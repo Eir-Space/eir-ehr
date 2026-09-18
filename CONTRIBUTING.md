@@ -19,6 +19,6 @@ Use issues for synthetic workflow feedback, bug reports, accessibility findings,
 
 Use Apache-2.0-compatible contributions and sign off commits with the Developer Certificate of Origin (`git commit -s`). Keep clinical workflows, country policy, persistence and presentation in their declared modules. Explain the user behavior, contract change, migration impact and verification in each pull request.
 
-Run `npm ci`, `npm run check`, `npx playwright install chromium`, and `npm run test:e2e`. Use only synthetic fixtures. Never commit a database, credential, patient identifier from a real record or identifiable clinical text. Do not label a connector operational until it has passed its service-specific checks against an authorized test environment.
+Run `npm ci`, `npm run terminology:import`, `npm run check`, `npx playwright install chromium`, and `npm run test:e2e`. Use only synthetic fixtures. Never commit a database, credential, patient identifier from a real record, identifiable clinical text or downloaded terminology dataset. Do not label a connector operational until it has passed its service-specific checks against an authorized test environment.
 
 New plugins must document trust, dependencies, cleanup, license and failure modes. Replacing a provider must pass its behavioral contract suite. Security, record lifecycle, migrations and clinical semantics require maintainer review. Architectural decisions and country-specific requirements belong in public documentation.

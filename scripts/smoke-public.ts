@@ -25,7 +25,12 @@ try {
   const patient = (await request('/api/patients', a))[0];
   await request(`/api/patients/${patient.id}/chart`, b, undefined, 403);
   const chart = await request(`/api/patients/${patient.id}/chart`, a);
-  const encounter = chart.find((r: any) => r.kind === 'encounter');
+  const encounter = chart.find(
+    (r: any) => r.kind === 'encounter' && r.data.status === 'in-progress',
+  );
+  const matches = await request('/api/terminology/diagnoses?q=I109', a);
+  assert.equal(matches.items[0].code, 'I10.9');
+  assert.equal(matches.source.version, '2026-01-01');
   const note = await request(
     `/api/patients/${patient.id}/records/note`,
     a,
@@ -45,7 +50,7 @@ try {
   assert.equal(bundle.resourceType, 'Bundle');
   assert(bundle.entry.some((entry: any) => entry.resource.resourceType === 'DocumentReference'));
   console.log(
-    `PASS ${origin}: session isolation, clinical write/sign, AI proposal and FHIR export.`,
+    `PASS ${origin}: session isolation, diagnosis lookup, clinical write/sign, AI proposal and FHIR export.`,
   );
 } finally {
   for (const token of tokens) await request('/api/logout', token, {}).catch(() => {});

@@ -107,6 +107,7 @@ export interface Identity {
   revoke?(token: string): void;
 }
 export interface Services {
+  terminology: Terminology;
   store: Store;
   country: Country;
   access: Access;
@@ -115,6 +116,21 @@ export interface Services {
   aiReview: AIReview;
   fhir: Fhir;
   identity: Identity;
+}
+export interface Terminology {
+  source: {
+    system: string;
+    version: string;
+    url: string;
+    sha256: string;
+    count: number;
+    publisher: string;
+  };
+  lookup(code: string): import('./icd.ts').DiagnosisTerm | undefined;
+  search(
+    query: string,
+    limit?: number,
+  ): { total: number; items: import('./icd.ts').DiagnosisTerm[] };
 }
 export type ServiceName = keyof Services;
 export type Plugin = {

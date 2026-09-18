@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "tsx apps/server.ts",
+    "terminology:import": "tsx scripts/import-icd.ts",
     "start": "tsx apps/server.ts",
     "demo:public": "tsx apps/public-server.ts",
     "hosting:prepare": "tsx scripts/prepare-hosting.ts",
@@ -27,6 +28,7 @@
   "dependencies": {
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^10.1.4",
+    "csv-parse": "^7.0.2",
     "fastify": "^5.6.0",
     "lucide": "^0.468.0",
     "personnummer": "3.2.1",

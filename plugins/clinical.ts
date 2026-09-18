@@ -4,7 +4,14 @@ import { assert, Fault, type Clinical, type Plugin } from '../packages/contracts
 const text = z.string().trim().min(1).max(20000);
 const short = z.string().trim().min(1).max(200);
 const id = z.uuid();
-const code = z.object({ system: z.url(), code: short, display: short }).strict();
+const code = z
+  .object({
+    system: z.url(),
+    code: short,
+    display: z.string().trim().min(1).max(1000),
+    version: short.optional(),
+  })
+  .strict();
 export const patientInput = z
   .object({
     name: short,
@@ -46,11 +53,12 @@ export default {
   version: '1.0.0',
   apiVersion: 1,
   provides: ['clinical'],
-  requires: ['store', 'country', 'access'],
+  requires: ['store', 'country', 'access', 'terminology'],
   setup(ctx) {
     const store = ctx.get('store'),
       access = ctx.get('access'),
       country = ctx.get('country');
+    const terminology = ctx.get('terminology');
     const clinical: Clinical = {
       patients(actor) {
         store.audit(actor, 'patient.directory');
@@ -118,6 +126,26 @@ export default {
         access.check(actor, patientId, true);
         assert(inputs[kind], 422, 'Unsupported clinical record type');
         const parsed = inputs[kind].parse(input) as Record<string, any>;
+        if (kind === 'condition') {
+          assert(
+            parsed.code.system === terminology.source.system,
+            422,
+            'Unsupported diagnosis code system',
+          );
+          assert(
+            !parsed.code.version || parsed.code.version === terminology.source.version,
+            409,
+            'Diagnosis catalogue version changed',
+          );
+          const term = terminology.lookup(parsed.code.code);
+          assert(term?.selectable, 422, 'Select a valid, specific diagnosis code');
+          parsed.code = {
+            system: term.system,
+            version: term.version,
+            code: term.code,
+            display: term.display,
+          };
+        }
         if (parsed.encounterId) {
           const encounter = store.get(actor.tenant, parsed.encounterId);
           assert(

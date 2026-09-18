@@ -24,6 +24,7 @@ Pricing checked 2026-09-18: [Cloud Run](https://cloud.google.com/run/pricing), [
 
 ```sh
 npm ci
+npm run terminology:import
 npm run check
 npm run test:e2e
 npm run demo:public
@@ -49,4 +50,4 @@ The 30-minute lifetime is checked before every API request. Timers may pause whe
 
 For a live release check, run `npm run smoke:public -- https://eir-ehr-demo.web.app`, then `EIR_DEMO_TEST_URL=https://eir-ehr-demo.web.app npm run test:e2e`. The public browser test will drive the deployed service with synthetic data and log out afterward. Repeat with the custom domain once its HTTPS certificate is ready. The normal clinical browser test still uses its local isolated fixture.
 
-Use the delivery and safety gates in [PLAN.md](PLAN.md): verified workforce identity, lawful access/proxy policy, protected identities, durable transactional storage, backup/restore evidence, immutable external audit, approved national integrations, deployment threat model, incident response and clinical validation. Do not migrate to real records by simply adding a volume or removing the demo banner.
+Use the delivery and safety gates in [PLAN.md](PLAN.md): verified workforce identity, lawful access/proxy policy, protected identities, durable transactional storage, backup/restore evidence, immutable external audit, approved national integrations, deployment threat model, incident response and clinical validation. Do not migrate to real records by simply adding a volume or removing the demo badge.

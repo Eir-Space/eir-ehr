@@ -10,7 +10,7 @@ Session secrets are random, eight-hour bearer tokens. Only SHA-256 token hashes 
 
 ## Backup And Restore Drill
 
-Public mode is a separate entry point and plugin profile, described in [HOSTING.md](HOSTING.md). It creates one in-memory runtime/database per visitor and never loads the local persistent database. Limits, origin checks, consent acknowledgement and expiry are enforced server-side. Expiry is checked on every API access; memory cleanup runs when CPU is available or on the next workspace creation. Request-based Cloud Run may suspend idle timers. Expired records remain inaccessible even before memory cleanup. This mode is for temporary synthetic demonstrations only.
+Public mode is a separate entry point and plugin profile, described in [HOSTING.md](HOSTING.md). It creates one in-memory runtime/database per visitor and never loads the local persistent database. Limits, origin checks, an explicit demo-mode start payload and expiry are enforced server-side. The public start page carries a concise demo notice, not a legal consent workflow. Expiry is checked on every API access; memory cleanup runs when CPU is available or on the next workspace creation. Request-based Cloud Run may suspend idle timers. Expired records remain inaccessible even before memory cleanup. This mode is for temporary synthetic demonstrations only.
 
 Run `npm run backup -- .data/ehr.sqlite /secure/path/backup.sqlite`. This uses SQLite's online backup API, not an unsafe copy of the main file while WAL writes are in flight. The destination must not exist. Protect backup permissions and encrypt at the storage boundary; the script does not implement encryption.
 
