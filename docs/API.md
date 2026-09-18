@@ -4,25 +4,26 @@ Base: `http://127.0.0.1:4180/api`. JSON requests and responses. Every `/api` end
 
 Errors have `{error, fields?}`. Statuses: 401 invalid/expired session, 403 authorization, 404 missing record, 409 revision/lifecycle conflict, 422 validation. Request bodies are limited to 128 KiB. Rate limits and same-origin checks apply. Secrets and records are not included in server request logging.
 
-| Method | Path                            | Operation                                                                                |
-| ------ | ------------------------------- | ---------------------------------------------------------------------------------------- |
-| GET    | `/session`                      | Authenticated actor, country, locale, configured renderers and supported vitals          |
-| POST   | `/logout`                       | Revoke local bearer session                                                              |
-| GET    | `/plugins`                      | Active plugin IDs, versions and service dependencies                                     |
-| GET    | `/openapi.json`                 | OpenAPI 3.1 discovery with request schemas derived from validators                       |
-| GET    | `/patients`                     | Patients accessible to this principal only                                               |
-| POST   | `/patients`                     | Register patient; establish a 30-day local care assignment for registering clinician     |
-| GET    | `/patients/:id/chart`           | Authorized clinical entities; patient/proxy views omit drafts/proposals                  |
-| POST   | `/patients/:id/records/:kind`   | Create encounter/note/observation/condition/allergy/task                                 |
-| POST   | `/records/:id/:action`          | Expected-version clinical transition                                                     |
-| GET    | `/records/:id/history`          | Authorized version history                                                               |
-| GET    | `/patients/:id/changes?after=0` | Up to 100 version entries plus next cursor; patient-specific authorization on every poll |
-| GET    | `/patients/:id/export/fhir`     | FHIR R4 collection Bundle projection                                                     |
-| POST   | `/patients/:id/ai`              | Generate/persist proposal for specified open encounter                                   |
-| POST   | `/proposals/:id/review`         | Accept into draft note or reject                                                         |
-| POST   | `/patients/:id/access`          | Clinician grants expiring clinician or proxy access                                      |
-| POST   | `/patients/:id/restriction`     | Patient toggles the coarse local restriction                                             |
-| GET    | `/audit`                        | Auditor: tenant events; patient: own events; last 200 events and chain verification      |
+| Method | Path                                     | Operation                                                                                |
+| ------ | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| GET    | `/session`                               | Authenticated actor, country, locale, configured renderers and supported vitals          |
+| POST   | `/logout`                                | Revoke local bearer session                                                              |
+| GET    | `/plugins`                               | Active plugin IDs, versions and service dependencies                                     |
+| GET    | `/terminology/diagnoses?q=I109&limit=20` | Authenticated local code/name search, source metadata, total and bounded items           |
+| GET    | `/openapi.json`                          | OpenAPI 3.1 discovery with request schemas derived from validators                       |
+| GET    | `/patients`                              | Patients accessible to this principal only                                               |
+| POST   | `/patients`                              | Register patient; establish a 30-day local care assignment for registering clinician     |
+| GET    | `/patients/:id/chart`                    | Authorized clinical entities; patient/proxy views omit drafts/proposals                  |
+| POST   | `/patients/:id/records/:kind`            | Create encounter/note/observation/condition/allergy/task                                 |
+| POST   | `/records/:id/:action`                   | Expected-version clinical transition                                                     |
+| GET    | `/records/:id/history`                   | Authorized version history                                                               |
+| GET    | `/patients/:id/changes?after=0`          | Up to 100 version entries plus next cursor; patient-specific authorization on every poll |
+| GET    | `/patients/:id/export/fhir`              | FHIR R4 collection Bundle projection                                                     |
+| POST   | `/patients/:id/ai`                       | Generate/persist proposal for specified open encounter                                   |
+| POST   | `/proposals/:id/review`                  | Accept into draft note or reject                                                         |
+| POST   | `/patients/:id/access`                   | Clinician grants expiring clinician or proxy access                                      |
+| POST   | `/patients/:id/restriction`              | Patient toggles the coarse local restriction                                             |
+| GET    | `/audit`                                 | Auditor: tenant events; patient: own events; last 200 events and chain verification      |
 
 Local care assignments, proxy grants and the coarse restriction are development policy primitives. The API does not verify HSA employment, legal guardianship, delegation evidence or Swedish cross-provider access rules. Do not expose these primitives as a production onboarding workflow.
 
@@ -46,12 +47,14 @@ Clinical create payloads (UUIDs are returned by previous operations):
 encounter:   {reason}
 note:        {encounterId, text}
 observation: {encounterId, code, value, unit, effectiveAt}
-condition:   {code: {system, code, display}, onset?}
+condition:   {code: {system, version?, code, display}, onset?}
 allergy:     {substance, reaction, criticality: "low" | "high" | "unable-to-assess"}
 task:        {title, due: "YYYY-MM-DD"}
 ```
 
-Supported vital codes/units are returned by `/session`. The server enforces code/unit pairing and input bounds. These are input integrity checks, not diagnostic interpretation. A diagnosis coding payload is recorded as entered; terminology-service validation is not yet implemented.
+Supported vital codes/units are returned by `/session`. The server enforces code/unit pairing and input bounds. These are input integrity checks, not diagnostic interpretation. Diagnosis writes use the configured terminology provider: canonical code, label and version replace client-supplied values. Unknown codes, unsupported systems and categories requiring a more specific code return 422; a supplied stale release version returns 409. Historical conditions are not recoded. See [terminology](TERMINOLOGY.md) for source rights and coding-rule limitations.
+
+Diagnosis search accepts `q` (up to 100 characters, empty for common codes) and `limit` (1-50, default 20). Response: `{source: {system, version, url, sha256, count, publisher}, total, items: [{system, version, code, display, parent, selectable, notPrincipal, manifestation}]}`. Searches run locally without a patient ID or external search service.
 
 All entity revisions start at 1. Supply the currently read version:
 

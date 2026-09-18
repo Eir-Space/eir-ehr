@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createPublicDemo } from '../apps/public-demo.ts';
 import { root } from './helpers.ts';
 
-test('public demo isolates visitors, validates consent, rejects national IDs and destroys sessions', async (t) => {
+test('public demo isolates visitors, validates start mode, rejects national IDs and destroys sessions', async (t) => {
   const app = await createPublicDemo(root);
   t.after(() => app.close());
   assert.equal((await app.inject({ url: '/deployment.json' })).json().mode, 'public-demo');
@@ -60,7 +60,9 @@ test('public demo isolates visitors, validates consent, rejects national IDs and
   const chart = (
     await app.inject({ url: `/api/patients/${patients[0].id}/chart`, headers })
   ).json();
-  const encounter = chart.find((r: any) => r.kind === 'encounter');
+  const encounter = chart.find(
+    (r: any) => r.kind === 'encounter' && r.data.status === 'in-progress',
+  );
   const saved = await app.inject({
     method: 'POST',
     url: `/api/patients/${patients[0].id}/records/note`,

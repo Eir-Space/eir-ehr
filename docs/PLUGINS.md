@@ -21,6 +21,8 @@ Replace `./plugins/country-se.ts` with `./plugins/country-eu-local.ts`, with `co
 
 ## A Complete Plugin Contract
 
+`eir.terminology.icd-se` provides release metadata, diagnosis search and canonical code validation through `Terminology`. It is independently replaceable, including alongside another country pack. See [terminology setup and source rights](TERMINOLOGY.md). The clinical plugin requires a terminology provider and never trusts a browser-supplied diagnosis label.
+
 A module exports a default `Plugin`. It declares version 1 of the runtime API and its required/provided services. Its `setup` obtains dependencies through `ctx.get`, installs implementations with `ctx.provide`, and registers immediate cleanup with `ctx.onDispose`. Every acquired connection, timer, listener and process must have cleanup registered as soon as it exists. Returning a disposer is also supported when initialization cannot fail after acquisition.
 
 Read `plugins/ai-extractive.ts` for a small complete implementation, `plugins/clinical.ts` for stateful workflow behavior, and `plugins/storage-sqlite.ts` for transactional infrastructure. These are real modules used by the application, not template stubs. The `Services` interface can be extended with TypeScript declaration merging by out-of-tree plugins. Service keys are validated names, not a fixed allowlist. New service consumers must declare their dependencies.

@@ -1,4 +1,5 @@
 import { escape as e, date, display } from './renderers/shared.js';
+import { diagnosisFields, diagnosisPicker } from './diagnosis-picker.js';
 const $ = (s) => document.querySelector(s);
 const state = {
   token: '',
@@ -22,13 +23,15 @@ const kinds = (kind) => state.chart.filter((r) => r.kind === kind);
 const encounter = () => kinds('encounter').find((r) => r.data.status === 'in-progress');
 const canWrite = () => state.session?.actor.role === 'clinician';
 let submitDialog;
+let disposeDialog;
 let busy = false;
 window.addEventListener('DOMContentLoaded', icons);
-async function api(path, body) {
+async function api(path, body, signal) {
   const response = await fetch(`/api${path}`, {
     method: body === undefined ? 'GET' : 'POST',
     headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    signal,
   });
   const data = await response.json();
   if (!response.ok)
@@ -65,6 +68,7 @@ async function login(token) {
     state.renderer = state.session.defaultRenderer;
     $('#login').hidden = true;
     $('#shell').hidden = false;
+    $('#project-community').hidden = true;
     form.reset();
     $('#identity').textContent = state.session.actor.id;
     $('#register').hidden = !canWrite();
@@ -73,6 +77,7 @@ async function login(token) {
     state.token = '';
     $('#login').hidden = false;
     $('#shell').hidden = true;
+    $('#project-community').hidden = !state.publicDemo;
     $('#login-error').textContent = err.message;
   }
   icons();
@@ -85,10 +90,6 @@ $('#login-form').addEventListener('submit', async (event) => {
 });
 $('#start-demo').onclick = async () => {
   $('#login-error').textContent = '';
-  if (!$('#synthetic-consent').checked) {
-    $('#login-error').textContent = 'Please confirm you will use synthetic information only.';
-    return;
-  }
   $('#start-demo').disabled = true;
   try {
     const response = await fetch('/demo/start', {
@@ -98,8 +99,8 @@ $('#start-demo').onclick = async () => {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error ?? 'Could not start the demo');
-    $('#demo-expiry').textContent =
-      'Upphör ' +
+    $('.environment').title =
+      'Separat arbetsyta med exempelpatienter. Återställs vid omladdning. Upphör ' +
       new Date(data.expiresAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     await login(data.token);
   } catch (error) {
@@ -116,15 +117,14 @@ async function deployment() {
     if (config.mode !== 'public-demo') return;
     state.publicDemo = true;
     document.body.classList.add('public-demo');
-    $('#login h1').textContent = 'Eir EHR';
+    $('#login h1').textContent = 'Eir Journal';
     $('#demo-entry').hidden = false;
     $('#project-community').hidden = false;
-    $('#demo-banner').hidden = false;
     $('#token-field').hidden = true;
     $('#token-field input').disabled = true;
     $('#local-login').hidden = true;
     $('#local-hint').hidden = true;
-    $('.environment').textContent = 'Syntetisk demo';
+    $('.environment').textContent = 'Demo';
   } catch {
     $('#login-error').textContent = 'Could not connect. Please reload the page.';
   }
@@ -138,6 +138,10 @@ $('#logout').onclick = () =>
 $('#search').oninput = renderPatients;
 $('#register').onclick = () => openRegistration();
 $('#cancel-dialog').onclick = () => $('#dialog').close();
+$('#dialog').addEventListener('close', () => {
+  disposeDialog?.();
+  disposeDialog = undefined;
+});
 $('#dialog-form').onsubmit = (event) => {
   event.preventDefault();
   const values = Object.fromEntries(new FormData(event.currentTarget));
@@ -148,6 +152,8 @@ $('#dialog-form').onsubmit = (event) => {
   });
 };
 function modal(title, fields, submit, label = 'Spara') {
+  disposeDialog?.();
+  disposeDialog = undefined;
   submitDialog = submit;
   $('#dialog-title').textContent = title;
   $('#dialog-fields').innerHTML = fields;
@@ -196,7 +202,7 @@ function renderPatients() {
               .map((s) => s[0])
               .slice(0, 2)
               .join(''),
-          )}</span><span>${e(p.data.name)}<small>${e(p.data.identifier.value)}</small></span></button>`,
+          )}</span><span>${e(p.data.name)}<small>${e(p.data.birthDate)} · ${e(p.data.identifier.value)}</small></span></button>`,
       )
       .join('') || '<p class="empty">Inga patienter.</p>';
   $('#patient-count').textContent = `${state.patients.length} patienter med åtkomst`;
@@ -282,16 +288,59 @@ async function render() {
 function renderOverview(target) {
   const allergy = kinds('allergy').filter((x) => x.data.status === 'active');
   const problems = kinds('condition').filter((x) => x.data.status === 'active');
-  const observations = kinds('observation').filter((x) => x.data.status === 'final');
-  target.innerHTML = `<div class="split"><div><section class="band"><div class="section-title"><h2>Aktuella diagnoser</h2>${canWrite() ? button('condition', 'Lägg till', 'plus') : ''}</div>${problems.map((r) => `<div class="row"><div><strong>${e(r.data.code.display)}</strong><small>${e(r.data.code.code)} · ${e(r.data.code.system)}</small></div>${canWrite() ? button('correct', 'Rätta', null, `data-id="${r.id}"`) : ''}</div>`).join('') || '<p class="empty">Inga diagnoser registrerade.</p>'}</section><section class="band"><div class="section-title"><h2>Mätvärden</h2>${canWrite() && encounter() ? button('observation', 'Registrera', 'plus') : ''}</div>${observations.map((r) => `<div class="row"><div><strong>${e(r.data.display)}</strong><small>${date(r.data.effectiveAt)}</small></div><div class="metric"><strong>${e(r.data.value)}</strong><span>${e(r.data.unit)}</span></div>${canWrite() ? button('correct', 'Rätta', null, `data-id="${r.id}"`) : ''}</div>`).join('') || '<p class="empty">Inga mätvärden registrerade.</p>'}</section><section class="band"><div class="section-title"><h2>Senaste anteckning</h2></div>${kinds('note')[0] ? `<p>${e(kinds('note')[0].data.text)}</p>` : '<p class="empty">Ingen anteckning ännu.</p>'}</section></div><aside><section class="band"><div class="section-title"><h2>Överkänslighet</h2>${canWrite() ? button('allergy', '', 'plus', 'title="Registrera överkänslighet" aria-label="Registrera överkänslighet"') : ''}</div>${allergy.map((r) => `<div class="safety"><strong>${e(r.data.substance)}</strong><p>${e(r.data.reaction)}</p>${canWrite() ? button('correct', 'Rätta', null, `data-id="${r.id}"`) : ''}</div>`).join('') || '<p class="empty">Uppgift saknas. Allergifrihet är inte bekräftad.</p>'}</section><section class="band"><div class="section-title"><h2>Att följa upp</h2></div>${
-    kinds('task')
-      .filter((r) => r.data.status === 'requested')
-      .map(
-        (r) =>
-          `<div class="row"><div><strong>${e(r.data.title)}</strong><small>${e(r.data.due)}</small></div></div>`,
-      )
-      .join('') || '<p class="empty">Inga öppna uppgifter.</p>'
-  }</section></aside></div>`;
+  const readings = kinds('observation')
+    .filter((x) => x.data.status === 'final')
+    .sort(
+      (a, b) =>
+        Date.parse(b.data.effectiveAt) - Date.parse(a.data.effectiveAt) ||
+        Date.parse(b.createdAt) - Date.parse(a.createdAt),
+    );
+  const observations = Object.keys(state.session.vitals)
+    .map((code) => readings.find((r) => r.data.code === code))
+    .filter(Boolean);
+  const correction = (r) =>
+    canWrite()
+      ? button(
+          'correct',
+          '',
+          'pencil',
+          `data-id="${r.id}" title="Rätta uppgift" aria-label="Rätta ${e(r.data.display ?? r.data.code?.display ?? r.data.substance)}"`,
+        )
+      : '';
+  const previous = (r) => {
+    const value = readings.find(
+      (v) =>
+        v.data.code === r.data.code &&
+        Date.parse(v.data.effectiveAt) < Date.parse(r.data.effectiveAt),
+    );
+    return value
+      ? `<small>Tidigare ${e(value.data.value)} · ${date(value.data.effectiveAt)}</small>`
+      : '';
+  };
+  const codeLabel = (coding) =>
+    coding.system === 'http://hl7.org/fhir/sid/icd-10-se'
+      ? `ICD-10-SE${coding.version ? ' ' + coding.version.slice(0, 4) : ''}`
+      : coding.system;
+  target.innerHTML = `<div class="split"><div>
+    <section class="band"><div class="section-title"><h2>Aktuella diagnoser</h2>${canWrite() ? button('condition', 'Lägg till', 'plus') : ''}</div>
+      ${problems.map((r) => `<div class="row"><div><strong>${e(r.data.code.display)}</strong><small>${e(r.data.code.code)} · ${e(codeLabel(r.data.code))}</small></div>${correction(r)}</div>`).join('') || '<p class="empty">Inga diagnoser registrerade.</p>'}
+    </section>
+    <section class="band"><div class="section-title"><h2>Mätvärden</h2>${canWrite() && encounter() ? button('observation', 'Registrera', 'plus') : ''}</div>
+      ${observations.map((r) => `<div class="row vital-row"><div><strong>${e(r.data.display)}</strong><small>${date(r.data.effectiveAt)}</small>${previous(r)}</div><div class="metric"><strong>${e(r.data.value)}</strong><span>${e(r.data.unit)}</span></div>${correction(r)}</div>`).join('') || '<p class="empty">Inga mätvärden registrerade.</p>'}
+    </section>
+    <section class="band"><div class="section-title"><h2>Senaste anteckning</h2></div>${kinds('note')[0] ? `<p class="note-preview">${e(kinds('note')[0].data.text)}</p>` : '<p class="empty">Ingen anteckning ännu.</p>'}</section>
+    </div><aside><section class="band"><div class="section-title"><h2>Överkänslighet</h2>${canWrite() ? button('allergy', '', 'plus', 'title="Registrera överkänslighet" aria-label="Registrera överkänslighet"') : ''}</div>
+      ${allergy.map((r) => `<div class="safety"><strong>${e(r.data.substance)}</strong><p>${e(r.data.reaction)}</p>${correction(r)}</div>`).join('') || '<p class="empty">Uppgift saknas. Allergifrihet är inte bekräftad.</p>'}
+    </section><section class="band"><div class="section-title"><h2>Att följa upp</h2></div>${
+      kinds('task')
+        .filter((r) => r.data.status === 'requested')
+        .sort((a, b) => a.data.due.localeCompare(b.data.due))
+        .map(
+          (r) =>
+            `<div class="row"><div><strong>${e(r.data.title)}</strong><small>${e(r.data.due)}</small></div></div>`,
+        )
+        .join('') || '<p class="empty">Inga öppna uppgifter.</p>'
+    }</section></aside></div>`;
 }
 function renderNotes(target) {
   target.innerHTML = `<div class="toolbar"><h2>Journalanteckningar</h2>${canWrite() && encounter() ? button('note', 'Ny anteckning', 'plus', 'class="primary"') : ''}</div>${
@@ -365,14 +414,25 @@ async function action(name, id) {
       field('title', 'Uppgift') + field('due', 'Senast', 'date'),
       (values) => create('task', values),
     );
-  if (name === 'condition')
-    return modal(
-      'Registrera diagnos',
-      field('display', 'Diagnos') +
-        field('code', 'Kod') +
-        field('system', 'Kodsystem', 'url', 'http://hl7.org/fhir/sid/icd-10-se'),
-      (values) => create('condition', { code: values }),
+  if (name === 'condition') {
+    let picker;
+    modal('Registrera diagnos', diagnosisFields, (values) =>
+      create('condition', {
+        code: picker.value(),
+        ...(values.onset ? { onset: values.onset } : {}),
+      }),
     );
+    picker = diagnosisPicker(
+      $('#dialog-fields'),
+      (query, signal) =>
+        api(`/terminology/diagnoses?q=${encodeURIComponent(query)}`, undefined, signal),
+      () => {
+        $('#dialog-error').textContent = '';
+      },
+    );
+    disposeDialog = () => picker.dispose();
+    return;
+  }
   if (name === 'allergy')
     return modal(
       'Registrera överkänslighet',

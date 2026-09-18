@@ -3,6 +3,7 @@
   "plugins": [
     { "module": "./plugins/storage-sqlite.ts", "config": { "path": ":memory:" } },
     { "module": "./plugins/country-se.ts" },
+    { "module": "./plugins/terminology-icd-se.ts" },
     { "module": "./plugins/identity-local.ts" },
     { "module": "./plugins/access.ts" },
     { "module": "./plugins/clinical.ts" },

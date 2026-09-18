@@ -165,6 +165,7 @@ small,
   min-height: calc(100svh - 66px);
 }
 .directory {
+  min-width: 0;
   border-right: 1px solid var(--line);
   background: #f9fafb;
   padding: 23px 15px;
@@ -325,6 +326,23 @@ main {
   display: block;
   margin-top: 4px;
 }
+.split > *,
+.row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.note-preview {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.vital-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 125px 36px;
+  align-items: center;
+}
+.vital-row button {
+  padding: 7px;
+}
 .row .actions {
   display: flex;
   gap: 6px;
@@ -360,10 +378,13 @@ main {
   gap: 8px;
 }
 .metric strong {
+  white-space: nowrap;
+  flex-shrink: 0;
   font-size: 28px;
   font-weight: 600;
 }
 .metric span {
+  white-space: nowrap;
   font-size: 12px;
   color: var(--muted);
 }
@@ -596,15 +617,79 @@ a {
   flex-shrink: 0;
 }
 .public-demo #login {
-  padding: 36px 0;
+  padding: 56px 0 40px;
   min-height: 0;
 }
 .public-demo #login form {
-  width: 620px;
+  width: 660px;
   gap: 18px;
 }
 .public-demo #login .wordmark {
-  margin-bottom: 12px;
+  margin-bottom: 0;
+}
+.public-demo #login h1 {
+  font-size: 36px;
+}
+.public-demo #login .lead {
+  font-size: 19px;
+  max-width: 440px;
+}
+#start-demo {
+  justify-self: start;
+  min-height: 44px;
+  padding: 10px 18px;
+}
+.community-inner {
+  max-width: 708px;
+}
+.community-heading a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.community-heading svg {
+  width: 16px;
+  height: 16px;
+}
+.contribution-columns {
+  gap: 18px;
+  margin: 22px 0;
+}
+#diagnosis-results {
+  max-height: 260px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+}
+#diagnosis-results:empty {
+  display: none;
+}
+#diagnosis-results [role='option'] {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 8px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+#diagnosis-results [role='option']:hover,
+#diagnosis-results [aria-selected='true'] {
+  background: #edf5f3;
+}
+#diagnosis-results small {
+  display: block;
+  margin-top: 4px;
+}
+#diagnosis-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  background: #edf5f3;
+  border-left: 3px solid var(--accent);
+}
+#diagnosis-selected span,
+#diagnosis-results span {
+  overflow-wrap: anywhere;
 }
 #login-error {
   color: #a12929;
@@ -688,7 +773,7 @@ a {
   border-top: 1px solid var(--line);
 }
 .community-inner {
-  max-width: 1040px;
+  max-width: 708px;
   margin: 0 auto;
   padding: 34px 24px 42px;
 }
@@ -709,8 +794,8 @@ a {
 .contribution-columns {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px;
-  margin: 28px 0;
+  gap: 18px;
+  margin: 22px 0;
 }
 .contribution-columns h3 {
   font-size: 16px;
@@ -774,6 +859,12 @@ a {
   .environment {
     display: none;
   }
+  .public-demo .environment {
+    display: inline-block;
+  }
+  .public-demo .app-header .wordmark span {
+    display: none;
+  }
   #identity {
     font-size: 10px;
     max-width: 110px;
@@ -824,6 +915,18 @@ a {
   }
   .row {
     flex-wrap: wrap;
+  }
+  .vital-row {
+    grid-template-columns: minmax(0, 1fr) 90px 36px;
+    gap: 10px;
+  }
+  .metric {
+    gap: 0;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .metric strong {
+    font-size: 24px;
   }
   .plugin {
     gap: 6px;

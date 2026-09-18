@@ -37,6 +37,15 @@ export function openApi() {
   route('/session', 'get', 'Authenticated context');
   route('/logout', 'post', 'Revoke local session', { type: 'object' });
   route('/plugins', 'get', 'Active plugin manifests');
+  route('/terminology/diagnoses', 'get', 'Search the configured diagnosis catalogue');
+  paths['/terminology/diagnoses'].get.parameters = [
+    { in: 'query', name: 'q', schema: { type: 'string', maxLength: 100, default: '' } },
+    {
+      in: 'query',
+      name: 'limit',
+      schema: { type: 'integer', minimum: 1, maximum: 50, default: 20 },
+    },
+  ];
   route('/patients', 'get', 'Authorized patient directory');
   route('/patients', 'post', 'Register a patient', schema(patientInput), '201');
   route('/patients/{id}/chart', 'get', 'Authorized chart');

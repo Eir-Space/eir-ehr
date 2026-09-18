@@ -1,5 +1,6 @@
 node_modules
 .data
+.terminology
 test-results
 package-lock.json
 LICENSE

@@ -42,13 +42,15 @@
         <p>The clinical workspace is in Swedish. This guide maps the controls to the workflow.</p>
         <ol>
           <li>
-            <strong>Start demo.</strong> Confirm synthetic-only use on the start screen. Each
-            session creates a separate in-memory workspace with Alex Exempel, a fictional patient,
-            and an open encounter.
+            <strong>Öppna journalen (open workspace).</strong> Each session creates a separate
+            workspace with four fictional patients: Anna Lindberg, Johan Bergström, Sara Haddad and
+            Erik Nyström. Each has an open consultation, diagnoses, measurements and follow-up
+            tasks.
           </li>
           <li>
-            <strong>Översikt (overview).</strong> Inspect the patient, encounter, pulse observation
-            and follow-up task. Add an observation or complete the task.
+            <strong>Översikt (overview).</strong> Inspect the record and earlier measurements.
+            Choose Lägg till under diagnoses to search the official ICD-10-SE 2026 catalogue by
+            code, name or published synonym. Select a result and save it to the chart.
           </li>
           <li>
             <strong>Anteckningar (notes).</strong> Open a draft or choose Ny anteckning. Save, then
@@ -72,8 +74,8 @@
           </li>
         </ol>
         <p>
-          Refresh or choose Börja om to start fresh. Use Logga ut to immediately destroy your
-          workspace. Copying a demo link does not share your records or session.
+          Refresh to start fresh. Use Logga ut to immediately destroy your workspace. Copying a demo
+          link does not share your records or session.
         </p>
       </section>
       <section id="modules">
@@ -159,6 +161,7 @@ Storage · Country · Identity · AI · FHIR</pre>
 git clone https://github.com/Eir-Space/eir-ehr.git
 cd eir-ehr
 npm ci
+npm run terminology:import
 EIR_DEMO=1 npm start
 # Open http://127.0.0.1:4180 with the printed local token
 npm run check</pre>

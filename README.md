@@ -12,6 +12,7 @@ Node 22.13+ (Node's SQLite API is experimental in Node 22).
 
 ```sh
 npm ci
+npm run terminology:import
 EIR_DEMO=1 npm start
 ```
 
@@ -24,6 +25,7 @@ Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.
 | Area                | Implemented behavior                                                                                                                                                     |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Clinical workspace  | Swedish patient directory, encounters, chart, notes, observations, diagnoses, allergies and follow-up tasks                                                              |
+| Diagnosis catalogue | Official ICD-10-SE 2026 code/name lookup, canonical label validation and versioned coding; replaceable terminology provider                                              |
 | Record integrity    | Transactions, compare-and-set versions, note signing, immutable signed notes, linked amendments, correction history                                                      |
 | Sweden country pack | Personnummer and samordningsnummer checksum/date validation using `personnummer`, explicit 12-digit identifiers, separate birth date, local reserve IDs                  |
 | Access              | Hashed local sessions, tenant scoping, expiring care relationships, expiring proxy grants, patient self-access and a coarse patient restriction                          |
@@ -52,6 +54,7 @@ npm run backup -- .data/ehr.sqlite /secure/path/ehr-backup.sqlite
 - [Sweden-first delivery plan](docs/PLAN.md)
 - [Plugin authoring and model replacement](docs/PLUGINS.md)
 - [API contract](docs/API.md)
+- [Diagnosis catalogue, import and data rights](docs/TERMINOLOGY.md)
 - [Sweden, Estonia, Denmark and EU evidence](docs/SOURCES.md)
 - [Operations and security boundaries](docs/OPERATIONS.md)
 - [Public demo hosting, cost controls and DNS](docs/HOSTING.md)

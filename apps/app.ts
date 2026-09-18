@@ -46,6 +46,17 @@ export async function createApp(
       });
       api.get('/plugins', async () => runtime.active);
       api.get('/openapi.json', async () => openApi());
+      api.get('/terminology/diagnoses', async (req) => {
+        const query = z
+          .object({
+            q: z.string().trim().max(100).default(''),
+            limit: z.coerce.number().int().min(1).max(50).default(20),
+          })
+          .strict()
+          .parse(req.query);
+        const terminology = runtime.get('terminology');
+        return { ...terminology.search(query.q, query.limit), source: terminology.source };
+      });
       api.get('/patients', async (req) => clinical.patients(actor(req)));
       api.post('/patients', async (req, reply) =>
         reply.code(201).send(clinical.register(actor(req), req.body)),
