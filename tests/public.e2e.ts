@@ -5,9 +5,12 @@ import { createPublicDemo } from '../apps/public-demo.ts';
 import { root } from './helpers.ts';
 
 test('public visitor can start, use the real chart and read the contributor guide', async (t) => {
-  const app = await createPublicDemo(root);
-  const address = await app.listen({ port: 0, host: '127.0.0.1' });
-  t.after(() => app.close());
+  const remote = process.env.EIR_DEMO_TEST_URL;
+  const app = remote ? undefined : await createPublicDemo(root);
+  const address = remote
+    ? new URL(remote).origin
+    : await app!.listen({ port: 0, host: '127.0.0.1' });
+  t.after(() => app?.close());
   const browser = await chromium.launch({ headless: true });
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });

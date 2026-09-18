@@ -12,6 +12,7 @@
     "start": "tsx apps/server.ts",
     "demo:public": "tsx apps/public-server.ts",
     "hosting:prepare": "tsx scripts/prepare-hosting.ts",
+    "hosting:deploy": "tsx scripts/deploy-hosting.ts",
     "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",

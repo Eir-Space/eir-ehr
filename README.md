@@ -6,7 +6,7 @@ An open, Sweden-first electronic health record built from replaceable plugins. A
 
 ## Run
 
-The public demo is deployed separately from local mode. See [hosting and DNS](docs/HOSTING.md). It includes a walkthrough and contribution guide, a fresh synthetic workspace per visitor and a 30-minute lifetime. Never enter real health information.
+Try the [public demo and collaboration page](https://eir-ehr-demo.web.app) or read the [walkthrough and contribution guide](https://eir-ehr-demo.web.app/guide.html). The custom domain is `ehr.eir.space`. Public mode gives every visitor a fresh synthetic workspace with a 30-minute lifetime. Never enter real health information. See [hosting and DNS](docs/HOSTING.md) for the separate deployment and cost limits.
 
 Node 22.13+ (Node's SQLite API is experimental in Node 22).
 

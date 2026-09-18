@@ -39,10 +39,14 @@ Deployment order: backend first, smoke its session/chart/write paths, then stati
 
 ## Session And Failure Behavior
 
+If Firebase CLI authentication is not configured but the operator is already authenticated with `gcloud`, the repository also includes `npm run hosting:deploy -- eir-space eir-ehr-demo`. It uses the [documented Hosting REST deployment sequence](https://firebase.google.com/docs/hosting/api-deploy), prepares the static directory, validates the supported configuration, uploads content-addressed compressed files and only releases a fully finalized version. It requires explicit project and site arguments and keeps short-lived authentication in memory. It does not create service-account keys or change IAM. Use the CLI for Hosting configurations outside the script's deliberately narrow supported schema.
+
 Each start creates a new plugin runtime with a separate in-memory SQLite database and random tenant. Bearer hashes route requests to that workspace. Unknown, revoked or expired tokens cannot access it. Start requests reserve a capacity slot before asynchronous setup. Logout destroys the runtime even after exhausting a budget. National identifiers are rejected by the public registration endpoint; free-text data cannot be reliably classified, so synthetic-only use is mandatory.
 
 The 30-minute lifetime is checked before every API request. Timers may pause when Cloud Run is idle; cleanup also happens at the next start request, and process exit discards all databases. Refreshing a browser loses its token; its old inaccessible workspace is reclaimed on expiry, not immediately. Cloud Run may retire the instance at any time. Even with a maximum of one, deployments and platform replacement can temporarily create different instances. A token reaching the wrong instance receives a restart instruction, never another visitor's records. This deliberate reset behavior is acceptable for a demo, not for patient care.
 
 ## Before Real Clinical Use
+
+For a live release check, run `npm run smoke:public -- https://eir-ehr-demo.web.app`, then `EIR_DEMO_TEST_URL=https://eir-ehr-demo.web.app npm run test:e2e`. The public browser test will drive the deployed service with synthetic data and log out afterward. Repeat with the custom domain once its HTTPS certificate is ready. The normal clinical browser test still uses its local isolated fixture.
 
 Use the delivery and safety gates in [PLAN.md](PLAN.md): verified workforce identity, lawful access/proxy policy, protected identities, durable transactional storage, backup/restore evidence, immutable external audit, approved national integrations, deployment threat model, incident response and clinical validation. Do not migrate to real records by simply adding a volume or removing the demo banner.
