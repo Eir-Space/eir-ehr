@@ -1,0 +1,28 @@
+name: Workflow or contribution proposal
+description: Propose a clinical workflow, module, design or documentation improvement.
+body:
+  - type: markdown
+    attributes:
+      value: Use fictional examples only. Never include real patient data, identifiers or credentials. Report security issues privately under SECURITY.md.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Who needs this and what goes wrong today?
+      description: Describe the care setting or contributor workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected behavior and acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Safety, privacy and integration considerations
+  - type: textarea
+    id: contribution
+    attributes:
+      label: How would you like to help?
+      description: Code, clinical review, testing, design, documentation, standards or something else.

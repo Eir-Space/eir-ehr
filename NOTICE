@@ -1,0 +1,6 @@
+Eir EHR
+Copyright 2026 Eir Space contributors
+
+Architecture inspired by DeepSeek Harness and Cordis service composition.
+No DeepSeek Harness or Cordis implementation code is included.
+Dependency licenses remain with their respective authors; see package-lock.json.

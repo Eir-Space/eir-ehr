@@ -1,0 +1,20 @@
+import { fileURLToPath } from 'node:url';
+import { fromConfig } from '../packages/runtime.ts';
+import type { Actor } from '../packages/contracts.ts';
+import type { SqliteStore } from '../plugins/storage-sqlite.ts';
+export const root = fileURLToPath(new URL('../', import.meta.url));
+export const doctor: Actor = { id: 'doctor-a', tenant: 'clinic-a', role: 'clinician' };
+export async function fixture(path = ':memory:') {
+  const { runtime } = await fromConfig(root + 'eir.config.json', {
+    'eir.storage.sqlite': { path },
+  });
+  const clinical = runtime.get('clinical'),
+    store = runtime.get('store') as SqliteStore;
+  const patient = clinical.register(doctor, {
+    name: 'Syntetisk Patient',
+    birthDate: '1985-03-12',
+    identifier: { type: 'local', value: 'TEST-001' },
+  });
+  const encounter = clinical.create(doctor, patient.id, 'encounter', { reason: 'Testkontakt' });
+  return { runtime, clinical, store, patient, encounter };
+}

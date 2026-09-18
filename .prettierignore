@@ -1,0 +1,9 @@
+node_modules
+.data
+test-results
+package-lock.json
+LICENSE
+NOTICE
+.hosting
+.firebase
+firebase-debug.log

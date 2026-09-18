@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Eir EHR | Walkthrough and contributing</title>
+    <meta
+      name="description"
+      content="Try the open-source Sweden-first EHR, explore its plugin architecture and contribute working clinical modules."
+    />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body class="guide">
+    <header class="guide-header">
+      <a class="wordmark" href="/">Eir <span>Journal</span></a>
+      <nav class="public-links">
+        <a href="/">Open demo</a><a href="https://github.com/Eir-Space/eir-ehr">GitHub</a>
+      </nav>
+    </header>
+    <main class="guide-content">
+      <h1>Eir EHR</h1>
+      <p class="lead">
+        An open-source clinical workspace. Sweden first, built to adapt across Europe.
+      </p>
+      <p>
+        Try a real, early implementation: write and sign a note, record observations, review an AI
+        draft and switch chart renderers. The code, plugin contracts and delivery plan are open
+        under Apache-2.0.
+      </p>
+      <p class="safety">
+        <strong>Development release. Not for patient care.</strong> Use made-up information only.
+        National services, prescribing and laboratory order delivery are not connected. This is not
+        a certified or complete production EHR.
+      </p>
+      <nav class="guide-index" aria-label="On this page">
+        <a href="#walkthrough">Try the workflow</a><a href="#modules">How modules work</a
+        ><a href="#contribute">Contribute</a><a href="#privacy">Demo data</a>
+      </nav>
+      <section id="walkthrough">
+        <h2>Try the workflow</h2>
+        <p>The clinical workspace is in Swedish. This guide maps the controls to the workflow.</p>
+        <ol>
+          <li>
+            <strong>Start demo.</strong> Confirm synthetic-only use on the start screen. Each
+            session creates a separate in-memory workspace with Alex Exempel, a fictional patient,
+            and an open encounter.
+          </li>
+          <li>
+            <strong>Översikt (overview).</strong> Inspect the patient, encounter, pulse observation
+            and follow-up task. Add an observation or complete the task.
+          </li>
+          <li>
+            <strong>Anteckningar (notes).</strong> Open a draft or choose Ny anteckning. Save, then
+            Signera to attest it. Signed notes cannot be overwritten; create a linked amendment
+            instead.
+          </li>
+          <li>
+            <strong>AI-granskning (AI review).</strong> Choose Skapa journalförslag. Inspect the
+            quoted sources, edit the proposal and save a reviewed draft. Signing remains a separate
+            clinical action. The public provider performs deterministic extraction, not
+            language-model inference; local installations can use Ollama.
+          </li>
+          <li>
+            <strong>Journal (chart).</strong> Change Visning from timeline to table. Both render the
+            same records through interchangeable UI modules. Download the FHIR export from the
+            patient toolbar.
+          </li>
+          <li>
+            <strong>Moduler (modules).</strong> Inspect the running service graph. National
+            connections are marked Ej ansluten, never simulated as connected.
+          </li>
+        </ol>
+        <p>
+          Refresh or choose Börja om to start fresh. Use Logga ut to immediately destroy your
+          workspace. Copying a demo link does not share your records or session.
+        </p>
+      </section>
+      <section id="modules">
+        <h2>Replace the parts, keep the contracts</h2>
+        <p>
+          The server resolves plugins by their declared services and dependencies. Storage, country
+          rules, identity, access policy, clinical workflows, AI providers, AI review and FHIR
+          export have explicit contracts. Chart renderers are separately selectable browser modules.
+        </p>
+        <pre>
+Clinical workspace / alternate chart renderer
+             | authenticated clinical API
+Clinical workflows + access checks + audit
+             | typed service contracts
+Storage · Country · Identity · AI · FHIR</pre>
+        <p>
+          An AI provider returns a proposal with evidence. It cannot sign a note through that
+          interface. Review validates cited source versions and checks access again; stale proposals
+          must be regenerated. Source validation does not establish medical correctness.
+        </p>
+        <p>
+          Server plugins are trusted operator-installed code, not a sandbox for untrusted uploads.
+          The current storage contract is synchronous SQLite; scalable async storage and isolated
+          extension execution are planned, not claimed.
+        </p>
+        <p>
+          <a href="https://github.com/Eir-Space/eir-ehr/blob/main/docs/PLUGINS.md"
+            >Plugin authoring guide</a
+          >
+          ·
+          <a href="https://github.com/Eir-Space/eir-ehr/blob/main/docs/ARCHITECTURE.md"
+            >Architecture and boundaries</a
+          >
+          · <a href="https://github.com/Eir-Space/eir-ehr/blob/main/docs/API.md">API contract</a>
+        </p>
+      </section>
+      <section id="contribute">
+        <h2>Build with us</h2>
+        <p>
+          Eir EHR is an open, collaborative project for Swedish healthcare, not just a product demo.
+          Contributions through pull requests, clinical feedback, design work and documentation are
+          welcome.
+        </p>
+        <ol>
+          <li>
+            Read the delivery plan and open an issue to discuss substantial workflow or contract
+            changes.
+          </li>
+          <li>Fork the repository and create a branch for one focused improvement.</li>
+          <li>
+            Implement the behavior, add regression tests, and run the type checks and browser
+            workflow.
+          </li>
+          <li>
+            Open a pull request explaining the user problem, safety implications and verification.
+            Maintainer review is required before merging.
+          </li>
+        </ol>
+        <p>
+          Clinicians, patients, designers and engineers can contribute. Begin with a concrete
+          workflow, its failure modes and a testable acceptance criterion. Do not submit real
+          patient records, credentials or licensed terminology datasets.
+        </p>
+        <ul>
+          <li>
+            <strong>Clinical and UX:</strong> review consultation flows, wrong-patient risks,
+            keyboard navigation, screen-reader behavior and patient/proxy access.
+          </li>
+          <li>
+            <strong>Sweden:</strong> help specify verified SITHS/HSA identity, protected identities,
+            lawful access and tested national-service adapters.
+          </li>
+          <li>
+            <strong>Modules:</strong> contribute renderers, country packs, terminology adapters,
+            provider connectors or source-grounded AI providers with contract tests.
+          </li>
+          <li>
+            <strong>Reliability:</strong> improve transaction boundaries, audit anchoring, recovery
+            tests, accessibility and security regression coverage.
+          </li>
+        </ul>
+        <pre>
+git clone https://github.com/Eir-Space/eir-ehr.git
+cd eir-ehr
+npm ci
+EIR_DEMO=1 npm start
+# Open http://127.0.0.1:4180 with the printed local token
+npm run check</pre>
+        <p>
+          Requires Node 22.13 or later. Local mode persists synthetic records in SQLite; public-demo
+          mode deliberately does not.
+        </p>
+        <p>
+          <a href="https://github.com/Eir-Space/eir-ehr/blob/main/CONTRIBUTING.md"
+            >Contribution process</a
+          >
+          · <a href="https://github.com/Eir-Space/eir-ehr/issues">Issues and proposals</a> ·
+          <a href="https://github.com/Eir-Space/eir-ehr/blob/main/docs/PLAN.md"
+            >Delivery plan and clinical-pilot gates</a
+          >
+        </p>
+        <p>
+          Report security issues privately using the
+          <a href="https://github.com/Eir-Space/eir-ehr/blob/main/SECURITY.md">security policy</a>,
+          not a public issue.
+        </p>
+      </section>
+      <section id="privacy">
+        <h2>What happens to demo data?</h2>
+        <p>
+          Each session has a separate SQLite database in server memory, a random bearer token and a
+          30-minute lifetime. The token stays in page memory, not local storage or a URL. Closing or
+          refreshing the page loses the token; the server removes expired workspaces on cleanup or
+          the next request. A server restart removes all workspaces immediately.
+        </p>
+        <p>
+          Application code does not log note bodies or tokens and does not call an external AI
+          service. Hosting infrastructure can retain ordinary request metadata such as IP addresses,
+          paths and timestamps. Never put real information in the demo, including in free text or
+          URLs. There are no analytics scripts or advertising cookies.
+        </p>
+        <p>
+          Capacity and request limits protect this small public service. A busy or restarted service
+          may ask you to start again. Use a local installation for longer development sessions. This
+          temporary public setup is not a clinical hosting architecture.
+        </p>
+      </section>
+      <footer>
+        Apache-2.0 · Eir Space ·
+        <a href="https://github.com/Eir-Space/eir-ehr/blob/main/docs/SOURCES.md"
+          >Sweden, Estonia, Denmark and EU sources</a
+        >
+      </footer>
+    </main>
+  </body>
+</html>

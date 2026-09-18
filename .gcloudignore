@@ -1,0 +1,10 @@
+.git
+.data
+node_modules
+test-results
+playwright-report
+.env*
+*.sqlite*
+.hosting
+.firebase
+firebase-debug.log

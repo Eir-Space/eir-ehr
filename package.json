@@ -1,0 +1,41 @@
+{
+  "name": "@eir-space/eir-ehr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "tsx apps/server.ts",
+    "start": "tsx apps/server.ts",
+    "demo:public": "tsx apps/public-server.ts",
+    "hosting:prepare": "tsx scripts/prepare-hosting.ts",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm test",
+    "test:e2e": "tsx --test tests/*.e2e.ts",
+    "plugins": "tsx scripts/plugins.ts",
+    "backup": "tsx scripts/backup.ts",
+    "smoke:model": "tsx scripts/smoke-model.ts",
+    "smoke:public": "tsx scripts/smoke-public.ts"
+  },
+  "dependencies": {
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/static": "^10.1.4",
+    "fastify": "^5.6.0",
+    "lucide": "^0.468.0",
+    "personnummer": "3.2.1",
+    "tsx": "^4.23.13",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.18.0",
+    "prettier": "^3.9.8",
+    "typescript": "^5.9.0"
+  }
+}

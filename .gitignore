@@ -1,0 +1,10 @@
+node_modules/
+.data/
+.env
+test-results/
+playwright-report/
+*.sqlite*
+.DS_Store
+.hosting/
+.firebase/
+firebase-debug.log

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Eir Journal</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/style.css" />
+    <script defer src="/icons.js"></script>
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div id="login">
+      <form id="login-form">
+        <div class="wordmark"><i data-lucide="activity"></i> Eir <span>Journal</span></div>
+        <h1>Logga in</h1>
+        <section id="demo-entry" hidden>
+          <p>
+            An open, collaborative project to build an open-source electronic health record for
+            Sweden, with a modular foundation for the rest of Europe. Built in the open with
+            clinicians, patients, developers and designers. Apache-2.0 licensed.
+          </p>
+          <p>
+            Try the working clinical workspace below, explore the architecture, or help shape what
+            comes next. Each demo workspace is separate from other visitors.
+          </p>
+          <p class="safety">
+            <strong>Synthetic data only.</strong> Do not enter real names, personal identity numbers
+            or health information. This development release is not for patient care.
+          </p>
+          <label class="check-label"
+            ><input id="synthetic-consent" type="checkbox" /> I will use made-up information
+            only.</label
+          >
+          <button id="start-demo" class="primary" type="button">
+            Start demo <i data-lucide="arrow-right"></i>
+          </button>
+          <p class="quiet">
+            No account required. Ends after 30 minutes or a server restart. Refreshing the page
+            starts over. The AI workflow uses a labelled, no-model extraction provider.
+          </p>
+        </section>
+        <label id="token-field"
+          >Sessionsnyckel<input name="token" type="password" required autocomplete="off" /></label
+        ><button id="local-login" class="primary" type="submit">
+          Öppna arbetsyta <i data-lucide="arrow-right"></i>
+        </button>
+        <p id="local-hint" class="quiet">
+          Lokal utvecklingsmiljö · Endast syntetiska patientuppgifter
+        </p>
+        <nav class="public-links" aria-label="Project">
+          <a href="/guide.html" target="_blank" rel="noopener">Walkthrough &amp; contributing</a
+          ><a href="https://github.com/Eir-Space/eir-ehr" target="_blank" rel="noopener"
+            >Source code</a
+          >
+        </nav>
+        <p id="login-error" role="alert"></p>
+      </form>
+    </div>
+    <div id="shell" hidden>
+      <header class="app-header">
+        <div class="wordmark"><i data-lucide="activity"></i> Eir <span>Journal</span></div>
+        <span class="environment">Utvecklingsmiljö</span><span id="identity"></span
+        ><a
+          class="icon-link"
+          href="/guide.html"
+          target="_blank"
+          rel="noopener"
+          title="Walkthrough and contributing"
+          aria-label="Walkthrough and contributing"
+          ><i data-lucide="book-open"></i></a
+        ><button id="logout" title="Logga ut" aria-label="Logga ut">
+          <i data-lucide="log-out"></i>
+        </button>
+      </header>
+      <div id="demo-banner" hidden>
+        <span>Offentlig demo · Endast påhittade uppgifter · <span id="demo-expiry"></span></span
+        ><a href="/">Börja om</a>
+      </div>
+      <div class="layout">
+        <aside class="directory">
+          <div class="section-title">
+            <h2>Patienter</h2>
+            <button id="register" title="Registrera patient" aria-label="Registrera patient">
+              <i data-lucide="user-plus"></i>
+            </button>
+          </div>
+          <label class="search"
+            ><i data-lucide="search"></i
+            ><input id="search" placeholder="Sök i patientlistan" aria-label="Sök patienter"
+          /></label>
+          <div id="patients"></div>
+          <footer>Sverige · Primärvård<br /><span id="patient-count"></span></footer>
+        </aside>
+        <main>
+          <div id="error" role="alert" hidden></div>
+          <div id="notice" role="status"></div>
+          <section id="patient-header"></section>
+          <nav id="tabs" aria-label="Journalvyer"></nav>
+          <section id="content"></section>
+        </main>
+      </div>
+    </div>
+    <section id="project-community" hidden lang="en">
+      <div class="community-inner">
+        <div class="community-heading">
+          <h2>An open EHR, built together</h2>
+          <a href="https://github.com/Eir-Space/eir-ehr" target="_blank" rel="noopener"
+            >Explore the repository</a
+          >
+        </div>
+        <p>
+          Swedish healthcare needs software that people can inspect, improve and adapt. Eir is an
+          independent, open collaboration to build that foundation: useful clinical workflows,
+          replaceable modules, modern APIs and AI that remains subject to clinical review.
+        </p>
+        <p>
+          This is an early working implementation, not a finished or certified clinical product. We
+          publish the source, limitations and delivery plan so contributors can see exactly what
+          works and what still needs to be built.
+        </p>
+        <div class="contribution-columns">
+          <section>
+            <h3>Contribute code</h3>
+            <p>
+              Fork the repository, choose a focused change, add tests and open a pull request. New
+              modules should declare their contracts, permissions and failure behavior.
+            </p>
+            <a
+              href="https://github.com/Eir-Space/eir-ehr/blob/main/CONTRIBUTING.md"
+              target="_blank"
+              rel="noopener"
+              >How to open a pull request</a
+            >
+          </section>
+          <section>
+            <h3>Bring clinical experience</h3>
+            <p>
+              Tell us where the workflow fails: consultations, handovers, consent, proxy access and
+              accessibility. Use fictional examples, never patient information.
+            </p>
+            <a
+              href="https://github.com/Eir-Space/eir-ehr/issues/new/choose"
+              target="_blank"
+              rel="noopener"
+              >Suggest a workflow or report a problem</a
+            >
+          </section>
+          <section>
+            <h3>Help the project grow</h3>
+            <p>
+              Improve documentation, review the design, test a country pack, or help specify Swedish
+              integrations. Working adapters and careful validation matter more than feature lists.
+            </p>
+            <a href="/guide.html#contribute" target="_blank" rel="noopener"
+              >Find a way to contribute</a
+            >
+          </section>
+        </div>
+        <nav class="public-links" aria-label="Project documentation">
+          <a
+            href="https://github.com/Eir-Space/eir-ehr/blob/main/docs/PLAN.md"
+            target="_blank"
+            rel="noopener"
+            >Roadmap &amp; safety gates</a
+          ><a
+            href="https://github.com/Eir-Space/eir-ehr/blob/main/docs/PLUGINS.md"
+            target="_blank"
+            rel="noopener"
+            >Build a plugin</a
+          ><a href="/guide.html" target="_blank" rel="noopener">Demo walkthrough</a>
+        </nav>
+      </div>
+    </section>
+    <dialog id="dialog">
+      <form id="dialog-form">
+        <div class="section-title">
+          <h2 id="dialog-title"></h2>
+          <button type="button" id="cancel-dialog" title="Stäng" aria-label="Stäng">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div id="dialog-fields"></div>
+        <p id="dialog-error" role="alert"></p>
+        <button class="primary" type="submit">Spara</button>
+      </form>
+    </dialog>
+  </body>
+</html>

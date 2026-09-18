@@ -1,0 +1,15 @@
+{
+  "profile": "sweden-primary-care",
+  "plugins": [
+    { "module": "./plugins/storage-sqlite.ts", "config": { "path": ".data/ehr.sqlite" } },
+    { "module": "./plugins/country-se.ts" },
+    { "module": "./plugins/identity-local.ts" },
+    { "module": "./plugins/access.ts" },
+    { "module": "./plugins/clinical.ts" },
+    { "module": "./plugins/ai-extractive.ts" },
+    { "module": "./plugins/ai-review.ts" },
+    { "module": "./plugins/fhir-r4.ts" }
+  ],
+  "chartRenderers": ["timeline", "table"],
+  "defaultRenderer": "timeline"
+}
