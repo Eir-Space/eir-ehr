@@ -108,6 +108,8 @@ export interface Identity {
   revoke?(token: string): void;
 }
 export interface Services {
+  medications: Medications;
+  laboratories: Laboratories;
   careTeam: CareTeam;
   terminology: Terminology;
   store: Store;
@@ -129,6 +131,29 @@ export interface CareTeam {
   createTask(actor: Actor, patientId: string, input: unknown): Entity;
   task(actor: Actor, id: string, action: string, version: number, input: unknown): Entity;
   encounterClosed(actor: Actor, encounterId: string): void;
+  // Domain services call these inside their own store transaction.
+  createLinkedTask(actor: Actor, patientId: string, input: unknown, orderId: string): Entity;
+  syncLinkedTask(
+    actor: Actor,
+    order: Entity,
+    event: 'result' | 'review' | 'cancel',
+    resolution?: string,
+  ): Entity;
+}
+export interface Medications {
+  list(
+    actor: Actor,
+    patientId: string,
+  ): { items: Entity[]; snapshot: string[]; review: Entity | null; current: boolean };
+  add(actor: Actor, patientId: string, input: unknown): Entity;
+  update(actor: Actor, id: string, version: number, input: unknown): Entity;
+  reconcile(actor: Actor, patientId: string, input: unknown): Entity;
+}
+export interface Laboratories {
+  order(actor: Actor, patientId: string, input: unknown): Entity;
+  receive(actor: Actor, id: string, version: number, input: unknown): Entity;
+  review(actor: Actor, id: string, version: number, input: unknown): Entity;
+  cancel(actor: Actor, id: string, version: number, input: unknown): Entity;
 }
 export interface Terminology {
   source: {

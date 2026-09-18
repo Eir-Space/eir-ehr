@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { patientInput, inputs } from '../plugins/clinical.ts';
 import { bookingInput } from './care-team.ts';
+import { medicationInput, medicationUpdate, reconciliationInput } from './medications.ts';
+import { labOrderInput, labReportInput, labReviewInput, labCancelInput } from './laboratories.ts';
 const json = (schema: Record<string, unknown>) => ({ 'application/json': { schema } });
 export function openApi() {
   const paths: Record<string, any> = {};
@@ -82,6 +84,58 @@ export function openApi() {
   route('/patients', 'get', 'Authorized patient directory');
   route('/patients', 'post', 'Register a patient', schema(patientInput), '201');
   route('/patients/{id}/chart', 'get', 'Authorized chart');
+  route(
+    '/patients/{id}/medications',
+    'get',
+    'Clinician-only statements and versioned reconciliation snapshot',
+  );
+  route(
+    '/patients/{id}/medications',
+    'post',
+    'Document medication use; not prescribing or dispensing',
+    schema(medicationInput),
+    '201',
+  );
+  route(
+    '/patients/{id}/medication-reviews',
+    'post',
+    'Reconcile exact medication and allergy versions',
+    schema(reconciliationInput),
+    '201',
+  );
+  const expected = (data: z.ZodType) =>
+    schema(z.object({ version: z.number().int().positive(), data }).strict());
+  route(
+    '/medications/{id}',
+    'post',
+    'Reasoned medication correction or status change',
+    expected(medicationUpdate),
+  );
+  route(
+    '/patients/{id}/lab-orders',
+    'post',
+    'Create local lab order and owned result follow-up',
+    schema(labOrderInput),
+    '201',
+  );
+  route(
+    '/lab-orders/{id}/receive',
+    'post',
+    'Record source-identified result; idempotent source/message ID',
+    expected(labReportInput),
+  );
+  route(
+    '/lab-orders/{id}/review',
+    'post',
+    'Review exact current report and close owned follow-up',
+    expected(labReviewInput),
+  );
+  route(
+    '/lab-orders/{id}/cancel',
+    'post',
+    'Cancel an order before results arrive',
+    expected(labCancelInput),
+  );
   route(
     '/patients/{id}/records/{kind}',
     'post',

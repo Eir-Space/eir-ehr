@@ -2,6 +2,7 @@ import type { Actor } from '../packages/contracts.ts';
 import type { Runtime } from '../packages/runtime.ts';
 import { vitals } from '../plugins/clinical.ts';
 import { Temporal } from '@js-temporal/polyfill';
+import { randomUUID } from 'node:crypto';
 
 // Fictional clinical scenarios. Local identifiers never resemble national identity numbers.
 const patients = [
@@ -108,6 +109,47 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
     clinical.transition(actor, history.id, 'sign', history.version, {});
     clinical.transition(actor, intake.id, 'close', intake.version, {});
     const encounter = clinical.create(actor, patient.id, 'encounter', { reason: scenario.reason });
+    const medicine = [
+      ['Enalapril 5 mg, tablett', 'Hypertoni'],
+      ['Metformin 500 mg, tablett', 'Typ 2-diabetes'],
+      ['Pulmicort Turbuhaler 200 mikrogram/dos', 'Astma'],
+    ][index];
+    if (medicine)
+      runtime.get('medications').add(actor, patient.id, {
+        clientId: randomUUID(),
+        name: medicine[0],
+        indication: medicine[1],
+        dosageText: null,
+        source: 'patient',
+        sourceDetail:
+          'Patienten uppger preparat och styrka. Dosering behöver stämmas av mot aktuell lista.',
+        status: 'active',
+      });
+    if (index < 2) {
+      const labs = runtime.get('laboratories');
+      const order = labs.order(actor, patient.id, {
+        clientId: randomUUID(),
+        encounterId: encounter.id,
+        test: index === 0 ? 'Kreatinin och kalium' : 'HbA1c',
+        question:
+          index === 0 ? 'Prover inför behandlingsuppföljning.' : 'Prov inför diabetesuppföljning.',
+        specimen: index === 0 ? 'Plasma' : 'Blod',
+        assigneeId: actor.id,
+        due: today,
+        priority: 'routine',
+      });
+      if (index === 0)
+        labs.receive(actor, order.id, order.version, {
+          source: 'Exempellaboratoriet',
+          messageId: 'LAB-2026-001',
+          collectedAt: days(-1),
+          reportedAt: days(0),
+          results: [
+            { name: 'P-Kreatinin', value: '78', unit: 'µmol/L', reference: '', flag: 'unknown' },
+            { name: 'P-Kalium', value: '4,2', unit: 'mmol/L', reference: '', flag: 'unknown' },
+          ],
+        });
+    }
     for (const [i, code] of Object.keys(vitals).entries()) {
       // Earlier readings are entered retrospectively; audit timestamps remain real.
       for (const [value, offset] of [

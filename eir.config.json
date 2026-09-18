@@ -32,6 +32,8 @@
       }
     },
     { "module": "./plugins/clinical.ts" },
+    { "module": "./plugins/medications.ts" },
+    { "module": "./plugins/laboratories.ts" },
     { "module": "./plugins/ai-extractive.ts" },
     { "module": "./plugins/ai-review.ts" },
     { "module": "./plugins/fhir-r4.ts" }

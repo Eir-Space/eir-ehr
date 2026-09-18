@@ -166,13 +166,13 @@ test('public care-team release exposes seeded worklists and working inbox on the
   await expect(page.locator('.appointment-row')).toHaveCount(4);
   await page.screenshot({ path: root + 'test-results/care-team-public.png', fullPage: true });
   await page.getByRole('button', { name: 'Inkorg', exact: true }).click();
-  await expect(page.locator('.task-row')).toHaveCount(8);
+  await expect(page.locator('.task-row')).toHaveCount(10);
   await page.getByLabel('Ansvarig', { exact: true }).selectOption('demo-clinician');
-  await expect(page.locator('.task-row')).toHaveCount(4);
+  await expect(page.locator('.task-row')).toHaveCount(6);
   await page.getByRole('button', { name: 'Slutför uppgift' }).first().click();
   await page.getByLabel('Åtgärd / resultat').fill('Uppföljning genomförd i testarbetsytan');
   await page.getByRole('button', { name: 'Slutför', exact: true }).click();
-  await expect(page.locator('.task-row')).toHaveCount(3);
+  await expect(page.locator('.task-row')).toHaveCount(5);
   await page.getByRole('button', { name: 'Logga ut', exact: true }).click();
   await expect(page.locator('#login')).toBeVisible();
 });

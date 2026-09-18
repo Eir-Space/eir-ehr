@@ -29,6 +29,8 @@ Local care assignments, proxy grants and the coarse restriction are development 
 
 ## Payloads
 
+Medication reconciliation and laboratory order/result routes have dedicated request schemas and ownership rules. See [the complete medication/results API and lifecycle](MEDICATIONS-AND-RESULTS.md). These are clinician-only workflows; patient/proxy chart, history, changes and export also omit their entities. Linked lab tasks can only be assigned/started through ordinary task transitions; receipt, review and cancellation are governed by the lab service.
+
 Care-team additions:
 
 - `/session` includes `{careTeam: {timeZone, members}}` for clinicians, otherwise `null`.
@@ -81,6 +83,6 @@ Access grant: `{actorId, role: "clinician" | "proxy", expires: ISO-8601 timestam
 
 ## Export And Change Feed
 
-FHIR output covers Patient, Encounter, Observation, Condition, AllergyIntolerance, DocumentReference and Task. Local references use Bundle UUID URNs; note content is base64 UTF-8. Local identifiers are institution-scoped; Swedish identifiers use the namespaces from the cited HL7 Sweden base guide. No profile conformance is asserted. Run a full FHIR validator and the intended national IG suite before exchange with another health system.
+FHIR output covers Patient, Encounter, Observation, Condition, AllergyIntolerance, DocumentReference, Task, MedicationStatement, ServiceRequest and DiagnosticReport. Laboratory reports contain their own Observation resources and only the latest report per order is exported. Local references use Bundle UUID URNs and contained-resource references; note content is base64 UTF-8. Local identifiers are institution-scoped; Swedish identifiers use the namespaces from the cited HL7 Sweden base guide. No profile conformance is asserted. Run a full FHIR validator and the intended national IG suite before exchange with another health system.
 
 The change feed exposes immutable historical versions in database cursor order, scoped to one authorized patient. Persist `nextCursor` even when the page contains no visible entries: hidden draft/proposal versions may have been scanned. Delivery is polling-based and at-least-once from a consumer's perspective. Deduplicate by `record.id` plus `record.version`. It is not a FHIR Subscription endpoint or a push webhook system. Audit access and chart changes are separate streams.

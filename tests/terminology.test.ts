@@ -102,7 +102,12 @@ test('fictional patient scenarios have distinct records, open work and immutable
     );
     assert.equal(chart.filter((r) => r.kind === 'note' && r.data.status === 'signed').length, 1);
     assert.equal(chart.filter((r) => r.kind === 'note' && r.data.status === 'draft').length, 1);
-    assert.equal(chart.filter((r) => r.kind === 'task').length, 2);
+    assert.equal(chart.filter((r) => r.kind === 'task' && !r.data.linkedOrderId).length, 2);
+    const labOrders = chart.filter((r) => r.kind === 'labOrder');
+    assert.equal(
+      chart.filter((r) => r.kind === 'task' && r.data.linkedOrderId).length,
+      labOrders.length,
+    );
     const observations = chart.filter((r) => r.kind === 'observation');
     assert.equal(observations.length, 10);
     assert.equal(new Set(observations.map((r) => r.data.effectiveAt)).size, 2);
