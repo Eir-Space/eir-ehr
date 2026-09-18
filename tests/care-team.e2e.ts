@@ -202,12 +202,14 @@ test('a lost create response does not duplicate a draft and closing drains newer
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(async () => {
+    // Close the browser before Fastify waits for its last in-flight chart refresh.
+    await browser?.close();
     await app.close();
     f.runtime.stop();
   });
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const page = await browser.newPage();
   page.setDefaultTimeout(10000);
   await page.goto(address);
@@ -230,7 +232,6 @@ test('a lost create response does not duplicate a draft and closing drains newer
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  t.after(() => release());
   let saving = false;
   await page.route(
     '**/records/*/save',
@@ -241,11 +242,14 @@ test('a lost create response does not duplicate a draft and closing drains newer
     },
     { times: 1 },
   );
-  await page.getByLabel('Journaltext', { exact: true }).fill('Första uppdateringen');
-  await expect.poll(() => saving).toBe(true);
-  await page.getByLabel('Journaltext', { exact: true }).fill('Senaste uppdateringen');
-  await page.getByRole('dialog').getByRole('button', { name: 'Stäng', exact: true }).click();
-  release();
+  try {
+    await page.getByLabel('Journaltext', { exact: true }).fill('Första uppdateringen');
+    await expect.poll(() => saving).toBe(true);
+    await page.getByLabel('Journaltext', { exact: true }).fill('Senaste uppdateringen');
+    await page.getByRole('dialog').getByRole('button', { name: 'Stäng', exact: true }).click();
+  } finally {
+    release();
+  }
   await expect(page.getByRole('dialog')).not.toBeVisible();
   const notes = f.store.list(doctor.tenant, f.patient.id, 'note');
   assert.equal(notes.length, 1);
