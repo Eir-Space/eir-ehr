@@ -6,6 +6,7 @@
     { "module": "./plugins/terminology-icd-se.ts" },
     { "module": "./plugins/identity-local.ts" },
     { "module": "./plugins/access.ts" },
+    { "module": "./plugins/care-team.ts" },
     { "module": "./plugins/clinical.ts" },
     { "module": "./plugins/ai-extractive.ts" },
     { "module": "./plugins/ai-review.ts" },

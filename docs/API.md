@@ -29,6 +29,17 @@ Local care assignments, proxy grants and the coarse restriction are development 
 
 ## Payloads
 
+Care-team additions:
+
+- `/session` includes `{careTeam: {timeZone, members}}` for clinicians, otherwise `null`.
+- `GET /care-team?day=YYYY-MM-DD` returns `{appointments, tasks}` limited to patients the actor can currently access. It does not grant access. Appointments overlap the selected clinic-local day; tasks include all due dates for client filtering.
+- `POST /patients/:id/appointments`: `{practitionerId, localStart: "YYYY-MM-DDTHH:mm", durationMinutes: 5..240, reason, type: "visit" | "phone" | "video"}`. The timezone comes from operator configuration, not the browser.
+- `POST /appointments/:id/:action`: `{version, data}`. Actions: `arrive`/`start` with `{}`, `reschedule` with a full booking payload, `cancel`/`no-show` with `{reason}`. Only the booked clinician may start. No-show rejects future/arrived bookings. Closing the linked clinical encounter completes the appointment atomically.
+- Task creation also accepts `{assigneeId?, priority?: "routine" | "urgent"}`; the default owner is the actor. Task transitions add `start` with `{}`, `assign` with `{assigneeId, reason}`, `reschedule` with `{due, reason}`, `cancel`/`reopen` with `{reason}`. `complete` optionally accepts `{resolution}`. The owner alone starts/completes/cancels; authorised colleagues may explicitly reassign with a reason.
+- Note creation accepts an optional UUID `clientId`. Retrying the same patient/author/encounter/text draft returns the existing record; mismatched or signed content returns 409. Subsequent autosaves use ordinary versioned `save` transitions.
+
+Internal task and appointment data is excluded from patient/proxy chart, version history and changes. Appointments are not yet mapped into the FHIR export. See [care-team behavior and limits](CARE-TEAM.md).
+
 Patient creation:
 
 ```json

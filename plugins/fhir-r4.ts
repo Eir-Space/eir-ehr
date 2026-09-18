@@ -142,6 +142,10 @@ export function project(e: Entity): Record<string, any> | null {
         status: d.status,
         intent: 'order',
         description: d.title,
+        ...(d.assigneeId
+          ? { owner: { identifier: { system: 'urn:eir:actor', value: d.assigneeId } } }
+          : {}),
+        priority: d.priority === 'urgent' ? 'urgent' : 'routine',
         for: subject,
         restriction: { period: { end: d.due } },
       };

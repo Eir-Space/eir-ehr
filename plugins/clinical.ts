@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { assert, Fault, type Clinical, type Plugin } from '../packages/contracts.ts';
+import { taskInput } from '../packages/care-team.ts';
 
 const text = z.string().trim().min(1).max(20000);
 const short = z.string().trim().min(1).max(200);
@@ -28,7 +29,7 @@ export const vitals: Record<string, { label: string; unit: string; min: number; 
 };
 export const inputs: Record<string, z.ZodType> = {
   encounter: z.object({ reason: short }).strict(),
-  note: z.object({ encounterId: id, text }).strict(),
+  note: z.object({ encounterId: id, text, clientId: id.optional() }).strict(),
   observation: z
     .object({
       encounterId: id,
@@ -46,35 +47,26 @@ export const inputs: Record<string, z.ZodType> = {
       criticality: z.enum(['low', 'high', 'unable-to-assess']),
     })
     .strict(),
-  task: z.object({ title: short, due: z.iso.date() }).strict(),
+  task: taskInput,
 };
 export default {
   id: 'eir.clinical',
   version: '1.0.0',
   apiVersion: 1,
   provides: ['clinical'],
-  requires: ['store', 'country', 'access', 'terminology'],
+  requires: ['store', 'country', 'access', 'terminology', 'careTeam'],
   setup(ctx) {
     const store = ctx.get('store'),
       access = ctx.get('access'),
       country = ctx.get('country');
     const terminology = ctx.get('terminology');
+    const careTeam = ctx.get('careTeam');
     const clinical: Clinical = {
       patients(actor) {
         store.audit(actor, 'patient.directory');
         return store
           .list(actor.tenant, undefined, 'patient')
-          .filter((patient) => {
-            if (actor.role === 'patient') return actor.patientId === patient.id;
-            if (!['clinician', 'proxy'].includes(actor.role)) return false;
-            const grant = store.getGrant(actor.tenant, patient.id, actor.id);
-            const blocked = store.isBlocked(actor.tenant, patient.id);
-            return (
-              !blocked &&
-              grant?.role === actor.role &&
-              String(grant.expires) > new Date().toISOString()
-            );
-          })
+          .filter((patient) => access.allowed(actor, patient.id))
           .map((patient) => {
             access.check(actor, patient.id);
             return patient;
@@ -119,11 +111,13 @@ export default {
           .filter(
             (e) =>
               actor.role === 'clinician' ||
-              (e.kind !== 'proposal' && (e.kind !== 'note' || e.data.status === 'signed')),
+              (!['proposal', 'task', 'appointment'].includes(e.kind) &&
+                (e.kind !== 'note' || e.data.status === 'signed')),
           );
       },
       create(actor, patientId, kind, input) {
         access.check(actor, patientId, true);
+        if (kind === 'task') return careTeam.createTask(actor, patientId, input);
         assert(inputs[kind], 422, 'Unsupported clinical record type');
         const parsed = inputs[kind].parse(input) as Record<string, any>;
         if (kind === 'condition') {
@@ -183,6 +177,22 @@ export default {
           } as Record<string, string>
         )[kind];
         return store.transaction(() => {
+          if (kind === 'note' && parsed.clientId) {
+            const previous = store
+              .list(actor.tenant, patientId, 'note')
+              .find((r) => r.data.clientId === parsed.clientId);
+            if (previous) {
+              assert(
+                previous.data.author === actor.id &&
+                  previous.data.encounterId === parsed.encounterId &&
+                  previous.data.status === 'draft' &&
+                  previous.data.text === parsed.text,
+                409,
+                'Draft already exists with different content. Reload the chart.',
+              );
+              return previous;
+            }
+          }
           if (kind === 'encounter')
             assert(
               !store
@@ -197,6 +207,7 @@ export default {
       transition(actor, entityId, action, version, input) {
         const entity = store.get(actor.tenant, entityId);
         assert(entity, 404, 'Record not found');
+        if (entity.kind === 'task') return careTeam.task(actor, entityId, action, version, input);
         access.check(actor, entity.patientId, true);
         assert(entity.version === version, 409, 'Record changed. Reload before saving.');
         return store.transaction(() => {
@@ -236,9 +247,6 @@ export default {
               'Sign draft notes before closing the encounter',
             );
             data = { ...data, status: 'finished', closedAt: new Date().toISOString() };
-          } else if (entity.kind === 'task' && action === 'complete') {
-            assert(data.status === 'requested', 409, 'Task already completed');
-            data = { ...data, status: 'completed', completedBy: actor.id };
           } else if (
             ['condition', 'allergy', 'observation'].includes(entity.kind) &&
             action === 'correct'
@@ -247,7 +255,10 @@ export default {
             assert(data.status !== 'entered-in-error', 409, 'Record already corrected');
             data = { ...data, status: 'entered-in-error', correctionReason: reason };
           } else throw new Fault(422, 'Unsupported clinical transition');
-          return store.revise(actor, entity, version, data, `${entity.kind}.${action}`);
+          const updated = store.revise(actor, entity, version, data, `${entity.kind}.${action}`);
+          if (entity.kind === 'encounter' && action === 'close')
+            careTeam.encounterClosed(actor, entity.id);
+          return updated;
         });
       },
       history(actor, entityId) {
@@ -259,7 +270,8 @@ export default {
           .filter(
             (e) =>
               actor.role === 'clinician' ||
-              (e.kind !== 'proposal' && (e.kind !== 'note' || e.data.status === 'signed')),
+              (!['proposal', 'task', 'appointment'].includes(e.kind) &&
+                (e.kind !== 'note' || e.data.status === 'signed')),
           );
       },
     };

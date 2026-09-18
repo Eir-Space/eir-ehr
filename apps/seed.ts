@@ -1,6 +1,7 @@
 import type { Actor } from '../packages/contracts.ts';
 import type { Runtime } from '../packages/runtime.ts';
 import { vitals } from '../plugins/clinical.ts';
+import { Temporal } from '@js-temporal/polyfill';
 
 // Fictional clinical scenarios. Local identifiers never resemble national identity numbers.
 const patients = [
@@ -64,6 +65,9 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
   const clinical = runtime.get('clinical');
   const terminology = runtime.get('terminology');
   const now = Date.now();
+  const team = runtime.get('careTeam');
+  const staff = team.members(actor);
+  const today = Temporal.Now.plainDateISO(team.timeZone).toString();
   const days = (offset: number) => new Date(now + offset * 86400000).toISOString();
   // Insert in reverse so the newest-first directory opens Anna's follow-up.
   for (const [index, scenario] of [...patients.entries()].reverse()) {
@@ -72,6 +76,16 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
       birthDate: scenario.birthDate,
       identifier: { type: 'local', value: `DEMO-00${index + 1}` },
     });
+    for (const member of staff)
+      runtime.get('access').grant(actor, patient.id, member.id, 'clinician', days(30));
+    const appointment = team.book(actor, patient.id, {
+      practitionerId: actor.id,
+      localStart: `${today}T${String(9 + index).padStart(2, '0')}:00`,
+      durationMinutes: 30,
+      reason: scenario.reason,
+      type: index === 3 ? 'phone' : 'visit',
+    });
+    if (index === 0) team.appointment(actor, appointment.id, 'arrive', appointment.version, {});
     for (const code of scenario.codes) {
       const term = terminology.lookup(code)!;
       clinical.create(actor, patient.id, 'condition', {
@@ -111,7 +125,12 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
     }
     clinical.create(actor, patient.id, 'note', { encounterId: encounter.id, text: scenario.note });
     for (const [i, title] of scenario.tasks.entries()) {
-      clinical.create(actor, patient.id, 'task', { title, due: days(3 + i * 11).slice(0, 10) });
+      clinical.create(actor, patient.id, 'task', {
+        title,
+        due: days(index === 1 && i === 0 ? -1 : 3 + i * 11).slice(0, 10),
+        assigneeId: i === 1 ? (staff[1]?.id ?? actor.id) : actor.id,
+        priority: index === 1 && i === 0 ? 'urgent' : 'routine',
+      });
     }
   }
 }

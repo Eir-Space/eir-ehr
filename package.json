@@ -29,6 +29,7 @@
   "dependencies": {
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^10.1.4",
+    "@js-temporal/polyfill": "^0.5.1",
     "csv-parse": "^7.0.2",
     "fastify": "^5.6.0",
     "lucide": "^0.468.0",

@@ -91,6 +91,13 @@
       </header>
       <div class="layout">
         <aside class="directory">
+          <nav id="workspace-nav" aria-label="Arbetsyta" hidden>
+            <button data-view="schedule"><i data-lucide="calendar-days"></i>Arbetslista</button>
+            <button data-view="inbox"><i data-lucide="inbox"></i>Inkorg</button>
+            <button data-view="chart" class="active">
+              <i data-lucide="folder-heart"></i>Patientjournal
+            </button>
+          </nav>
           <div class="section-title">
             <h2>Patienter</h2>
             <button id="register" title="Registrera patient" aria-label="Registrera patient">

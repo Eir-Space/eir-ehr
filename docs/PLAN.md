@@ -6,7 +6,7 @@ Baseline 2026-09-18. This is a delivery proposal with acceptance gates, not a cl
 
 Start with one Swedish primary-care practice and its complete consultation loop. It must eventually support reception/identity, appointments, encounters, history, measurements, clinical documentation, problem and allergy reconciliation, medicines, laboratory orders/results, referrals, tasks, communication and patient access. Hospital medication administration, theatre management, billing across 27 countries and inpatient order sets are later products.
 
-The current code is the executable foundation: registration, encounters, notes/sign/amend, selected vitals, problems/allergies, tasks, local identity/policy, audit, AI proposals, record export and plugin composition. It does not yet include scheduling, medication ordering, lab connectivity, referrals, attachments or national services. Unfinished capabilities are tracked here rather than exposed as fake modules.
+The current code is the executable foundation: registration, encounters, notes/sign/amend, selected vitals, problems/allergies, tasks, local identity/policy, audit, AI proposals, record export and plugin composition. The care-team release adds daily scheduling/check-in, assigned tasks with explicit handover and server-autosaved drafts with recovery/conflict handling (see CARE-TEAM.md). It does not yet include medication ordering, lab connectivity, referrals, attachments, automatic escalation or national services. Unfinished capabilities are tracked here rather than exposed as fake modules.
 
 ## Milestones
 

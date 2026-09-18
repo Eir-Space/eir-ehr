@@ -15,6 +15,7 @@ export const labels = {
   condition: 'Diagnos',
   allergy: 'Överkänslighet',
   task: 'Uppgift',
+  appointment: 'Bokning',
   proposal: 'AI-förslag',
 };
 export function display(e) {

@@ -22,6 +22,8 @@ Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.
 
 ## Working Modules
 
+The [care-team release](docs/CARE-TEAM.md) adds daily booking/check-in, a shared assigned inbox with explicit handover, encounter-linked appointment completion and server-autosaved drafts with conflict recovery. It keeps the public workspace disposable; persistent draft recovery is available in the local persistent installation.
+
 | Area                | Implemented behavior                                                                                                                                                     |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Clinical workspace  | Swedish patient directory, encounters, chart, notes, observations, diagnoses, allergies and follow-up tasks                                                              |

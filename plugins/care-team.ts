@@ -1,0 +1,311 @@
+import { Temporal } from '@js-temporal/polyfill';
+import { z } from 'zod';
+import { bookingInput, taskInput } from '../packages/care-team.ts';
+import {
+  assert,
+  Fault,
+  type Actor,
+  type CareTeam,
+  type Entity,
+  type Plugin,
+} from '../packages/contracts.ts';
+
+const short = z.string().trim().min(1).max(200);
+const reason = z.object({ reason: short }).strict();
+const empty = z.object({}).strict();
+const memberInput = z.object({ id: short, tenant: short, name: short, profession: short }).strict();
+const activeBooking = (r: Entity) => ['booked', 'arrived', 'in-progress'].includes(r.data.status);
+
+export default {
+  id: 'eir.care-team',
+  version: '1.0.0',
+  apiVersion: 1,
+  provides: ['careTeam'],
+  requires: ['store', 'access'],
+  setup(ctx, config) {
+    const store = ctx.get('store'),
+      access = ctx.get('access');
+    const settings = z
+      .object({
+        timeZone: z.string().default('Europe/Stockholm'),
+        members: z.array(memberInput).default([]),
+      })
+      .strict()
+      .parse(config);
+    Temporal.Now.zonedDateTimeISO(settings.timeZone);
+    assert(
+      new Set(settings.members.map((m) => `${m.tenant}/${m.id}`)).size === settings.members.length,
+      422,
+      'Duplicate team member',
+    );
+    const clinician = (actor: Actor) =>
+      assert(actor.role === 'clinician', 403, 'Clinician role required');
+    const members = (actor: Actor) => {
+      clinician(actor);
+      const rows = settings.members.filter((m) => m.tenant === actor.tenant);
+      return rows.some((m) => m.id === actor.id)
+        ? rows
+        : [
+            { id: actor.id, tenant: actor.tenant, name: actor.id, profession: 'Vårdpersonal' },
+            ...rows,
+          ];
+    };
+    const assignee = (actor: Actor, patientId: string, id: string) => {
+      assert(
+        members(actor).some((m) => m.id === id),
+        422,
+        'Unknown team member',
+      );
+      assert(
+        access.allowed({ ...actor, id }, patientId, true),
+        403,
+        'The selected team member has no active care relationship',
+      );
+    };
+    const current = (actor: Actor, id: string, kind: string, version: number) => {
+      clinician(actor);
+      const row = store.get(actor.tenant, id);
+      assert(row?.kind === kind, 404, 'Record not found');
+      access.check(actor, row.patientId, true);
+      assert(row.version === version, 409, 'Record changed. Reload before saving.');
+      return row;
+    };
+    const slot = (actor: Actor, patientId: string, input: unknown, except?: string) => {
+      const parsed = bookingInput.parse(input);
+      assignee(actor, patientId, parsed.practitionerId);
+      let startsAt: string, endsAt: string;
+      try {
+        const start = Temporal.PlainDateTime.from(parsed.localStart).toZonedDateTime(
+          settings.timeZone,
+          { disambiguation: 'reject' },
+        );
+        startsAt = start.toInstant().toString();
+        endsAt = start.add({ minutes: parsed.durationMinutes }).toInstant().toString();
+      } catch {
+        throw new Fault(422, 'Invalid or ambiguous clinic time. Choose another time.');
+      }
+      assert(
+        !store
+          .list(actor.tenant, undefined, 'appointment')
+          .some(
+            (r) =>
+              r.id !== except &&
+              activeBooking(r) &&
+              (r.patientId === patientId || r.data.practitionerId === parsed.practitionerId) &&
+              Date.parse(r.data.startsAt) < Date.parse(endsAt) &&
+              Date.parse(r.data.endsAt) > Date.parse(startsAt),
+          ),
+        409,
+        'The patient or clinician already has an overlapping appointment',
+      );
+      return { ...parsed, startsAt, endsAt, timeZone: settings.timeZone };
+    };
+    const service: CareTeam = {
+      timeZone: settings.timeZone,
+      members,
+      workspace(actor, day) {
+        clinician(actor);
+        z.iso.date().parse(day);
+        const start = Temporal.PlainDate.from(day).toZonedDateTime(settings.timeZone);
+        const end = start.add({ days: 1 });
+        const visible = new Set(
+          store
+            .list(actor.tenant, undefined, 'patient')
+            .filter((p) => access.allowed(actor, p.id))
+            .map((p) => p.id),
+        );
+        const appointments = store
+          .list(actor.tenant, undefined, 'appointment')
+          .filter(
+            (r) =>
+              visible.has(r.patientId) &&
+              Date.parse(r.data.startsAt) < end.epochMilliseconds &&
+              Date.parse(r.data.endsAt) > start.epochMilliseconds,
+          )
+          .sort((a, b) => a.data.startsAt.localeCompare(b.data.startsAt));
+        const tasks = store
+          .list(actor.tenant, undefined, 'task')
+          .filter((r) => visible.has(r.patientId))
+          .sort((a, b) => a.data.due.localeCompare(b.data.due) || a.id.localeCompare(b.id));
+        for (const id of new Set([...appointments, ...tasks].map((r) => r.patientId)))
+          access.check(actor, id);
+        store.audit(actor, 'care-team.workspace');
+        return { appointments, tasks };
+      },
+      book(actor, patientId, input) {
+        clinician(actor);
+        access.check(actor, patientId, true);
+        return store.transaction(() =>
+          store.insert(actor, 'appointment', patientId, {
+            ...slot(actor, patientId, input),
+            status: 'booked',
+            author: actor.id,
+          }),
+        );
+      },
+      appointment(actor, id, action, version, input) {
+        const row = current(actor, id, 'appointment', version);
+        return store.transaction(() => {
+          let data = { ...row.data };
+          if (action === 'reschedule') {
+            assert(data.status === 'booked', 409, 'Only a booked appointment can be rescheduled');
+            data = { ...data, ...slot(actor, row.patientId, input, id) };
+          } else if (action === 'cancel' || action === 'no-show') {
+            const parsed = reason.parse(input);
+            assert(
+              ['booked', 'arrived'].includes(data.status),
+              409,
+              'Appointment already started or closed',
+            );
+            if (action === 'no-show') {
+              assert(
+                data.status === 'booked' && Date.parse(data.startsAt) <= Date.now(),
+                409,
+                'Cannot mark a future or arrived appointment as no-show',
+              );
+            }
+            data = {
+              ...data,
+              status: action === 'cancel' ? 'cancelled' : 'no-show',
+              resolution: parsed.reason,
+            };
+          } else if (action === 'arrive') {
+            empty.parse(input);
+            assert(data.status === 'booked', 409, 'Appointment is not booked');
+            data = { ...data, status: 'arrived', arrivedAt: new Date().toISOString() };
+          } else if (action === 'start') {
+            empty.parse(input);
+            assert(
+              ['booked', 'arrived'].includes(data.status),
+              409,
+              'Appointment already started or closed',
+            );
+            assert(
+              data.practitionerId === actor.id,
+              403,
+              'Only the booked clinician can start this appointment',
+            );
+            let encounter = store
+              .list(actor.tenant, row.patientId, 'encounter')
+              .find((r) => r.data.status === 'in-progress');
+            assert(
+              !encounter ||
+                !store
+                  .list(actor.tenant, row.patientId, 'appointment')
+                  .some(
+                    (r) => r.data.status === 'in-progress' && r.data.encounterId === encounter!.id,
+                  ),
+              409,
+              'The current encounter is already linked to another appointment',
+            );
+            encounter ??= store.insert(actor, 'encounter', row.patientId, {
+              reason: data.reason,
+              status: 'in-progress',
+              author: actor.id,
+            });
+            data = {
+              ...data,
+              status: 'in-progress',
+              encounterId: encounter.id,
+              startedAt: new Date().toISOString(),
+            };
+          } else throw new Fault(422, 'Unsupported appointment action');
+          return store.revise(actor, row, version, data, `appointment.${action}`);
+        });
+      },
+      encounterClosed(actor, encounterId) {
+        const encounter = store.get(actor.tenant, encounterId);
+        assert(
+          encounter?.kind === 'encounter' && encounter.data.status === 'finished',
+          409,
+          'Encounter is not finished',
+        );
+        access.check(actor, encounter.patientId, true);
+        for (const row of store.list(actor.tenant, encounter.patientId, 'appointment')) {
+          if (row.data.encounterId === encounterId && row.data.status === 'in-progress') {
+            store.revise(
+              actor,
+              row,
+              row.version,
+              { ...row.data, status: 'completed', completedAt: encounter.data.closedAt },
+              'appointment.completed',
+            );
+          }
+        }
+      },
+      createTask(actor, patientId, input) {
+        clinician(actor);
+        access.check(actor, patientId, true);
+        const parsed = taskInput.parse(input);
+        const assigneeId = parsed.assigneeId ?? actor.id;
+        assignee(actor, patientId, assigneeId);
+        return store.transaction(() =>
+          store.insert(actor, 'task', patientId, {
+            ...parsed,
+            assigneeId,
+            status: 'requested',
+            author: actor.id,
+          }),
+        );
+      },
+      task(actor, id, action, version, input) {
+        const row = current(actor, id, 'task', version);
+        return store.transaction(() => {
+          let data = { ...row.data };
+          const owner = data.assigneeId ?? data.author;
+          if (action === 'assign') {
+            const parsed = z.object({ assigneeId: short, reason: short }).strict().parse(input);
+            assert(['requested', 'in-progress'].includes(data.status), 409, 'Task is closed');
+            assignee(actor, row.patientId, parsed.assigneeId);
+            data = {
+              ...data,
+              assigneeId: parsed.assigneeId,
+              assignmentReason: parsed.reason,
+              status: 'requested',
+            };
+          } else if (action === 'reschedule') {
+            const parsed = z.object({ due: z.iso.date(), reason: short }).strict().parse(input);
+            assert(['requested', 'in-progress'].includes(data.status), 409, 'Task is closed');
+            data = { ...data, due: parsed.due, rescheduleReason: parsed.reason };
+          } else if (action === 'reopen') {
+            const parsed = reason.parse(input);
+            assert(['completed', 'cancelled'].includes(data.status), 409, 'Task is already open');
+            assignee(actor, row.patientId, owner);
+            data = { ...data, status: 'requested', reopenedReason: parsed.reason };
+            delete data.completedAt;
+            delete data.completedBy;
+            delete data.resolution;
+          } else {
+            assert(['requested', 'in-progress'].includes(data.status), 409, 'Task is closed');
+            assert(owner === actor.id, 403, 'Reassign the task before acting for its owner');
+            if (action === 'start') {
+              empty.parse(input);
+              assert(data.status === 'requested', 409, 'Task is already in progress');
+              data = { ...data, status: 'in-progress' };
+            } else if (action === 'complete') {
+              const parsed = z.object({ resolution: short.optional() }).strict().parse(input);
+              data = {
+                ...data,
+                status: 'completed',
+                completedBy: actor.id,
+                completedAt: new Date().toISOString(),
+                ...parsed,
+              };
+            } else if (action === 'cancel') {
+              const parsed = reason.parse(input);
+              data = {
+                ...data,
+                status: 'cancelled',
+                resolution: parsed.reason,
+                completedBy: actor.id,
+                completedAt: new Date().toISOString(),
+              };
+            } else throw new Fault(422, 'Unsupported task action');
+          }
+          return store.revise(actor, row, version, data, `task.${action}`);
+        });
+      },
+    };
+    ctx.provide('careTeam', service);
+  },
+} satisfies Plugin;

@@ -72,9 +72,27 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
       let inner: FastifyInstance | undefined;
       try {
         // This separate profile never reads the local persistent clinical database.
-        const loaded = await fromConfig(resolve(root, 'eir.demo.config.json'));
-        runtime = loaded.runtime;
         const actor = { id: 'demo-clinician', tenant: randomUUID(), role: 'clinician' as const };
+        const loaded = await fromConfig(resolve(root, 'eir.demo.config.json'), {
+          'eir.care-team': {
+            members: [
+              { id: actor.id, tenant: actor.tenant, name: 'Emma Sjöberg', profession: 'Läkare' },
+              {
+                id: 'demo-nurse',
+                tenant: actor.tenant,
+                name: 'David Ek',
+                profession: 'Sjuksköterska',
+              },
+              {
+                id: 'demo-colleague',
+                tenant: actor.tenant,
+                name: 'Linnea Holm',
+                profession: 'Läkare',
+              },
+            ],
+          },
+        });
+        runtime = loaded.runtime;
         seedDemo(runtime, actor);
         const token = runtime.get('identity').issue!(actor);
         inner = await createApp(
