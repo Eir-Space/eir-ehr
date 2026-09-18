@@ -9,15 +9,16 @@ test('care team books, checks in, signs, closes, assigns and resolves work at de
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(async () => {
+    await browser?.close();
     await app.close();
     f.runtime.stop();
   });
   f.runtime
     .get('access')
     .grant(doctor, f.patient.id, 'nurse-a', 'clinician', '2099-01-01T00:00:00Z');
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
     timezoneId: 'America/New_York',
@@ -32,8 +33,25 @@ test('care team books, checks in, signs, closes, assigns and resolves work at de
   await page.getByRole('button', { name: 'Boka besök', exact: true }).click();
   await page.getByLabel('Tid (Europe/Stockholm)').fill('2026-09-21T09:00');
   await page.getByLabel('Kontaktorsak').fill('Återbesök');
+  let releaseRefresh!: () => void;
+  const refreshed = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  await page.route(
+    '**/api/patients',
+    async (route) => {
+      await refreshed;
+      await route.continue();
+    },
+    { times: 1 },
+  );
   await page.getByRole('button', { name: 'Boka', exact: true }).click();
-  await expect(page.getByRole('dialog')).not.toBeVisible();
+  try {
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await expect(page.getByLabel('Datum', { exact: true })).toBeDisabled();
+  } finally {
+    releaseRefresh();
+  }
   await page.getByLabel('Datum', { exact: true }).fill('2026-09-21');
   await expect(page.locator('.appointment-row')).toHaveCount(1);
   await expect(page.locator('.slot-time strong')).toHaveText('09:00');

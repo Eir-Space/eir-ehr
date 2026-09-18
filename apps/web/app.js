@@ -64,6 +64,13 @@ async function perform(fn) {
   if (busy) return;
   busy = true;
   $('#error').hidden = true;
+  const inputs = [...document.querySelectorAll('#shell input, #shell select')].map((control) => ({
+    control,
+    disabled: control.disabled,
+  }));
+  inputs.forEach(({ control }) => {
+    control.disabled = true;
+  });
   document.querySelectorAll('button').forEach((b) => (b.disabled = true));
   try {
     await fn();
@@ -75,6 +82,9 @@ async function perform(fn) {
     }
   } finally {
     busy = false;
+    inputs.forEach(({ control, disabled }) => {
+      control.disabled = disabled;
+    });
     document.querySelectorAll('button').forEach((b) => (b.disabled = false));
     icons();
   }
