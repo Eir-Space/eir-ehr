@@ -160,8 +160,29 @@ test('public care-team release exposes seeded worklists and working inbox on the
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(15000);
+  let releaseDirectory!: () => void;
+  const directoryReady = new Promise<void>((resolve) => {
+    releaseDirectory = resolve;
+  });
+  let directoryRequested = false;
+  await page.route(
+    '**/api/patients',
+    async (route) => {
+      directoryRequested = true;
+      await directoryReady;
+      await route.continue();
+    },
+    { times: 1 },
+  );
   await page.goto(address);
   await page.getByRole('button', { name: 'Öppna journalen' }).click();
+  try {
+    await expect.poll(() => directoryRequested).toBe(true);
+    await expect(page.locator('#shell')).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Öppna journalen' })).toBeDisabled();
+  } finally {
+    releaseDirectory();
+  }
   await page.getByRole('button', { name: 'Arbetslista', exact: true }).click();
   await expect(page.locator('.appointment-row')).toHaveCount(4);
   await page.screenshot({ path: root + 'test-results/care-team-public.png', fullPage: true });

@@ -86,9 +86,6 @@ async function login(token) {
     state.session = await api('/session');
     state.renderer = state.session.defaultRenderer;
     state.day = clinicDay(state.session.careTeam?.timeZone ?? 'Europe/Stockholm');
-    $('#login').hidden = true;
-    $('#shell').hidden = false;
-    $('#project-community').hidden = true;
     form.reset();
     $('#identity').textContent =
       state.session.careTeam?.members.find((m) => m.id === state.session.actor.id)?.name ??
@@ -96,6 +93,9 @@ async function login(token) {
     $('#workspace-nav').hidden = !canWrite();
     $('#register').hidden = !canWrite();
     await refreshPatients();
+    $('#login').hidden = true;
+    $('#shell').hidden = false;
+    $('#project-community').hidden = true;
   } catch (err) {
     state.token = '';
     $('#login').hidden = false;
