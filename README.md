@@ -58,6 +58,7 @@ npm run backup -- .data/ehr.sqlite /secure/path/ehr-backup.sqlite
 - [Sweden, Estonia, Denmark and EU evidence](docs/SOURCES.md)
 - [Operations and security boundaries](docs/OPERATIONS.md)
 - [Public demo hosting, cost controls and DNS](docs/HOSTING.md)
+- [Social preview and regeneration](docs/SHARING.md)
 
 The plugin design is informed by [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) and its Cordis-based service composition. Eir implements its own small typed runtime; it does not bundle the harness or claim Cordis compatibility.
 
