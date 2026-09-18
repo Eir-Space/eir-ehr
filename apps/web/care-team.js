@@ -76,7 +76,21 @@ export function renderCareTeam(
         .map((r) => {
           const isOwner = (r.data.assigneeId ?? r.data.author) === actorId;
           const overdue = taskOpen(r) && r.data.due < today;
-          return `<article class="work-row task-row" data-record-id="${r.id}"><div class="task-due ${overdue ? 'overdue' : ''}"><strong>${e(r.data.due)}</strong><small>${overdue ? 'Försenad' : 'Senast'}</small></div><div class="work-patient">${patientLink(r)}</div><div class="work-detail"><strong>${e(r.data.title)}</strong><small>${e(member(r.data.assigneeId ?? r.data.author))}${r.data.priority === 'urgent' ? ' · Hög prioritet' : ''}</small></div><span class="badge ${overdue ? 'draft' : ''}">${statusLabel[r.data.status]}</span><div class="row-actions">${taskOpen(r) ? (isOwner ? (r.data.status === 'requested' ? command('start-task', 'Påbörja uppgift', 'play', r.id) : '') + command('complete-task', 'Slutför uppgift', 'check', r.id) + command('cancel-task', 'Avbryt uppgift', 'x', r.id) : '') + command('assign-task', 'Byt ansvarig', 'user-round-cog', r.id) + command('reschedule-task', 'Ändra förfallodatum', 'calendar-clock', r.id) : command('reopen-task', 'Öppna uppgift igen', 'rotate-ccw', r.id)}${command('task-history', 'Uppgiftens historik', 'history', r.id)}</div>${r.data.resolution ? `<p class="work-resolution">${e(r.data.resolution)}</p>` : ''}</article>`;
+          const linkedActions =
+            command('lab-task', 'Öppna provbeställning', 'flask-conical', r.id) +
+            (taskOpen(r) ? command('assign-task', 'Byt ansvarig', 'user-round-cog', r.id) : '');
+          const ordinaryActions = taskOpen(r)
+            ? (isOwner
+                ? (r.data.status === 'requested'
+                    ? command('start-task', 'Påbörja uppgift', 'play', r.id)
+                    : '') +
+                  command('complete-task', 'Slutför uppgift', 'check', r.id) +
+                  command('cancel-task', 'Avbryt uppgift', 'x', r.id)
+                : '') +
+              command('assign-task', 'Byt ansvarig', 'user-round-cog', r.id) +
+              command('reschedule-task', 'Ändra förfallodatum', 'calendar-clock', r.id)
+            : command('reopen-task', 'Öppna uppgift igen', 'rotate-ccw', r.id);
+          return `<article class="work-row task-row" data-record-id="${r.id}"><div class="task-due ${overdue ? 'overdue' : ''}"><strong>${e(r.data.due)}</strong><small>${overdue ? 'Försenad' : 'Senast'}</small></div><div class="work-patient">${patientLink(r)}</div><div class="work-detail"><strong>${e(r.data.title)}</strong><small>${e(member(r.data.assigneeId ?? r.data.author))}${r.data.priority === 'urgent' ? ' · Hög prioritet' : ''}</small></div><span class="badge ${overdue ? 'draft' : ''}">${statusLabel[r.data.status]}</span><div class="row-actions">${r.data.linkedOrderId ? linkedActions : ordinaryActions}${command('task-history', 'Uppgiftens historik', 'history', r.id)}</div>${r.data.resolution ? `<p class="work-resolution">${e(r.data.resolution)}</p>` : ''}</article>`;
         })
         .join('') || '<p class="empty">Inga uppgifter i denna vy.</p>'
     }</div>`;

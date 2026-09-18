@@ -8,6 +8,8 @@ Start with one Swedish primary-care practice and its complete consultation loop.
 
 The current code is the executable foundation: registration, encounters, notes/sign/amend, selected vitals, problems/allergies, tasks, local identity/policy, audit, AI proposals, record export and plugin composition. The care-team release adds daily scheduling/check-in, assigned tasks with explicit handover and server-autosaved drafts with recovery/conflict handling (see CARE-TEAM.md). It does not yet include medication ordering, lab connectivity, referrals, attachments, automatic escalation or national services. Unfinished capabilities are tracked here rather than exposed as fake modules.
 
+The medication/results release now implements documented medication use, version-snapshotted medication/allergy reconciliation, local lab orders, source-labelled manual results, owned review and correction-triggered reopening (see MEDICATIONS-AND-RESULTS.md). It does not implement prescribing, dose checking, specimen collection or laboratory transmission. The next safety-critical targets are verified identity/access, persistent deployment isolation, and a real laboratory partner's transport plus critical-result escalation; those gates remain ahead of a care pilot.
+
 ## Milestones
 
 | Milestone                       | Indicative effort after team formed | Deliverables                                                                                                                                                                            | Exit evidence                                                                                                                                       |

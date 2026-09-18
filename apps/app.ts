@@ -5,6 +5,7 @@ import type { Runtime } from '../packages/runtime.ts';
 import { vitals } from '../plugins/clinical.ts';
 import { openApi } from '../packages/openapi.ts';
 import { baseApp, webFiles } from './http.ts';
+import { visibleRecord } from '../packages/visibility.ts';
 
 const uuid = z.uuid();
 const version = z.number().int().positive();
@@ -97,6 +98,50 @@ export async function createApp(
       api.get('/patients/:id/chart', async (req) =>
         clinical.chart(actor(req), uuid.parse((req.params as any).id)),
       );
+      api.get('/patients/:id/medications', async (req) =>
+        runtime.get('medications').list(actor(req), uuid.parse((req.params as any).id)),
+      );
+      api.post('/patients/:id/medications', async (req, reply) =>
+        reply
+          .code(201)
+          .send(
+            runtime
+              .get('medications')
+              .add(actor(req), uuid.parse((req.params as any).id), req.body),
+          ),
+      );
+      api.post('/patients/:id/medication-reviews', async (req, reply) =>
+        reply
+          .code(201)
+          .send(
+            runtime
+              .get('medications')
+              .reconcile(actor(req), uuid.parse((req.params as any).id), req.body),
+          ),
+      );
+      api.post('/medications/:id', async (req) => {
+        const body = z.object({ version, data: z.unknown() }).strict().parse(req.body);
+        return runtime
+          .get('medications')
+          .update(actor(req), uuid.parse((req.params as any).id), body.version, body.data);
+      });
+      api.post('/patients/:id/lab-orders', async (req, reply) =>
+        reply
+          .code(201)
+          .send(
+            runtime
+              .get('laboratories')
+              .order(actor(req), uuid.parse((req.params as any).id), req.body),
+          ),
+      );
+      for (const action of ['receive', 'review', 'cancel'] as const) {
+        api.post(`/lab-orders/:id/${action}`, async (req) => {
+          const body = z.object({ version, data: z.unknown() }).strict().parse(req.body);
+          return runtime
+            .get('laboratories')
+            [action](actor(req), uuid.parse((req.params as any).id), body.version, body.data);
+        });
+      }
       api.post('/patients/:id/records/:kind', async (req, reply) =>
         reply
           .code(201)
@@ -136,12 +181,7 @@ export async function createApp(
           .max(Number.MAX_SAFE_INTEGER)
           .parse((req.query as any).after ?? 0);
         const rows = store.changes(a.tenant, patientId, after);
-        const entries = rows.filter(
-          ({ record }) =>
-            a.role === 'clinician' ||
-            (!['proposal', 'task', 'appointment'].includes(record.kind) &&
-              (record.kind !== 'note' || record.data.status === 'signed')),
-        );
+        const entries = rows.filter(({ record }) => visibleRecord(a, record));
         return { entries, nextCursor: rows.length ? Number(rows.at(-1)!.cursor) : after };
       });
       api.get('/patients/:id/export/fhir', async (req, reply) => {

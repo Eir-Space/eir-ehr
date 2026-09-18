@@ -2,27 +2,46 @@ import { z } from 'zod';
 import { assert, type Entity, type Plugin } from '../packages/contracts.ts';
 
 export function evidenceFor(chart: Entity[], encounterId: string) {
+  const currentReports = new Set(
+    chart.filter((r) => r.kind === 'labOrder').map((r) => r.data.reportId),
+  );
   return chart
     .filter(
       (e) =>
-        ['condition', 'allergy', 'observation', 'note', 'encounter'].includes(e.kind) &&
+        [
+          'condition',
+          'allergy',
+          'observation',
+          'note',
+          'encounter',
+          'medication',
+          'labReport',
+          'labOrder',
+        ].includes(e.kind) &&
         e.data.status !== 'entered-in-error' &&
-        (['condition', 'allergy'].includes(e.kind) ||
+        (e.kind !== 'labReport' || currentReports.has(e.id)) &&
+        (['condition', 'allergy', 'medication'].includes(e.kind) ||
           e.id === encounterId ||
           e.data.encounterId === encounterId),
     )
     .map((e) => ({
       ref: `${e.id}@${e.version}`,
       text:
-        e.kind === 'note'
-          ? String(e.data.text)
-          : e.kind === 'observation'
-            ? `${e.data.display}: ${e.data.value} ${e.data.unit} (${e.data.effectiveAt})`
-            : e.kind === 'condition'
-              ? `${e.data.code.display} (${e.data.code.system}|${e.data.code.code})`
-              : e.kind === 'allergy'
-                ? `Allergi: ${e.data.substance}. Reaktion: ${e.data.reaction}.`
-                : `Kontaktorsak: ${e.data.reason}`,
+        e.kind === 'medication'
+          ? `Dokumenterad läkemedelsanvändning: ${e.data.name}. Status: ${e.data.status}. Dosering: ${e.data.dosageText ?? 'okänd'}. Källa: ${e.data.source} (${e.data.sourceDetail}). Inte ett recept eller expedieringsbevis.`
+          : e.kind === 'labOrder'
+            ? `Provbeställning: ${e.data.test}. Status: ${e.data.status}. Frågeställning: ${e.data.question}.`
+            : e.kind === 'labReport'
+              ? `Provsvar från ${e.data.source}, ${e.data.reportedAt}: ${e.data.results.map((r: any) => `${r.name}: ${r.value} ${r.unit}; referens: ${r.reference || 'saknas'}; markering från källan: ${r.flag}`).join('. ')}. Svarsversion: ${e.data.messageId}.`
+              : e.kind === 'note'
+                ? String(e.data.text)
+                : e.kind === 'observation'
+                  ? `${e.data.display}: ${e.data.value} ${e.data.unit} (${e.data.effectiveAt})`
+                  : e.kind === 'condition'
+                    ? `${e.data.code.display} (${e.data.code.system}|${e.data.code.code})`
+                    : e.kind === 'allergy'
+                      ? `Allergi: ${e.data.substance}. Reaktion: ${e.data.reaction}.`
+                      : `Kontaktorsak: ${e.data.reason}`,
     }));
 }
 const outputSchema = z

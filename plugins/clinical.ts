@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { assert, Fault, type Clinical, type Plugin } from '../packages/contracts.ts';
 import { taskInput } from '../packages/care-team.ts';
+import { visibleRecord } from '../packages/visibility.ts';
 
 const text = z.string().trim().min(1).max(20000);
 const short = z.string().trim().min(1).max(200);
@@ -106,14 +107,7 @@ export default {
       },
       chart(actor, patientId) {
         access.check(actor, patientId);
-        return store
-          .list(actor.tenant, patientId)
-          .filter(
-            (e) =>
-              actor.role === 'clinician' ||
-              (!['proposal', 'task', 'appointment'].includes(e.kind) &&
-                (e.kind !== 'note' || e.data.status === 'signed')),
-          );
+        return store.list(actor.tenant, patientId).filter((e) => visibleRecord(actor, e));
       },
       create(actor, patientId, kind, input) {
         access.check(actor, patientId, true);
@@ -265,14 +259,7 @@ export default {
         const entity = store.get(actor.tenant, entityId);
         assert(entity, 404, 'Record not found');
         access.check(actor, entity.patientId);
-        return store
-          .history(actor.tenant, entityId)
-          .filter(
-            (e) =>
-              actor.role === 'clinician' ||
-              (!['proposal', 'task', 'appointment'].includes(e.kind) &&
-                (e.kind !== 'note' || e.data.status === 'signed')),
-          );
+        return store.history(actor.tenant, entityId).filter((e) => visibleRecord(actor, e));
       },
     };
     ctx.provide('clinical', clinical);

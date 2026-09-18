@@ -12,6 +12,88 @@ export function project(e: Entity): Record<string, any> | null {
   };
   const subject = reference(e.patientId);
   switch (e.kind) {
+    case 'medication':
+      return {
+        ...common,
+        resourceType: 'MedicationStatement',
+        status: d.status,
+        medicationCodeableConcept: { text: d.name },
+        subject,
+        dateAsserted: e.updatedAt,
+        informationSource: d.source === 'patient' ? subject : { display: d.sourceDetail },
+        ...(d.dosageText ? { dosage: [{ text: d.dosageText }] } : {}),
+        ...(d.indication ? { reasonCode: [{ text: d.indication }] } : {}),
+        note: [{ text: `${d.source}: ${d.sourceDetail}${d.reason ? '. ' + d.reason : ''}` }],
+      };
+    case 'labOrder':
+      return {
+        ...common,
+        resourceType: 'ServiceRequest',
+        status:
+          d.status === 'cancelled' ? 'revoked' : d.status === 'reviewed' ? 'completed' : 'active',
+        intent: 'order',
+        priority: d.priority,
+        code: { text: d.test },
+        subject,
+        encounter: reference(d.encounterId),
+        authoredOn: e.createdAt,
+        requester: { identifier: { system: 'urn:eir:actor', value: d.author } },
+        reasonCode: [{ text: d.question }],
+        note: [
+          { text: `Provmaterial: ${d.specimen}. Local order; no external transmission recorded.` },
+        ],
+      };
+    case 'labReport':
+      return {
+        ...common,
+        resourceType: 'DiagnosticReport',
+        status: d.status,
+        code: { text: 'Laboratoriesvar' },
+        subject,
+        encounter: reference(d.encounterId),
+        basedOn: [reference(d.orderId)],
+        effectiveDateTime: d.collectedAt,
+        issued: d.reportedAt,
+        identifier: [
+          {
+            system: `urn:eir:lab-source:${encodeURIComponent(e.tenant)}:${encodeURIComponent(d.source)}`,
+            value: d.messageId,
+          },
+        ],
+        performer: [{ display: d.source }],
+        contained: d.results.map((r: any, i: number) => ({
+          resourceType: 'Observation',
+          id: `result-${i}`,
+          status: d.status,
+          code: { text: r.name },
+          subject,
+          effectiveDateTime: d.collectedAt,
+          valueString: `${r.value}${r.unit ? ' ' + r.unit : ''}`,
+          ...(r.reference ? { referenceRange: [{ text: r.reference }] } : {}),
+          ...(r.flag !== 'unknown'
+            ? {
+                interpretation: [
+                  {
+                    coding: [
+                      {
+                        system:
+                          'http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation',
+                        code: (
+                          { normal: 'N', high: 'H', low: 'L', critical: 'AA' } as Record<
+                            string,
+                            string
+                          >
+                        )[r.flag],
+                      },
+                    ],
+                  },
+                ],
+              }
+            : {}),
+        })),
+        result: d.results.map((_: unknown, i: number) => ({ reference: `#result-${i}` })),
+        ...(d.correctionReason ? { conclusion: `Rättelse: ${d.correctionReason}` } : {}),
+      };
     case 'patient':
       return {
         ...common,
@@ -165,7 +247,14 @@ export default {
     ctx.provide('fhir', {
       bundle(actor, patientId) {
         const entities = clinical.chart(actor, patientId);
-        const resources = entities.map(project).filter((r): r is Record<string, any> => r !== null);
+        // Superseded reports stay in the clinical history, not alongside current reports in an export.
+        const currentReports = new Set(
+          entities.filter((r) => r.kind === 'labOrder').map((r) => r.data.reportId),
+        );
+        const resources = entities
+          .filter((r) => r.kind !== 'labReport' || currentReports.has(r.id))
+          .map(project)
+          .filter((r): r is Record<string, any> => r !== null);
         store.audit(actor, 'fhir.export', patientId);
         return {
           resourceType: 'Bundle',

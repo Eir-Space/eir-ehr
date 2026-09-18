@@ -39,6 +39,8 @@ The shell itself can also be replaced: the JSON APIs are independent of its DOM/
 
 ## Compatibility And Trust
 
+Medication/result profiles add `Medications` and `Laboratories` providers. The default providers are independently replaceable; schemas and API requests are documented in [medication/result contracts](MEDICATIONS-AND-RESULTS.md). Custom `CareTeam` providers need the two transaction-aware linked-task operations, and must prevent generic task completion from bypassing report review. The default shell needs both services; removing a provider requires an alternate shell/profile rather than leaving nonfunctional controls visible.
+
 The care-team release requires a `CareTeam` provider in each clinical profile and an `Access.allowed` predicate consistent with audited `Access.check`. The default profiles include both. See [care-team contracts and compatibility](CARE-TEAM.md) before upgrading custom providers. `apps/web/care-team.js` and `draft-editor.js` are separate shell modules; neither bypasses clinical authorization or record-version checks.
 
 `apiVersion` gates runtime contracts. Plugin semantic versions are visible in `/api/plugins`. Lockfile changes need review and regression tests. This preview does not promise binary compatibility for every minor release; changes to storage or clinical contracts require a documented migration and updated tests.

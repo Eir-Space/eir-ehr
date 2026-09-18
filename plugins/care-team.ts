@@ -248,8 +248,89 @@ export default {
           }),
         );
       },
+      createLinkedTask(actor, patientId, input, orderId) {
+        clinician(actor);
+        access.check(actor, patientId, true);
+        const parsed = taskInput.parse(input);
+        const assigneeId = parsed.assigneeId ?? actor.id;
+        assignee(actor, patientId, assigneeId);
+        const order = store.get(actor.tenant, orderId);
+        assert(
+          order?.kind === 'labOrder' && order.patientId === patientId,
+          409,
+          'Invalid linked order',
+        );
+        assert(
+          !store
+            .list(actor.tenant, patientId, 'task')
+            .some((r) => r.data.linkedOrderId === orderId),
+          409,
+          'Order already has follow-up',
+        );
+        return store.insert(actor, 'task', patientId, {
+          ...parsed,
+          assigneeId,
+          linkedOrderId: orderId,
+          status: 'requested',
+          author: actor.id,
+        });
+      },
+      syncLinkedTask(actor, order, event, resolution) {
+        clinician(actor);
+        access.check(actor, order.patientId, true);
+        const saved = store.get(actor.tenant, order.id);
+        assert(saved?.kind === 'labOrder' && saved.version === order.version, 409, 'Order changed');
+        const row = store
+          .list(actor.tenant, order.patientId, 'task')
+          .find((r) => r.data.linkedOrderId === order.id);
+        assert(row, 409, 'Order follow-up is missing');
+        let data = { ...row.data };
+        if (event === 'result') {
+          assert(saved.data.status === 'received', 409, 'Order has no new result');
+          const today = Temporal.Now.plainDateISO(settings.timeZone).toString();
+          data = {
+            ...data,
+            status: 'requested',
+            title:
+              `${saved.data.critical ? 'Kritiskt provsvar' : 'Granska provsvar'}: ${saved.data.test}`.slice(
+                0,
+                200,
+              ),
+            priority: saved.data.critical ? 'urgent' : saved.data.priority,
+            due: data.due < today ? data.due : today,
+            reportId: saved.data.reportId,
+          };
+          delete data.completedAt;
+          delete data.completedBy;
+          delete data.resolution;
+        } else {
+          assert(
+            data.assigneeId === actor.id,
+            403,
+            'Reassign the follow-up before acting for its owner',
+          );
+          assert(
+            saved.data.status === (event === 'review' ? 'reviewed' : 'cancelled'),
+            409,
+            'Order state does not match follow-up',
+          );
+          data = {
+            ...data,
+            status: event === 'review' ? 'completed' : 'cancelled',
+            resolution,
+            completedAt: new Date().toISOString(),
+            completedBy: actor.id,
+          };
+        }
+        return store.revise(actor, row, row.version, data, `task.lab-${event}`);
+      },
       task(actor, id, action, version, input) {
         const row = current(actor, id, 'task', version);
+        assert(
+          !row.data.linkedOrderId || ['assign', 'start'].includes(action),
+          409,
+          'Linked lab follow-up must be resolved through the lab order and current report',
+        );
         return store.transaction(() => {
           let data = { ...row.data };
           const owner = data.assigneeId ?? data.author;

@@ -2,6 +2,7 @@ import { escape as e, date, display } from './renderers/shared.js';
 import { diagnosisFields, diagnosisPicker } from './diagnosis-picker.js';
 import { renderCareTeam, clinicDay, moveDay, taskOpen, statusLabel } from './care-team.js';
 import { draftEditor } from './draft-editor.js';
+import { renderMedications, renderLabs, workflowAction } from './clinical-workflows.js';
 const $ = (s) => document.querySelector(s);
 const state = {
   token: '',
@@ -378,6 +379,17 @@ function bookingDialog(record) {
 async function careAction(name, id) {
   const appointment = state.team.appointments.find((r) => r.id === id);
   const task = state.team.tasks.find((r) => r.id === id);
+  if (name === 'lab-task') {
+    state.patient = state.patients.find((p) => p.id === task.patientId);
+    state.view = 'chart';
+    state.tab = 'labs';
+    renderPatients();
+    await refreshChart();
+    document
+      .querySelector(`[data-record-id="${task.data.linkedOrderId}"]`)
+      ?.scrollIntoView({ block: 'center' });
+    return;
+  }
   if (name === 'chart') {
     state.patient = state.patients.find((p) => p.id === id);
     state.view = 'chart';
@@ -522,6 +534,12 @@ async function render() {
     ['overview', 'Översikt'],
     ['journal', 'Journal'],
     ['notes', 'Anteckningar'],
+    ...(canWrite()
+      ? [
+          ['medications', 'Läkemedel'],
+          ['labs', 'Prover och svar'],
+        ]
+      : []),
     ['tasks', 'Uppgifter'],
     ['ai', 'AI-granskning'],
     ['plugins', 'Moduler'],
@@ -559,6 +577,10 @@ async function render() {
     $('#renderer').disabled = false;
   }
   if (state.tab === 'notes') renderNotes(content);
+  if (state.tab === 'medications' && canWrite())
+    renderMedications(content, state.chart, memberName);
+  if (state.tab === 'labs' && canWrite())
+    renderLabs(content, state.chart, state.session.actor.id, memberName, !!open);
   if (state.tab === 'tasks') renderTasks(content);
   if (state.tab === 'ai') renderAI(content);
   if (state.tab === 'plugins') {
@@ -640,7 +662,7 @@ function renderTasks(target) {
     kinds('task')
       .map(
         (r) =>
-          `<div class="row"><div><strong>${e(r.data.title)}</strong><small>Senast ${e(r.data.due)} · ${e(memberName(r.data.assigneeId ?? r.data.author))}</small></div><div class="actions"><span class="badge">${statusLabel[r.data.status]}</span>${canWrite() && taskOpen(r) && (r.data.assigneeId ?? r.data.author) === state.session.actor.id ? button('complete', 'Markera klar', 'check', `data-id="${r.id}"`) : ''}</div></div>`,
+          `<div class="row"><div><strong>${e(r.data.title)}</strong><small>Senast ${e(r.data.due)} · ${e(memberName(r.data.assigneeId ?? r.data.author))}</small></div><div class="actions"><span class="badge">${statusLabel[r.data.status]}</span>${r.data.linkedOrderId ? button('open-labs', 'Provsvar', 'flask-conical') : canWrite() && taskOpen(r) && (r.data.assigneeId ?? r.data.author) === state.session.actor.id ? button('complete', 'Markera klar', 'check', `data-id="${r.id}"`) : ''}</div></div>`,
       )
       .join('') || '<p class="empty">Inga uppgifter.</p>'
   }`;
@@ -666,6 +688,21 @@ function bindActions() {
 async function action(name, id) {
   const r = state.chart.find((r) => r.id === id);
   const current = encounter();
+  if (name === 'open-labs') {
+    state.tab = 'labs';
+    return render();
+  }
+  if (name.startsWith('med-') || name.startsWith('lab-'))
+    return workflowAction(name, id, {
+      chart: state.chart,
+      patientId: state.patient.id,
+      encounterId: current?.id,
+      actorId: state.session.actor.id,
+      memberName,
+      memberSelect,
+      api,
+      modal,
+    });
   if (name === 'encounter')
     return modal('Ny vårdkontakt', field('reason', 'Kontaktorsak'), (values) =>
       create('encounter', values),

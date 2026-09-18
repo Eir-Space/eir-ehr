@@ -24,6 +24,8 @@ Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.
 
 The [care-team release](docs/CARE-TEAM.md) adds daily booking/check-in, a shared assigned inbox with explicit handover, encounter-linked appointment completion and server-autosaved drafts with conflict recovery. It keeps the public workspace disposable; persistent draft recovery is available in the local persistent installation.
 
+The [medication and results release](docs/MEDICATIONS-AND-RESULTS.md) adds versioned medication reconciliation and a local order-to-result-to-review loop. Report corrections reopen assigned follow-up; critical results require explicit acknowledgement. Neither module claims external prescribing or laboratory connectivity.
+
 | Area                | Implemented behavior                                                                                                                                                     |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Clinical workspace  | Swedish patient directory, encounters, chart, notes, observations, diagnoses, allergies and follow-up tasks                                                              |
@@ -33,7 +35,7 @@ The [care-team release](docs/CARE-TEAM.md) adds daily booking/check-in, a shared
 | Access              | Hashed local sessions, tenant scoping, expiring care relationships, expiring proxy grants, patient self-access and a coarse patient restriction                          |
 | Audit               | Persisted read/write decisions, append-only SQL guards, hash-chain verification on startup                                                                               |
 | AI                  | Replaceable extractive or local Ollama provider, bounded input, persisted evidence and exact citations, clinician review, stale-context rejection, draft-only acceptance |
-| APIs                | Authenticated JSON clinical API, ordered patient change feed, seven-resource FHIR R4 export projection                                                                   |
+| APIs                | Authenticated JSON clinical API, ordered patient change feed, FHIR R4 projection including medication statements and lab orders/results                                  |
 | Extensibility       | Dependency-declared services, versioned manifests, startup validation, rollback/disposal, configurable server modules and chart renderers                                |
 
 All displayed national-service connections are **not connected**. No fictitious connectivity or eHealth maturity scores are generated. The extractive provider is visibly identified as not using a language model.

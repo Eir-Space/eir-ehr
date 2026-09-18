@@ -14,6 +14,7 @@ test('public visitor can start, use the real chart and read the contributor guid
   const browser = await chromium.launch({ headless: true });
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
+  page.setDefaultTimeout(15000);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(address);
@@ -51,7 +52,10 @@ test('public visitor can start, use the real chart and read the contributor guid
   assert.equal(await page.locator('#dialog-error').textContent(), '');
   await page.screenshot({ path: root + 'test-results/diagnosis-picker.png', fullPage: true });
   await page.getByRole('button', { name: 'Spara', exact: true }).click();
-  await page.getByText('Allergisk rinit orsakad av pollen', { exact: true }).waitFor();
+  await page
+    .locator('#content')
+    .getByText('Allergisk rinit orsakad av pollen', { exact: true })
+    .waitFor();
   await page.route('**/api/terminology/diagnoses?*', (route) =>
     route.fulfill({
       status: 503,
