@@ -66,6 +66,7 @@ export interface Country {
   };
 }
 export interface Access {
+  allowed(actor: Actor, patientId: string, write?: boolean): boolean;
   check(actor: Actor, patientId: string, write?: boolean): void;
   grant(
     actor: Actor,
@@ -107,6 +108,7 @@ export interface Identity {
   revoke?(token: string): void;
 }
 export interface Services {
+  careTeam: CareTeam;
   terminology: Terminology;
   store: Store;
   country: Country;
@@ -116,6 +118,17 @@ export interface Services {
   aiReview: AIReview;
   fhir: Fhir;
   identity: Identity;
+}
+export type TeamMember = { id: string; tenant: string; name: string; profession: string };
+export interface CareTeam {
+  timeZone: string;
+  members(actor: Actor): TeamMember[];
+  workspace(actor: Actor, day: string): { appointments: Entity[]; tasks: Entity[] };
+  book(actor: Actor, patientId: string, input: unknown): Entity;
+  appointment(actor: Actor, id: string, action: string, version: number, input: unknown): Entity;
+  createTask(actor: Actor, patientId: string, input: unknown): Entity;
+  task(actor: Actor, id: string, action: string, version: number, input: unknown): Entity;
+  encounterClosed(actor: Actor, encounterId: string): void;
 }
 export interface Terminology {
   source: {

@@ -7,6 +7,13 @@ export const doctor: Actor = { id: 'doctor-a', tenant: 'clinic-a', role: 'clinic
 export async function fixture(path = ':memory:') {
   const { runtime } = await fromConfig(root + 'eir.config.json', {
     'eir.storage.sqlite': { path },
+    'eir.care-team': {
+      members: [
+        { id: 'doctor-a', tenant: 'clinic-a', name: 'Emma Sjöberg', profession: 'Läkare' },
+        { id: 'nurse-a', tenant: 'clinic-a', name: 'David Ek', profession: 'Sjuksköterska' },
+        { id: 'doctor-b', tenant: 'clinic-b', name: 'Other clinician', profession: 'Läkare' },
+      ],
+    },
   });
   const clinical = runtime.get('clinical'),
     store = runtime.get('store') as SqliteStore;

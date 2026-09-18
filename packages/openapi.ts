@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { patientInput, inputs } from '../plugins/clinical.ts';
+import { bookingInput } from './care-team.ts';
 const json = (schema: Record<string, unknown>) => ({ 'application/json': { schema } });
 export function openApi() {
   const paths: Record<string, any> = {};
@@ -37,6 +38,38 @@ export function openApi() {
   route('/session', 'get', 'Authenticated context');
   route('/logout', 'post', 'Revoke local session', { type: 'object' });
   route('/plugins', 'get', 'Active plugin manifests');
+  route('/care-team', 'get', 'Authorized day worklist and patient-scoped task inbox');
+  paths['/care-team'].get.parameters = [
+    { in: 'query', name: 'day', required: true, schema: { type: 'string', format: 'date' } },
+  ];
+  route(
+    '/patients/{id}/appointments',
+    'post',
+    'Book a non-overlapping clinic-local appointment',
+    schema(bookingInput),
+    '201',
+  );
+  route(
+    '/appointments/{id}/{action}',
+    'post',
+    'Expected-version appointment transition',
+    schema(
+      z
+        .object({
+          version: z.number().int().positive(),
+          data: z.union([
+            bookingInput,
+            z.object({ reason: z.string().min(1).max(200) }).strict(),
+            z.object({}).strict(),
+          ]),
+        })
+        .strict(),
+    ),
+  );
+  paths['/appointments/{id}/{action}'].post.parameters[1].schema = {
+    type: 'string',
+    enum: ['arrive', 'start', 'reschedule', 'cancel', 'no-show'],
+  };
   route('/terminology/diagnoses', 'get', 'Search the configured diagnosis catalogue');
   paths['/terminology/diagnoses'].get.parameters = [
     { in: 'query', name: 'q', schema: { type: 'string', maxLength: 100, default: '' } },
@@ -75,7 +108,19 @@ export function openApi() {
   );
   paths['/records/{id}/{action}'].post.parameters[1].schema = {
     type: 'string',
-    enum: ['save', 'sign', 'amend', 'close', 'complete', 'correct'],
+    enum: [
+      'save',
+      'sign',
+      'amend',
+      'close',
+      'complete',
+      'correct',
+      'start',
+      'assign',
+      'reschedule',
+      'cancel',
+      'reopen',
+    ],
   };
   route('/records/{id}/history', 'get', 'Authorized record versions');
   route('/patients/{id}/changes', 'get', 'Patient-scoped durable changes');

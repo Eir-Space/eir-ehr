@@ -6,6 +6,31 @@
     { "module": "./plugins/terminology-icd-se.ts" },
     { "module": "./plugins/identity-local.ts" },
     { "module": "./plugins/access.ts" },
+    {
+      "module": "./plugins/care-team.ts",
+      "config": {
+        "members": [
+          {
+            "id": "demo-clinician",
+            "tenant": "demo-vardcentral",
+            "name": "Emma Sjöberg",
+            "profession": "Läkare"
+          },
+          {
+            "id": "demo-nurse",
+            "tenant": "demo-vardcentral",
+            "name": "David Ek",
+            "profession": "Sjuksköterska"
+          },
+          {
+            "id": "demo-colleague",
+            "tenant": "demo-vardcentral",
+            "name": "Linnea Holm",
+            "profession": "Läkare"
+          }
+        ]
+      }
+    },
     { "module": "./plugins/clinical.ts" },
     { "module": "./plugins/ai-extractive.ts" },
     { "module": "./plugins/ai-review.ts" },

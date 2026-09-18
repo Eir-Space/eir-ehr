@@ -39,7 +39,40 @@ export async function createApp(
         vitals,
         renderers: rendererIds,
         defaultRenderer,
+        careTeam:
+          actor(req).role === 'clinician'
+            ? {
+                members: runtime.get('careTeam').members(actor(req)),
+                timeZone: runtime.get('careTeam').timeZone,
+              }
+            : null,
       }));
+      api.get('/care-team', async (req) => {
+        const query = z.object({ day: z.iso.date() }).strict().parse(req.query);
+        return runtime.get('careTeam').workspace(actor(req), query.day);
+      });
+      api.post('/patients/:id/appointments', async (req, reply) =>
+        reply
+          .code(201)
+          .send(
+            runtime.get('careTeam').book(actor(req), uuid.parse((req.params as any).id), req.body),
+          ),
+      );
+      api.post('/appointments/:id/:action', async (req) => {
+        const body = z
+          .object({ version, data: z.unknown().default({}) })
+          .strict()
+          .parse(req.body);
+        return runtime
+          .get('careTeam')
+          .appointment(
+            actor(req),
+            uuid.parse((req.params as any).id),
+            (req.params as any).action,
+            body.version,
+            body.data,
+          );
+      });
       api.post('/logout', async (req) => {
         identity.revoke?.(req.headers.authorization!.slice(7));
         return { ok: true };
@@ -106,7 +139,7 @@ export async function createApp(
         const entries = rows.filter(
           ({ record }) =>
             a.role === 'clinician' ||
-            (record.kind !== 'proposal' &&
+            (!['proposal', 'task', 'appointment'].includes(record.kind) &&
               (record.kind !== 'note' || record.data.status === 'signed')),
         );
         return { entries, nextCursor: rows.length ? Number(rows.at(-1)!.cursor) : after };

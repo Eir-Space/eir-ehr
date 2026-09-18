@@ -8,19 +8,23 @@ export default {
   setup(ctx) {
     const store = ctx.get('store');
     const access = {
-      check(actor: Parameters<typeof store.audit>[0], patientId: string, write = false) {
+      allowed(actor: Parameters<typeof store.audit>[0], patientId: string, write = false) {
         const patient = store.get(actor.tenant, patientId);
         const grant = store.getGrant(actor.tenant, patientId, actor.id);
         const blocked = store.isBlocked(actor.tenant, patientId);
         const self = actor.role === 'patient' && actor.patientId === patientId;
         const assigned =
           grant && grant.role === actor.role && String(grant.expires) > new Date().toISOString();
-        const allowed =
+        return Boolean(
           patient?.kind === 'patient' &&
           ((self && !write) ||
             (!blocked &&
               assigned &&
-              (actor.role === 'clinician' || (actor.role === 'proxy' && !write))));
+              (actor.role === 'clinician' || (actor.role === 'proxy' && !write)))),
+        );
+      },
+      check(actor: Parameters<typeof store.audit>[0], patientId: string, write = false) {
+        const allowed = access.allowed(actor, patientId, write);
         store.audit(
           actor,
           write ? 'access.write' : 'access.read',
