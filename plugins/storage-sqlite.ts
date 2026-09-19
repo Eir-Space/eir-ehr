@@ -107,6 +107,7 @@ class SqliteDatabase {
       .prepare(
         `SELECT * FROM entities WHERE tenant=? AND kind=?
       ${filters.map(([key]) => `AND json_extract(data,'$.${key}') = ?`).join(' ')}
+      ${q.statuses ? `AND json_extract(data,'$.status') IN (${q.statuses.map(() => '?').join(',')})` : ''}
       AND (? IS NULL OR json_extract(data,'$.availableAt') <= ?)
       AND (? IS NULL OR (createdAt,id) > (?,?)) ORDER BY createdAt,id LIMIT ?`,
       )
@@ -114,6 +115,7 @@ class SqliteDatabase {
         tenant,
         kind,
         ...filters.map(([, value]) => (typeof value === 'boolean' ? Number(value) : value)),
+        ...(q.statuses ?? []),
         q.dueBefore ?? null,
         q.dueBefore ?? null,
         q.after?.createdAt ?? null,

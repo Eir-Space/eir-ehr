@@ -1422,3 +1422,80 @@ a {
     flex-wrap: wrap;
   }
 }
+/* Dense clinical oversight; mobile rows retain their field labels. */
+.follow-up-status {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 12px 0 24px;
+}
+.follow-up-table {
+  width: 100%;
+}
+.follow-up-table table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.follow-up-table th,
+.follow-up-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 12px 8px;
+  border-bottom: 1px solid #d9e2e5;
+  overflow-wrap: anywhere;
+}
+.follow-up-table th:first-child {
+  width: 25%;
+}
+.follow-up-table th:last-child {
+  width: 18%;
+}
+.follow-up-table td span,
+.follow-up-table td small {
+  display: block;
+  margin-top: 5px;
+}
+.follow-up-table .actions {
+  flex-wrap: wrap;
+}
+.follow-up-warning {
+  color: #91411e;
+}
+.follow-up-filter {
+  max-width: 240px;
+  margin-bottom: 16px;
+}
+@media (max-width: 1000px) {
+  .follow-up-table table,
+  .follow-up-table tbody,
+  .follow-up-table tr,
+  .follow-up-table td {
+    display: block;
+    width: 100%;
+  }
+  .follow-up-table thead {
+    display: none;
+  }
+  .follow-up-table tr {
+    border-bottom: 1px solid #d9e2e5;
+    padding: 12px 0;
+  }
+  .follow-up-table td {
+    border: 0;
+    padding: 5px 0;
+  }
+  .follow-up-table td:nth-child(3)::before {
+    content: 'Senast: ';
+    font-weight: 600;
+  }
+  .follow-up-table td:nth-child(4)::before {
+    content: 'Ansvarig: ';
+    font-weight: 600;
+  }
+  .follow-up-table td:nth-child(5)::before {
+    content: 'Avisering: ';
+    font-weight: 600;
+  }
+}

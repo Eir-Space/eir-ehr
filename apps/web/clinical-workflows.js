@@ -84,6 +84,7 @@ export async function renderLabs(target, chart, actorId, memberName, hasEncounte
         return `<section class="lab-order band" data-record-id="${order.id}"><div class="section-title"><div><h3>${e(d.test)}</h3><small>${e(d.specimen)} · ${e(memberName(task?.data.assigneeId))} · Senast ${e(task?.data.due ?? d.due)}</small></div><span class="badge ${d.critical && d.status === 'received' ? 'critical' : d.status === 'received' ? 'draft' : ''}">${d.critical && d.status === 'received' ? 'Kritiskt · ej granskat' : status[d.status]}</span></div><p>${e(d.question)}</p>
       ${report ? `${results(report)}<small>${e(report.data.source)} · Svar ${e(report.data.messageId)} · Prov taget ${date(report.data.collectedAt)}</small>${report.data.correctionReason ? `<p class="correction-note">Rättat svar: ${e(report.data.correctionReason)}</p>` : ''}` : '<p class="empty">Inget svar registrerat.</p>'}
       ${d.status === 'reviewed' && review ? `<div class="review-note"><strong>Granskat ${date(review.createdAt)} · ${e(memberName(review.data.author))}</strong><p>${e(review.data.assessment)}</p><p>Åtgärd: ${e(review.data.action)}</p><p>Kommunikation: ${e(review.data.communication)}</p></div>` : ''}
+      ${d.status === 'reviewed' && d.actionRequired ? `<p class="workflow-caption"><span class="badge draft">Åtgärd kvarstår</span> · Senast ${date(task?.data.dueAt ?? d.actionDueAt)}</p>` : ''}
       ${d.connectorId ? `<p class="workflow-caption"><strong>${e(deliveryStates[deliveries.get(order.id)?.state] ?? 'Leveransstatus ej tillgänglig')}</strong> · ${e(d.connectorId)}</p>` : '<p class="quiet workflow-caption">Lokal beställning · Manuell svarsregistrering</p>'}
       <div class="actions">${d.status !== 'cancelled' && !d.connectorId ? cmd('lab-receive', report ? 'Registrera rättat svar' : 'Registrera provsvar', 'flask-conical', order.id) : ''}${d.status === 'received' && owner ? cmd('lab-review', 'Granska och åtgärda', 'check-check', order.id) : ''}${d.status === 'requested' && owner && !d.connectorId ? cmd('lab-cancel', 'Avbryt beställning', 'x', order.id) : ''}${cmd('lab-history', 'Historik', 'history', order.id)}</div>
       ${oldReports.length ? `<details class="evidence"><summary>${oldReports.length} ersatta svar</summary>${oldReports.map((r) => `<div class="history-row"><strong>Ersatt · ${e(r.data.messageId)}</strong>${results(r)}</div>`).join('')}</details>` : ''}</section>`;
@@ -167,13 +168,15 @@ export async function workflowAction(name, id, ctx) {
         input('specimen', 'Provmaterial') +
         memberSelect('assigneeId', 'Svarsansvarig', actorId) +
         input('due', 'Svar bevakas senast', '', 'date') +
+        input('expectedAt', 'Exakt bevakningstid (UTC)', '', 'datetime-local', false) +
         select('priority', 'Prioritet', { routine: 'Normal', urgent: 'Hög' }, 'routine'),
-      ({ connectorId, ...values }) =>
+      ({ connectorId, expectedAt, ...values }) =>
         api(`/patients/${patientId}/lab-orders`, {
           ...values,
           clientId,
           encounterId,
           ...(connectorId ? { connectorId } : {}),
+          ...(expectedAt ? { expectedAt: new Date(expectedAt + 'Z').toISOString() } : {}),
         }),
       'Skapa beställning',
     );
@@ -261,6 +264,13 @@ export async function workflowAction(name, id, ctx) {
         text('assessment', 'Bedömning') +
         text('action', 'Åtgärd / uppföljningsplan') +
         text('communication', 'Patientkontakt / kommunikationsplan', '', true, 1000) +
+        select(
+          'disposition',
+          'Fortsatt uppföljning',
+          { 'action-required': 'Åtgärd kvarstår', completed: 'Alla åtgärder slutförda' },
+          'action-required',
+        ) +
+        input('actionDueAt', 'Åtgärd senast (UTC)', '', 'datetime-local') +
         (row.data.critical
           ? check(
               'criticalAcknowledged',
@@ -276,10 +286,18 @@ export async function workflowAction(name, id, ctx) {
             reportId: report.id,
             taskVersion: task.version,
             criticalAcknowledged: values.criticalAcknowledged === 'on',
+            ...(values.disposition === 'action-required'
+              ? { actionDueAt: new Date(values.actionDueAt + 'Z').toISOString() }
+              : {}),
           },
         }),
       'Signera granskning',
     );
+    document.querySelector('[name="disposition"]').onchange = (event) => {
+      const deadline = document.querySelector('[name="actionDueAt"]');
+      deadline.required = event.target.value === 'action-required';
+      deadline.disabled = !deadline.required;
+    };
   } else if (name === 'lab-history') {
     const versions = await api(`/records/${id}/history`);
     const reviews = chart.filter((r) => r.kind === 'labReview' && r.data.orderId === id);

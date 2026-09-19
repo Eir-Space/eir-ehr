@@ -5,6 +5,7 @@ import { draftEditor } from './draft-editor.js';
 import { renderMedications, renderLabs, workflowAction } from './clinical-workflows.js';
 import { roleLabel, gateActions, renderAccessReview, renderWorkforce } from './access-workspace.js';
 import { renderIntegrations } from './integration-workspace.js';
+import { renderFollowUp } from './follow-up-workspace.js';
 const $ = (s) => document.querySelector(s);
 const state = {
   token: '',
@@ -150,11 +151,13 @@ async function login(token) {
         b.hidden =
           b.dataset.view === 'audit'
             ? !permitted('audit.review') || !state.session.authorization
-            : b.dataset.view === 'integrations'
-              ? !permitted('integration.manage') || !state.session.integrations
-              : b.dataset.view === 'workforce'
-                ? !permitted('workforce.manage') || !state.session.authorization
-                : !canWrite();
+            : b.dataset.view === 'follow-up'
+              ? !permitted('task.write') || !state.session.followUp
+              : b.dataset.view === 'integrations'
+                ? !permitted('integration.manage') || !state.session.integrations
+                : b.dataset.view === 'workforce'
+                  ? !permitted('workforce.manage') || !state.session.authorization
+                  : !canWrite();
       });
     $('#register').hidden = !permitted('patient.register');
     const clinicalWorkspace = !state.session.authorization || canWrite();
@@ -650,6 +653,25 @@ async function render() {
     });
   $('#patient-header').hidden = state.view !== 'chart';
   $('#tabs').hidden = state.view !== 'chart';
+  if (state.view === 'follow-up') {
+    await renderFollowUp($('#content'), {
+      api,
+      modal,
+      perform,
+      actorId: state.session.actor.id,
+      scope: state.session.actor.assignmentId,
+      memberName,
+      memberSelect,
+      openChart: async (patientId, tab) => {
+        state.patient = state.patients.find((p) => p.id === patientId);
+        state.tab = tab;
+        state.view = 'chart';
+        await refreshChart();
+      },
+    });
+    icons();
+    return;
+  }
   if (['audit', 'workforce', 'integrations'].includes(state.view)) {
     const options = {
       api,

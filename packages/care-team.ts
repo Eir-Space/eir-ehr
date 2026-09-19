@@ -14,6 +14,7 @@ export const taskInput = z
   .object({
     title: short,
     due: z.iso.date(),
+    dueAt: z.iso.datetime({ offset: true }).optional(),
     assigneeId: short.optional(),
     priority: z.enum(['routine', 'urgent']).default('routine'),
   })

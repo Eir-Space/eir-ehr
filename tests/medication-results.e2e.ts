@@ -88,6 +88,7 @@ await test('clinician reconciles medicines, records critical results, reviews an
   async function review() {
     await page.getByRole('button', { name: 'Granska och åtgärda' }).click();
     await page.getByLabel('Bedömning', { exact: true }).fill('Källsvaret granskat');
+    await page.getByLabel('Fortsatt uppföljning').selectOption('completed');
     await page.getByLabel('Åtgärd / uppföljningsplan').fill('Ansvarigt team kontaktat');
     await page
       .getByLabel('Patientkontakt / kommunikationsplan')
@@ -141,6 +142,9 @@ await test('public medication and lab release exposes seeded data and completes 
   await page.getByLabel('Bedömning', { exact: true }).fill('Exempelsvaret granskat');
   await page.getByLabel('Åtgärd / uppföljningsplan').fill('Uppföljning vid planerad kontakt');
   await page.getByLabel('Patientkontakt / kommunikationsplan').fill('Genomgång vid återbesök');
+  await page
+    .getByLabel('Åtgärd senast (UTC)')
+    .fill(new Date(Date.now() + 3600000).toISOString().slice(0, 16));
   await page.getByRole('button', { name: 'Signera granskning' }).click();
   await expect(page.getByText('Granskat', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Historik', exact: true }).click();

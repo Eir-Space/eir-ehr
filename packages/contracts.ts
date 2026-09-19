@@ -273,6 +273,9 @@ export interface AccessReview {
   protect(actor: Actor, patientId: string, version: number, input: unknown): Promise<Entity>;
 }
 export interface Services {
+  followUp: import('./follow-up.ts').FollowUp;
+  followUpPolicy: import('./follow-up.ts').FollowUpPolicy;
+  notificationTransport: import('./follow-up.ts').NotificationTransport;
   integrations: import('./integrations.ts').Integrations;
   labTransport: import('./integrations.ts').LabTransport;
   workforce: Workforce;

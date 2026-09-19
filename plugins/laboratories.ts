@@ -74,6 +74,7 @@ export default {
               title: `Inväntar provsvar: ${parsed.test}`.slice(0, 200),
               assigneeId: parsed.assigneeId,
               due: parsed.due,
+              ...(parsed.expectedAt ? { dueAt: parsed.expectedAt } : {}),
               priority: parsed.priority,
             },
             row.id,
@@ -161,6 +162,8 @@ export default {
               status: 'reviewed',
               reviewedReportId: parsed.reportId,
               reviewId: review.id,
+              actionRequired: parsed.disposition !== 'completed',
+              actionDueAt: parsed.actionDueAt ?? new Date().toISOString(),
             },
             'labOrder.review',
           );

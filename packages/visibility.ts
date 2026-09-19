@@ -14,6 +14,10 @@ export function visibleRecord(actor: Actor, record: Entity) {
       'integrationConnection',
       'integrationOutbox',
       'integrationInbox',
+      'followUpWorker',
+      'followUpNotification',
+      'followUpCoverage',
+      'followUpEvent',
     ].includes(record.kind)
   )
     return false;

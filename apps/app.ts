@@ -115,6 +115,7 @@ export async function createApp(
         renderers: rendererIds,
         defaultRenderer,
         integrations: runtime.has('integrations'),
+        followUp: runtime.has('followUp'),
         authorization: (await runtime.get('access').context?.(actor(req))) ?? null,
         assignments: runtime.has('workforce')
           ? (await runtime.get('workforce').assignments(actor(req))).map((row) => ({
@@ -212,6 +213,44 @@ export async function createApp(
       api.get('/lab-connectors', async (req) =>
         runtime.has('integrations') ? runtime.get('integrations').connectors(actor(req)) : [],
       );
+      if (runtime.has('followUp')) {
+        api.get('/follow-up', async (req) => runtime.get('followUp').list(actor(req), req.query));
+        api.post('/follow-up/coverage', async (req) =>
+          runtime.get('followUp').coverage(actor(req), req.body),
+        );
+        api.post('/follow-up/coverage/:id/cancel', async (req) => {
+          const body = z
+            .object({ version: z.number().int().positive(), reason: z.string() })
+            .strict()
+            .parse(req.body);
+          return runtime
+            .get('followUp')
+            .cancelCoverage(
+              actor(req),
+              uuid.parse((req.params as any).id),
+              body.version,
+              body.reason,
+            );
+        });
+        api.post('/follow-up/:id/action', async (req) => {
+          const body = z
+            .object({ version: z.number().int().positive(), data: z.unknown() })
+            .strict()
+            .parse(req.body);
+          return runtime
+            .get('followUp')
+            .action(actor(req), uuid.parse((req.params as any).id), body.version, body.data);
+        });
+        api.post('/follow-up/notifications/:id/replay', async (req) => {
+          const body = z
+            .object({ version: z.number().int().positive(), reason: z.string() })
+            .strict()
+            .parse(req.body);
+          return runtime
+            .get('followUp')
+            .replay(actor(req), uuid.parse((req.params as any).id), body.version, body.reason);
+        });
+      }
       if (runtime.has('integrations')) {
         api.get('/integrations', async (req) =>
           runtime.get('integrations').operations(actor(req), req.query),
@@ -232,7 +271,12 @@ export async function createApp(
         });
       }
       api.get('/openapi.json', async () =>
-        openApi(runtime.has('workforce'), secureCookies, runtime.has('integrations')),
+        openApi(
+          runtime.has('workforce'),
+          secureCookies,
+          runtime.has('integrations'),
+          runtime.has('followUp'),
+        ),
       );
       api.get('/terminology/diagnoses', async (req) => {
         const query = z

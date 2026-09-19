@@ -9,6 +9,7 @@ export const entityQuery = z
       )
       .default({}),
     dueBefore: z.iso.datetime().optional(),
+    statuses: z.array(z.string().min(1).max(80)).min(1).max(10).optional(),
     after: z.object({ createdAt: z.iso.datetime(), id: z.uuid() }).strict().optional(),
     limit: z.number().int().min(1).max(100).default(50),
   })

@@ -64,7 +64,10 @@ export async function reopenLabTask(store: Store, actor: Actor, order: Entity, t
     priority: order.data.critical ? 'urgent' : order.data.priority,
     due: row.data.due < today ? row.data.due : today,
     reportId: order.data.reportId,
+    resultReceivedAt: new Date().toISOString(),
   };
+  delete data.dueAt;
+  delete data.followUp;
   delete data.completedAt;
   delete data.completedBy;
   delete data.resolution;

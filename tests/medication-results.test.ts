@@ -48,6 +48,7 @@ const reviewInput = (reportId: string, taskVersion: number) => ({
   action: 'Responsible team contacted immediately',
   communication: 'Patient contacted',
   criticalAcknowledged: true,
+  disposition: 'completed',
 });
 test('medication reconciliation snapshots medicines and allergies, rejects stale reviews and preserves history', async (t) => {
   const f = await fixture();

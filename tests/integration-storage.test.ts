@@ -74,6 +74,22 @@ for (const pg of [false, true]) {
         await assert.rejects(other.searchEntities!('tenant-a', 'integrationOutbox', {}));
       } else assert.deepEqual(await store.searchEntities!('tenant-b', 'integrationOutbox', {}), []);
       const row = saved[0];
+      await store.insert(actor, 'task', null, { status: 'requested', title: 'Open' });
+      await store.insert(actor, 'task', null, { status: 'completed', title: 'Closed' });
+      assert.equal(
+        (
+          await store.searchEntities!(actor.tenant, 'task', {
+            statuses: ['requested', 'in-progress'],
+          })
+        ).length,
+        1,
+      );
+      assert.equal(
+        (await store.searchEntities!(actor.tenant, 'task', { statuses: ['completed'] }))[0].data
+          .title,
+        'Closed',
+      );
+      await assert.rejects(store.searchEntities!(actor.tenant, 'task', { statuses: [] }));
       for (const change of [
         { payload: { altered: true } },
         { payloadHash: 'modified' },

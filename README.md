@@ -22,6 +22,8 @@ Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.
 
 ## Working Modules
 
+The [clinical follow-up module](docs/FOLLOW-UP.md) separates result review from completed action, tracks contact attempts and deadlines, checks temporary cover against live permissions, and delivers generic notifications through a replaceable HTTP gateway with durable retries. The Swedish `Bevakning` view exposes outstanding work, delivery failures and worker freshness. Clinical policies and a staffed notification destination must be configured before use.
+
 The [laboratory integration runtime](docs/INTEGRATIONS.md) adds atomic order dispatch, durable authenticated result receipt, leased workers, retry/reconciliation, exact patient/order/correction matching and an administrative operations view. `npm run demo:integrations` runs a real local HTTP round trip with an interactive test laboratory. External Swedish lab onboarding remains separate; the public profile has no configured lab destination.
 
 The [persistent backend release](docs/PERSISTENCE.md) adds an asynchronous transaction contract, a replaceable PostgreSQL provider, database role-bound provider isolation, guarded migrations, encrypted logical backup/recovery tooling and a separate persistent synthetic staging profile. SQLite and the disposable public demo remain supported. See the [project overview and LinkedIn draft](docs/PROJECT-STATUS.md) for a shareable account of what works and what remains.
@@ -64,6 +66,9 @@ npm run backup -- .data/ehr.sqlite /secure/path/ehr-backup.sqlite
 - [Sweden-first delivery plan](docs/PLAN.md)
 - [Plugin authoring and model replacement](docs/PLUGINS.md)
 - [API contract](docs/API.md)
+- [FHIR capability inventory and limits](docs/FHIR.md)
+- [Regulatory alignment, evidence and release gates](docs/REGULATORY-ALIGNMENT.md)
+- [Clinical follow-up, coverage and notification operations](docs/FOLLOW-UP.md)
 - [Diagnosis catalogue, import and data rights](docs/TERMINOLOGY.md)
 - [Sweden, Estonia, Denmark and EU evidence](docs/SOURCES.md)
 - [Operations and security boundaries](docs/OPERATIONS.md)
