@@ -66,6 +66,22 @@
     { "module": "./plugins/notification-http.ts" },
     { "module": "./plugins/follow-up.ts" },
     {
+      "module": "./plugins/modules.ts",
+      "config": {
+        "definitions": [
+          {
+            "id": "deterioration",
+            "name": "Vitalövervakning",
+            "moduleVersion": "1.0.0",
+            "canEnable": false,
+            "restriction": "Kräver verksamhetsgodkänd motor och införande"
+          }
+        ]
+      }
+    },
+    { "module": "./plugins/risk-vitals.ts" },
+    { "module": "./plugins/deterioration.ts" },
+    {
       "module": "./plugins/ai-extractive.ts"
     },
     {

@@ -27,6 +27,8 @@ export const vitals: Record<string, { label: string; unit: string; min: number; 
   '8480-6': { label: 'Systoliskt blodtryck', unit: 'mm[Hg]', min: 20, max: 350 },
   '8462-4': { label: 'Diastoliskt blodtryck', unit: 'mm[Hg]', min: 10, max: 250 },
   '29463-7': { label: 'Kroppsvikt', unit: 'kg', min: 0.1, max: 700 },
+  '9279-1': { label: 'Andningsfrekvens', unit: '/min', min: 1, max: 100 },
+  '59408-5': { label: 'Syremättnad (SpO2)', unit: '%', min: 1, max: 100 },
 };
 export const inputs: Record<string, z.ZodType> = {
   encounter: z.object({ reason: short }).strict(),

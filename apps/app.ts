@@ -116,6 +116,8 @@ export async function createApp(
         defaultRenderer,
         integrations: runtime.has('integrations'),
         followUp: runtime.has('followUp'),
+        modules: runtime.has('modules'),
+        deterioration: runtime.has('deterioration'),
         authorization: (await runtime.get('access').context?.(actor(req))) ?? null,
         assignments: runtime.has('workforce')
           ? (await runtime.get('workforce').assignments(actor(req))).map((row) => ({
@@ -210,6 +212,43 @@ export async function createApp(
         });
       }
       api.get('/plugins', async () => runtime.active);
+      if (runtime.has('modules')) {
+        api.get('/modules', async (req) => runtime.get('modules').list(actor(req)));
+        api.post('/modules/:id', async (req) =>
+          runtime.get('modules').set(actor(req), (req.params as any).id, req.body),
+        );
+      }
+      if (runtime.has('deterioration')) {
+        api.get('/deterioration', async (req) =>
+          runtime.get('deterioration').list(actor(req), req.query),
+        );
+        api.post('/patients/:id/monitoring', async (req, reply) =>
+          reply
+            .code(201)
+            .send(
+              await runtime
+                .get('deterioration')
+                .enroll(actor(req), uuid.parse((req.params as any).id), req.body),
+            ),
+        );
+        api.post('/monitoring/:id/stop', async (req) =>
+          runtime
+            .get('deterioration')
+            .stop(actor(req), uuid.parse((req.params as any).id), req.body),
+        );
+        api.post('/monitoring/:id/evaluate', async (req) => {
+          z.object({}).strict().parse(req.body);
+          await runtime
+            .get('deterioration')
+            .evaluate(actor(req), uuid.parse((req.params as any).id));
+          return { ok: true };
+        });
+        api.post('/deterioration-alerts/:id/respond', async (req) =>
+          runtime
+            .get('deterioration')
+            .respond(actor(req), uuid.parse((req.params as any).id), req.body),
+        );
+      }
       api.get('/lab-connectors', async (req) =>
         runtime.has('integrations') ? runtime.get('integrations').connectors(actor(req)) : [],
       );
@@ -276,6 +315,8 @@ export async function createApp(
           secureCookies,
           runtime.has('integrations'),
           runtime.has('followUp'),
+          runtime.has('modules'),
+          runtime.has('deterioration'),
         ),
       );
       api.get('/terminology/diagnoses', async (req) => {

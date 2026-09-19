@@ -1499,3 +1499,101 @@ a {
     font-weight: 600;
   }
 }
+/* Unit-level module controls and encounter monitoring share the clinical workspace. */
+.module-setting,
+.monitor-patient {
+  border-bottom: 1px solid #d9e1e6;
+  padding: 20px 0;
+}
+.module-setting,
+.monitor-patient > header,
+.monitor-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.module-setting h3,
+.monitor-patient h3 {
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+.module-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+.module-switch input {
+  width: 20px;
+  height: 20px;
+  accent-color: #007f73;
+}
+.module-installed {
+  margin-top: 24px;
+}
+.monitor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #d9e1e6;
+}
+.monitor-meta small {
+  flex-basis: 100%;
+}
+.risk-alert {
+  background: #fff0ee;
+  color: #9b2822;
+  border-color: #edbdb6;
+}
+.risk-finding {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9b2822;
+}
+.risk-missing {
+  color: #845914;
+}
+.monitor-alert {
+  padding: 14px 0;
+  border-top: 1px solid #e7e8eb;
+  margin-top: 16px;
+}
+.monitor-alert small {
+  display: block;
+  margin-top: 6px;
+}
+.monitor-readings > div {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) minmax(80px, 1fr) minmax(120px, 2fr);
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e7e8eb;
+}
+.monitor-patient details {
+  margin: 12px 0;
+}
+.monitor-patient,
+.module-setting {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+@media (max-width: 650px) {
+  .module-setting,
+  .monitor-patient > header,
+  .monitor-alert {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .monitor-patient .actions {
+    flex-wrap: wrap;
+  }
+  .monitor-readings > div {
+    grid-template-columns: 1fr 1fr;
+  }
+  .monitor-readings small {
+    grid-column: 1 / -1;
+  }
+}

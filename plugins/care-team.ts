@@ -339,9 +339,12 @@ export default {
         return await store.transaction(async () => {
           const row = await current(actor, id, 'task', version);
           assert(
-            !row.data.linkedOrderId || ['assign', 'start'].includes(action),
+            (!row.data.linkedOrderId && !row.data.deteriorationAlertId) ||
+              ['assign', 'start'].includes(action),
             409,
-            'Linked lab follow-up must be resolved through the lab order and current report',
+            row.data.deteriorationAlertId
+              ? 'Review this alert in the deterioration workspace'
+              : 'Linked lab follow-up must be resolved through the lab order and current report',
           );
           let data = { ...row.data };
           const owner = data.assigneeId ?? data.author;

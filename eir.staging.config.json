@@ -24,6 +24,22 @@
     { "module": "./plugins/follow-up-policy.ts", "config": { "developmentDefaults": true } },
     { "module": "./plugins/notification-http.ts" },
     { "module": "./plugins/follow-up.ts" },
+    {
+      "module": "./plugins/modules.ts",
+      "config": {
+        "definitions": [
+          {
+            "id": "deterioration",
+            "name": "Vitalövervakning",
+            "moduleVersion": "1.0.0",
+            "canEnable": true,
+            "restriction": "Utvecklingsregler, ej kliniskt validerade"
+          }
+        ]
+      }
+    },
+    { "module": "./plugins/risk-vitals.ts" },
+    { "module": "./plugins/deterioration.ts", "config": { "worker": true } },
     { "module": "./plugins/ai-extractive.ts" },
     { "module": "./plugins/ai-review.ts" },
     { "module": "./plugins/fhir-r4.ts" }

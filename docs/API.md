@@ -33,6 +33,10 @@ Local care assignments, proxy grants and the coarse restriction are development 
 
 ## Payloads
 
+### Optional modules and monitoring
+
+Profiles with `modules` and `deterioration` advertise their routes in the session response and OpenAPI document. `/modules` lists installed optional capabilities; activation changes require `modules.manage`, a reason and an expected revision. Monitoring enrollment, evaluation, stop and clinician-response endpoints are documented in [DETERIORATION.md](DETERIORATION.md). These use current assignment and patient authorization, not a browser-only feature flag. Generic task completion cannot close a deterioration-linked task.
+
 ### Clinical follow up
 
 When the profile provides `followUp`, `/api/session` advertises it and the OpenAPI document includes:

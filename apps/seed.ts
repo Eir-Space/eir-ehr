@@ -164,7 +164,7 @@ async function seedRecords(runtime: Runtime, actor: Actor) {
           ],
         });
     }
-    for (const [i, code] of Object.keys(vitals).entries()) {
+    for (const [i, code] of ['8867-4', '8310-5', '8480-6', '8462-4', '29463-7'].entries()) {
       // Earlier readings are entered retrospectively; audit timestamps remain real.
       for (const [value, offset] of [
         [scenario.previous[i], -28],

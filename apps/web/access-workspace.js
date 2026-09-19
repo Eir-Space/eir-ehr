@@ -23,6 +23,7 @@ export const permissionLabels = {
   'patient.protected': 'Skyddad identitet',
   'workforce.manage': 'Administrera uppdrag',
   'integration.manage': 'Administrera integrationer',
+  'modules.manage': 'Administrera tillvalsmoduler',
   'audit.review': 'Granska åtkomstlogg',
 };
 export function gateActions(root, permissions) {
@@ -145,7 +146,7 @@ export async function renderWorkforce(target, { api, modal, actorId }) {
         const row = rows.find((r) => r.id === b.dataset.assignment);
         const allowed =
           row.data.role === 'administrator'
-            ? ['workforce.manage', 'integration.manage']
+            ? ['workforce.manage', 'integration.manage', 'modules.manage']
             : row.data.role === 'auditor'
               ? ['audit.review']
               : Object.keys(permissionLabels).filter(
