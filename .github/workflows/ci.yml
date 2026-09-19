@@ -19,7 +19,7 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       EIR_TEST_POSTGRES_URL: postgresql://postgres:eir_disposable_ci_only@127.0.0.1:5432/eir_test
-      PG_BIN: ${{ runner.temp }}/eir-pg-bin
+      PG_BIN: /tmp/eir-pg-bin
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
