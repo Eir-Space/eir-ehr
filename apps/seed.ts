@@ -78,7 +78,17 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
       identifier: { type: 'local', value: `DEMO-00${index + 1}` },
     });
     for (const member of staff)
-      runtime.get('access').grant(actor, patient.id, member.id, 'clinician', days(30));
+      if (member.id !== actor.id)
+        runtime
+          .get('access')
+          .grant(
+            actor,
+            patient.id,
+            member.id,
+            'clinician',
+            days(30),
+            'Scheduled care in the synthetic clinic',
+          );
     const appointment = team.book(actor, patient.id, {
       practitionerId: actor.id,
       localStart: `${today}T${String(9 + index).padStart(2, '0')}:00`,

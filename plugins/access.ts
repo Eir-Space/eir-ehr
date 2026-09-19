@@ -1,4 +1,4 @@
-import { Fault, type Plugin } from '../packages/contracts.ts';
+import { Fault, type Plugin, type Access } from '../packages/contracts.ts';
 export default {
   id: 'eir.access',
   version: '1.0.0',
@@ -7,7 +7,16 @@ export default {
   requires: ['store'],
   setup(ctx) {
     const store = ctx.get('store');
-    const access = {
+    const access: Access = {
+      permit(actor, action, patientId) {
+        if (patientId)
+          return access.check(
+            actor,
+            patientId,
+            action !== 'chart.read' && action !== 'chart.export',
+          );
+        if (actor.role !== 'clinician') throw new Fault(403, 'Clinician role required');
+      },
       allowed(actor: Parameters<typeof store.audit>[0], patientId: string, write = false) {
         const patient = store.get(actor.tenant, patientId);
         const grant = store.getGrant(actor.tenant, patientId, actor.id);

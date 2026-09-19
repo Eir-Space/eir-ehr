@@ -139,13 +139,92 @@ small,
   color: var(--muted);
 }
 .app-header {
-  height: 66px;
+  min-height: 66px;
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 22px;
   padding: 0 24px;
   background: #fff;
   border-bottom: 1px solid var(--line);
+}
+.staff-login {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+#assignment-field {
+  font-size: 11px;
+  max-width: min(100%, 310px);
+  padding: 8px 0;
+}
+#assignment-field select {
+  width: 100%;
+  min-height: 34px;
+  font-size: 12px;
+}
+.access-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  padding: 12px 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+.audit-entry,
+.staff-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.audit-meta,
+.staff-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.audit-meta time {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+.audit-entry details {
+  margin: 10px 0;
+}
+.audit-entry dl {
+  font-size: 12px;
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 6px;
+}
+.audit-entry dd {
+  margin: 0;
+}
+.staff-row > div {
+  flex: 1;
+  min-width: 160px;
+}
+.staff-row details {
+  flex-basis: 100%;
+}
+.permission-list {
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.permission-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.permission-list input {
+  min-height: auto;
 }
 .environment {
   font-size: 11px;
@@ -1035,9 +1114,15 @@ a {
     flex-wrap: wrap;
   }
   .app-header {
-    padding: 0 15px;
-    height: 60px;
+    padding: 12px 15px;
+    height: auto;
     gap: 12px;
+  }
+  #assignment-field {
+    order: 1;
+    flex-basis: 100%;
+    max-width: 100%;
+    padding: 0;
   }
   .environment {
     display: none;

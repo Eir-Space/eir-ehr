@@ -8,6 +8,7 @@ import {
   type CareTeam,
   type Entity,
   type Plugin,
+  type Permission,
 } from '../packages/contracts.ts';
 
 const short = z.string().trim().min(1).max(200);
@@ -42,6 +43,7 @@ export default {
       assert(actor.role === 'clinician', 403, 'Clinician role required');
     const members = (actor: Actor) => {
       clinician(actor);
+      if (access.members) return access.members(actor);
       const rows = settings.members.filter((m) => m.tenant === actor.tenant);
       return rows.some((m) => m.id === actor.id)
         ? rows
@@ -50,14 +52,21 @@ export default {
             ...rows,
           ];
     };
-    const assignee = (actor: Actor, patientId: string, id: string) => {
+    const assignee = (
+      actor: Actor,
+      patientId: string,
+      id: string,
+      permission: Permission = 'task.write',
+    ) => {
       assert(
         members(actor).some((m) => m.id === id),
         422,
         'Unknown team member',
       );
       assert(
-        access.allowed({ ...actor, id }, patientId, true),
+        access.eligible
+          ? access.eligible(actor, id, patientId, permission)
+          : access.allowed({ ...actor, id }, patientId, true),
         403,
         'The selected team member has no active care relationship',
       );
@@ -66,13 +75,13 @@ export default {
       clinician(actor);
       const row = store.get(actor.tenant, id);
       assert(row?.kind === kind, 404, 'Record not found');
-      access.check(actor, row.patientId, true);
+      access.permit(actor, kind === 'appointment' ? 'schedule.write' : 'task.write', row.patientId);
       assert(row.version === version, 409, 'Record changed. Reload before saving.');
       return row;
     };
     const slot = (actor: Actor, patientId: string, input: unknown, except?: string) => {
       const parsed = bookingInput.parse(input);
-      assignee(actor, patientId, parsed.practitionerId);
+      assignee(actor, patientId, parsed.practitionerId, 'record.write');
       let startsAt: string, endsAt: string;
       try {
         const start = Temporal.PlainDateTime.from(parsed.localStart).toZonedDateTime(
@@ -134,7 +143,7 @@ export default {
       },
       book(actor, patientId, input) {
         clinician(actor);
-        access.check(actor, patientId, true);
+        access.permit(actor, 'schedule.write', patientId);
         return store.transaction(() =>
           store.insert(actor, 'appointment', patientId, {
             ...slot(actor, patientId, input),
@@ -174,6 +183,7 @@ export default {
             assert(data.status === 'booked', 409, 'Appointment is not booked');
             data = { ...data, status: 'arrived', arrivedAt: new Date().toISOString() };
           } else if (action === 'start') {
+            access.permit(actor, 'record.write', row.patientId);
             empty.parse(input);
             assert(
               ['booked', 'arrived'].includes(data.status),
@@ -220,7 +230,7 @@ export default {
           409,
           'Encounter is not finished',
         );
-        access.check(actor, encounter.patientId, true);
+        access.permit(actor, 'record.write', encounter.patientId);
         for (const row of store.list(actor.tenant, encounter.patientId, 'appointment')) {
           if (row.data.encounterId === encounterId && row.data.status === 'in-progress') {
             store.revise(
@@ -235,7 +245,7 @@ export default {
       },
       createTask(actor, patientId, input) {
         clinician(actor);
-        access.check(actor, patientId, true);
+        access.permit(actor, 'task.write', patientId);
         const parsed = taskInput.parse(input);
         const assigneeId = parsed.assigneeId ?? actor.id;
         assignee(actor, patientId, assigneeId);
@@ -250,10 +260,10 @@ export default {
       },
       createLinkedTask(actor, patientId, input, orderId) {
         clinician(actor);
-        access.check(actor, patientId, true);
+        access.permit(actor, 'lab.order', patientId);
         const parsed = taskInput.parse(input);
         const assigneeId = parsed.assigneeId ?? actor.id;
-        assignee(actor, patientId, assigneeId);
+        assignee(actor, patientId, assigneeId, 'lab.review');
         const order = store.get(actor.tenant, orderId);
         assert(
           order?.kind === 'labOrder' && order.patientId === patientId,
@@ -277,7 +287,11 @@ export default {
       },
       syncLinkedTask(actor, order, event, resolution) {
         clinician(actor);
-        access.check(actor, order.patientId, true);
+        access.permit(
+          actor,
+          event === 'result' ? 'lab.receive' : event === 'review' ? 'lab.review' : 'lab.order',
+          order.patientId,
+        );
         const saved = store.get(actor.tenant, order.id);
         assert(saved?.kind === 'labOrder' && saved.version === order.version, 409, 'Order changed');
         const row = store
@@ -337,7 +351,12 @@ export default {
           if (action === 'assign') {
             const parsed = z.object({ assigneeId: short, reason: short }).strict().parse(input);
             assert(['requested', 'in-progress'].includes(data.status), 409, 'Task is closed');
-            assignee(actor, row.patientId, parsed.assigneeId);
+            assignee(
+              actor,
+              row.patientId,
+              parsed.assigneeId,
+              data.linkedOrderId ? 'lab.review' : 'task.write',
+            );
             data = {
               ...data,
               assigneeId: parsed.assigneeId,

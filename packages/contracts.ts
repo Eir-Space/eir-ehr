@@ -1,8 +1,57 @@
 export type Actor = {
   id: string;
   tenant: string;
-  role: 'clinician' | 'patient' | 'proxy' | 'auditor';
+  role: 'clinician' | 'patient' | 'proxy' | 'auditor' | 'administrator';
   patientId?: string;
+  assignmentId?: string;
+  unitId?: string;
+  authentication?: {
+    method: 'local' | 'oidc';
+    issuer: string;
+    subject: string;
+    acr?: string;
+    authenticatedAt: number;
+  };
+};
+export type Permission =
+  | 'chart.read'
+  | 'chart.export'
+  | 'patient.register'
+  | 'record.write'
+  | 'note.sign'
+  | 'medication.write'
+  | 'medication.reconcile'
+  | 'lab.order'
+  | 'lab.receive'
+  | 'lab.review'
+  | 'schedule.write'
+  | 'task.write'
+  | 'ai.use'
+  | 'access.manage'
+  | 'access.emergency'
+  | 'patient.protected'
+  | 'workforce.manage'
+  | 'audit.review';
+export type AuditRow = {
+  seq: number;
+  at: string;
+  actor: string;
+  action: string;
+  patientId: string | null;
+  entityId: string | null;
+  outcome: string;
+  hash: string;
+  unitId?: string;
+  assignmentId?: string;
+  [key: string]: unknown;
+};
+export type AuditQuery = {
+  before?: number;
+  limit: number;
+  unitId: string;
+  actorId?: string;
+  patientId?: string;
+  outcome?: string;
 };
 export type Entity = {
   id: string;
@@ -51,9 +100,14 @@ export interface Store {
   restrict(tenant: string, patientId: string, blocked: boolean): void;
   isBlocked(tenant: string, patientId: string): boolean;
   saveSession(hash: string, actor: Actor, expires: string): void;
-  session(hash: string): { actor: Actor; expires: string } | undefined;
+  session(hash: string): { actor: Actor; expires: string; lastSeen: string } | undefined;
+  updateSession(hash: string, actor: Actor): void;
+  saveLogin(hash: string, data: Record<string, string>, expires: string): void;
+  consumeLogin(hash: string): Record<string, string> | undefined;
   revokeSession(hash: string): void;
   auditEntries(tenant: string, patientId?: string): Record<string, unknown>[];
+  auditPage(tenant: string, query: AuditQuery): AuditRow[];
+  auditEntry(tenant: string, seq: number): AuditRow | undefined;
   changes(tenant: string, patientId: string, after: number): { cursor: number; record: Entity }[];
 }
 export interface Country {
@@ -66,6 +120,13 @@ export interface Country {
   };
 }
 export interface Access {
+  permit(actor: Actor, action: Permission, patientId?: string): void;
+  context?(
+    actor: Actor,
+    patientId?: string,
+  ): { permissions: Permission[]; unitId: string; name: string };
+  eligible?(actor: Actor, targetId: string, patientId: string, action: Permission): boolean;
+  members?(actor: Actor): TeamMember[];
   allowed(actor: Actor, patientId: string, write?: boolean): boolean;
   check(actor: Actor, patientId: string, write?: boolean): void;
   grant(
@@ -74,6 +135,7 @@ export interface Access {
     target: string,
     role: 'clinician' | 'proxy',
     expires: string,
+    reason?: string,
   ): void;
   block(actor: Actor, patientId: string, blocked: boolean): void;
 }
@@ -106,8 +168,39 @@ export interface Identity {
   authenticate(token: string): Promise<Actor>;
   issue?(actor: Actor): string;
   revoke?(token: string): void;
+  select?(token: string, assignmentId: string): Promise<Actor>;
+  browser?: {
+    origin: string;
+    begin(): Promise<{ url: string; binding: string }>;
+    callback(url: URL, binding: string): Promise<string>;
+  };
+}
+export interface Workforce {
+  current(actor: Actor): Entity;
+  assignments(actor: Actor): Entity[];
+  forIdentity(issuer: string, subject: string): Entity[];
+  actor(assignment: Entity, authentication?: Actor['authentication']): Actor;
+  staff(actor: Actor): Entity[];
+  create(actor: Actor, input: unknown): Entity;
+  update(actor: Actor, id: string, version: number, input: unknown): Entity;
+  units: { id: string; tenant: string; name: string }[];
+}
+export interface AccessReview {
+  list(
+    actor: Actor,
+    query: unknown,
+  ): {
+    entries: (AuditRow & { reviews: Entity[] })[];
+    nextBefore: number | null;
+    verification: { ok: boolean };
+  };
+  review(actor: Actor, input: unknown): Entity;
+  emergency(actor: Actor, patientId: string, input: unknown): Entity;
+  protect(actor: Actor, patientId: string, version: number, input: unknown): Entity;
 }
 export interface Services {
+  workforce: Workforce;
+  accessReview: AccessReview;
   medications: Medications;
   laboratories: Laboratories;
   careTeam: CareTeam;

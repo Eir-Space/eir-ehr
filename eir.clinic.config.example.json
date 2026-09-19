@@ -1,0 +1,71 @@
+{
+  "profile": "sweden-clinic-oidc",
+  "plugins": [
+    {
+      "module": "./plugins/storage-sqlite.ts",
+      "config": {
+        "path": ".data/clinic.sqlite"
+      }
+    },
+    {
+      "module": "./plugins/country-se.ts"
+    },
+    {
+      "module": "./plugins/terminology-icd-se.ts"
+    },
+    {
+      "module": "./plugins/workforce.ts",
+      "config": {
+        "units": [
+          {
+            "id": "replace-with-care-unit-id",
+            "tenant": "replace-with-provider-id",
+            "name": "Your care unit"
+          }
+        ],
+        "bootstrap": []
+      }
+    },
+    {
+      "module": "./plugins/identity-oidc.ts",
+      "config": {
+        "issuer": "https://idp.example.org",
+        "clientId": "replace-with-registered-client-id",
+        "clientSecretEnv": "EIR_OIDC_CLIENT_SECRET",
+        "origin": "https://ehr.example.org",
+        "requiredAcr": ["replace-with-approved-provider-acr"],
+        "idleMinutes": 15,
+        "absoluteHours": 8
+      }
+    },
+    {
+      "module": "./plugins/access-clinic.ts"
+    },
+    {
+      "module": "./plugins/access-review.ts"
+    },
+    {
+      "module": "./plugins/care-team.ts"
+    },
+    {
+      "module": "./plugins/clinical.ts"
+    },
+    {
+      "module": "./plugins/medications.ts"
+    },
+    {
+      "module": "./plugins/laboratories.ts"
+    },
+    {
+      "module": "./plugins/ai-extractive.ts"
+    },
+    {
+      "module": "./plugins/ai-review.ts"
+    },
+    {
+      "module": "./plugins/fhir-r4.ts"
+    }
+  ],
+  "chartRenderers": ["timeline", "table"],
+  "defaultRenderer": "timeline"
+}

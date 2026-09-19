@@ -3,6 +3,7 @@ import { diagnosisFields, diagnosisPicker } from './diagnosis-picker.js';
 import { renderCareTeam, clinicDay, moveDay, taskOpen, statusLabel } from './care-team.js';
 import { draftEditor } from './draft-editor.js';
 import { renderMedications, renderLabs, workflowAction } from './clinical-workflows.js';
+import { roleLabel, gateActions, renderAccessReview, renderWorkforce } from './access-workspace.js';
 const $ = (s) => document.querySelector(s);
 const state = {
   token: '',
@@ -18,6 +19,8 @@ const state = {
   day: '',
   owner: '',
   taskFilter: 'open',
+  auditFilters: {},
+  patientPermissions: null,
 };
 const icons = () => globalThis.lucide?.createIcons();
 const icon = (name) => `<i data-lucide="${name}"></i>`;
@@ -30,11 +33,42 @@ const textField = (value = '') =>
 const kinds = (kind) => state.chart.filter((r) => r.kind === kind);
 const encounter = () => kinds('encounter').find((r) => r.data.status === 'in-progress');
 const canWrite = () => state.session?.actor.role === 'clinician';
+const permitted = (permission) =>
+  state.session?.authorization
+    ? state.session.authorization.permissions.includes(permission)
+    : canWrite();
 let submitDialog;
 let disposeDialog;
 let activeDraft;
 let dirtyDraft = false;
 let busy = false;
+let sessionGeneration = 0;
+let idleTimer;
+function clearSession() {
+  sessionGeneration++;
+  clearTimeout(idleTimer);
+  activeDraft?.dispose();
+  activeDraft = undefined;
+  dirtyDraft = false;
+  state.token = '';
+  state.session = null;
+  state.patient = null;
+  state.patients = [];
+  state.chart = [];
+  $('#dialog').close();
+  $('#dialog-fields').innerHTML = '';
+  $('#patients').innerHTML = '';
+  $('#patient-header').innerHTML = '';
+  $('#content').innerHTML = '';
+  $('#shell').hidden = true;
+  $('#login').hidden = false;
+  $('#login-error').textContent =
+    'Sessionen har avslutats. Logga in igen. Eventuell osparad text kunde inte sparas.';
+}
+function refreshIdleTimer() {
+  clearTimeout(idleTimer);
+  if (state.session?.authorization) idleTimer = setTimeout(clearSession, 15 * 60000);
+}
 window.addEventListener('beforeunload', (event) => {
   if (dirtyDraft) {
     event.preventDefault();
@@ -43,14 +77,20 @@ window.addEventListener('beforeunload', (event) => {
 });
 window.addEventListener('DOMContentLoaded', icons);
 async function api(path, body, signal) {
+  const generation = sessionGeneration;
   const response = await fetch(`/api${path}`, {
     method: body === undefined ? 'GET' : 'POST',
-    headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+    headers: {
+      ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}),
+      'Content-Type': 'application/json',
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal,
   });
   const data = await response.json();
+  if (generation !== sessionGeneration) throw new Error('Sessionen har avslutats.');
   if (!response.ok) {
+    if (response.status === 401 && state.session) clearSession();
     const error = new Error(
       data.error +
         (data.fields ? ' · ' + data.fields.map((f) => f.path + ': ' + f.message).join('; ') : ''),
@@ -58,6 +98,7 @@ async function api(path, body, signal) {
     error.status = response.status;
     throw error;
   }
+  refreshIdleTimer();
   return data;
 }
 async function perform(fn) {
@@ -98,14 +139,43 @@ async function login(token) {
     state.day = clinicDay(state.session.careTeam?.timeZone ?? 'Europe/Stockholm');
     form.reset();
     $('#identity').textContent =
+      state.session.authorization?.name ??
       state.session.careTeam?.members.find((m) => m.id === state.session.actor.id)?.name ??
       state.session.actor.id;
-    $('#workspace-nav').hidden = !canWrite();
-    $('#register').hidden = !canWrite();
+    $('#workspace-nav').hidden = !canWrite() && !state.session.authorization;
+    $('#workspace-nav')
+      .querySelectorAll('[data-view]')
+      .forEach((b) => {
+        b.hidden =
+          b.dataset.view === 'audit'
+            ? !permitted('audit.review') || !state.session.authorization
+            : b.dataset.view === 'workforce'
+              ? !permitted('workforce.manage') || !state.session.authorization
+              : !canWrite();
+      });
+    $('#register').hidden = !permitted('patient.register');
+    const clinicalWorkspace = !state.session.authorization || canWrite();
+    $('.directory > .section-title').hidden = !clinicalWorkspace;
+    $('#search').closest('label').hidden = !clinicalWorkspace;
+    $('#patients').hidden = !clinicalWorkspace;
+    $('.directory > footer').hidden = !clinicalWorkspace;
+    $('#assignment-field').hidden = !state.session.assignments?.length;
+    $('#assignment').innerHTML = (state.session.assignments ?? [])
+      .map(
+        (a) =>
+          `<option value="${a.id}" ${a.id === state.session.actor.assignmentId ? 'selected' : ''}>${e(a.name)} · ${e(roleLabel[a.role])}</option>`,
+      )
+      .join('');
+    $('#lock').hidden = !state.session.authorization;
+    $('#emergency-access').hidden = !state.session.authorization || !permitted('access.emergency');
+    if (state.session.actor.role === 'auditor') state.view = 'audit';
+    else if (state.session.actor.role === 'administrator') state.view = 'workforce';
+    else if (['audit', 'workforce'].includes(state.view)) state.view = 'chart';
     await refreshPatients();
     $('#login').hidden = true;
     $('#shell').hidden = false;
     $('#project-community').hidden = true;
+    refreshIdleTimer();
   } catch (err) {
     state.token = '';
     $('#login').hidden = false;
@@ -147,6 +217,17 @@ async function deployment() {
     const response = await fetch('/deployment.json');
     if (!response.ok) throw new Error('Unable to read deployment mode');
     const config = await response.json();
+    if (config.authentication === 'oidc') {
+      $('#staff-login').hidden = false;
+      $('#token-field').hidden = true;
+      $('#token-field input').disabled = true;
+      $('#local-login').hidden = true;
+      $('#local-hint').textContent = 'Inloggning via organisationens identitetstjänst';
+      $('.environment').textContent = 'Klinikmiljö';
+      await login('');
+      if (!state.session) $('#login-error').textContent = '';
+      return;
+    }
     if (config.mode !== 'public-demo') return;
     state.publicDemo = true;
     document.body.classList.add('public-demo');
@@ -168,6 +249,41 @@ $('#logout').onclick = () =>
     await api('/logout', {});
     location.reload();
   });
+$('#lock').onclick = () =>
+  perform(async () => {
+    await activeDraft?.flush();
+    await api('/logout', {});
+    dirtyDraft = false;
+    location.reload();
+  });
+$('#assignment').onchange = () =>
+  perform(async () => {
+    try {
+      await activeDraft?.flush();
+      await api('/session/assignment', { assignmentId: $('#assignment').value });
+      state.patient = null;
+      state.chart = [];
+      state.patients = [];
+      state.auditFilters = {};
+      $('#search').value = '';
+      await login(state.token);
+    } finally {
+      if (state.session) $('#assignment').value = state.session.actor.assignmentId;
+    }
+  });
+$('#emergency-access').onclick = () =>
+  modal(
+    'Tillfällig läsåtkomst',
+    field('patientId', 'Patientens interna ID') + field('reason', 'Orsak till undantaget'),
+    async (values) => {
+      await api(`/patients/${encodeURIComponent(values.patientId)}/emergency-access`, {
+        reason: values.reason,
+      });
+      state.patient = { id: values.patientId };
+      state.view = 'chart';
+    },
+    'Öppna i 15 minuter',
+  );
 $('#search').oninput = renderPatients;
 $('#register').onclick = () => openRegistration();
 const closeDialog = () =>
@@ -344,6 +460,7 @@ async function refreshTeam() {
         await refreshTeam();
       }),
   });
+  gateActions($('#content'), state.session.authorization?.permissions);
   icons();
 }
 function bookingDialog(record) {
@@ -508,6 +625,10 @@ function renderPatients() {
 }
 async function refreshChart() {
   state.chart = state.patient ? await api(`/patients/${state.patient.id}/chart`) : [];
+  state.patientPermissions =
+    state.patient && state.session.authorization
+      ? (await api(`/patients/${state.patient.id}/permissions`)).permissions
+      : null;
   await render();
 }
 async function render() {
@@ -524,6 +645,19 @@ async function render() {
     });
   $('#patient-header').hidden = state.view !== 'chart';
   $('#tabs').hidden = state.view !== 'chart';
+  if (state.view === 'audit' || state.view === 'workforce') {
+    const options = {
+      api,
+      modal,
+      perform,
+      actorId: state.session.actor.id,
+      filters: state.auditFilters,
+    };
+    if (state.view === 'audit') await renderAccessReview($('#content'), options);
+    else await renderWorkforce($('#content'), options);
+    icons();
+    return;
+  }
   if (state.view !== 'chart') {
     await refreshTeam();
     return;
@@ -540,6 +674,11 @@ async function render() {
   const open = encounter();
   $('#patient-header').innerHTML =
     `<div><h1>${e(p.data.name)}</h1><p class="quiet">${e(p.data.identifier.value)} &nbsp; · &nbsp; ${e(p.data.birthDate)}</p><p class="encounter">${icon('circle-dot')}${open ? e(open.data.reason) : 'Ingen pågående vårdkontakt'}</p></div><div class="actions">${button('export', 'Exportera', 'download')}${canWrite() ? (open ? button('close', 'Avsluta kontakt', 'check') : button('encounter', 'Ny vårdkontakt', 'plus', 'class="primary"')) : ''}</div>`;
+  if (state.session.authorization)
+    $('#patient-header .actions').insertAdjacentHTML(
+      'beforeend',
+      `${permitted('access.manage') ? button('grant-access', '', 'user-check', 'title="Tilldela patientåtkomst" aria-label="Tilldela patientåtkomst"') : ''}${permitted('access.manage') && permitted('patient.protected') ? button('protect', '', 'shield', 'title="Skyddad identitet" aria-label="Skyddad identitet"') : ''}`,
+    );
   const tabs = [
     ['overview', 'Översikt'],
     ['journal', 'Journal'],
@@ -598,6 +737,11 @@ async function render() {
     content.innerHTML = `<div class="toolbar"><h2>Aktiva moduler</h2><span class="quiet">${plugins.length} aktiva</span></div>${plugins.map((p) => `<div class="plugin"><strong>${e(p.id)}</strong><code>${e(p.provides.join(', '))}</code><span class="badge">v${e(p.version)}</span></div>`).join('')}<div class="band"><div class="section-title"><h2>Nationella anslutningar</h2></div><div class="row"><span>SITHS / HSA</span><span class="badge draft">Ej ansluten</span></div><div class="row"><span>NPÖ / 1177 Journalen</span><span class="badge draft">Ej ansluten</span></div><div class="row"><span>Nationella läkemedelslistan</span><span class="badge draft">Ej ansluten</span></div></div>`;
   }
   bindActions();
+  gateActions(content, state.patientPermissions ?? state.session.authorization?.permissions);
+  gateActions(
+    $('#patient-header'),
+    state.patientPermissions ?? state.session.authorization?.permissions,
+  );
   icons();
 }
 function renderOverview(target) {
@@ -698,6 +842,35 @@ function bindActions() {
 async function action(name, id) {
   const r = state.chart.find((r) => r.id === id);
   const current = encounter();
+  if (name === 'grant-access')
+    return modal(
+      'Tilldela patientåtkomst',
+      memberSelect('actorId', 'Medarbetare', '') +
+        field(
+          'expires',
+          'Giltigt till (UTC)',
+          'datetime-local',
+          new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16),
+        ) +
+        field('reason', 'Vårdrelation och arbetsuppgift'),
+      (values) =>
+        api(`/patients/${state.patient.id}/access`, {
+          ...values,
+          role: 'clinician',
+          expires: new Date(values.expires + 'Z').toISOString(),
+        }),
+    );
+  if (name === 'protect')
+    return modal(
+      'Skyddad identitet',
+      `<label>Identitetsskydd<select name="protected"><option value="true" ${state.patient.data.protectedIdentity ? 'selected' : ''}>Skyddad</option><option value="false" ${!state.patient.data.protectedIdentity ? 'selected' : ''}>Ej skyddad</option></select></label>` +
+        field('reason', 'Verifiering och orsak'),
+      (values) =>
+        api(`/patients/${state.patient.id}/protection`, {
+          version: state.patient.version,
+          data: { ...values, protected: values.protected === 'true' },
+        }),
+    );
   if (name === 'open-labs') {
     state.tab = 'labs';
     return render();
