@@ -1,6 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { z } from 'zod';
 import { bookingInput, taskInput } from '../packages/care-team.ts';
+import { reopenLabTask } from '../packages/lab-application.ts';
 import {
   assert,
   Fault,
@@ -295,30 +296,16 @@ export default {
         );
         const saved = await store.get(actor.tenant, order.id);
         assert(saved?.kind === 'labOrder' && saved.version === order.version, 409, 'Order changed');
+        if (event === 'result') {
+          assert(saved.data.status === 'received', 409, 'Order has no new result');
+          return reopenLabTask(store, actor, saved, settings.timeZone);
+        }
         const row = (await store.list(actor.tenant, order.patientId, 'task')).find(
           (r) => r.data.linkedOrderId === order.id,
         );
         assert(row, 409, 'Order follow-up is missing');
         let data = { ...row.data };
-        if (event === 'result') {
-          assert(saved.data.status === 'received', 409, 'Order has no new result');
-          const today = Temporal.Now.plainDateISO(settings.timeZone).toString();
-          data = {
-            ...data,
-            status: 'requested',
-            title:
-              `${saved.data.critical ? 'Kritiskt provsvar' : 'Granska provsvar'}: ${saved.data.test}`.slice(
-                0,
-                200,
-              ),
-            priority: saved.data.critical ? 'urgent' : saved.data.priority,
-            due: data.due < today ? data.due : today,
-            reportId: saved.data.reportId,
-          };
-          delete data.completedAt;
-          delete data.completedBy;
-          delete data.resolution;
-        } else {
+        {
           assert(
             data.assigneeId === actor.id,
             403,

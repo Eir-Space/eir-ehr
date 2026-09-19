@@ -1,4 +1,5 @@
 import { escape as e, date } from './renderers/shared.js';
+import { deliveryStates } from './integration-workspace.js';
 
 const status = {
   active: 'Pågående',
@@ -59,9 +60,17 @@ export function renderMedications(target, chart, memberName) {
     ${review ? `<section class="band medication-review"><h3>Senaste avstämning</h3><p>${e(review.data.note)}</p><small>Underlag: ${e(review.data.source)}</small><small>${review.data.noCurrentMedicines ? 'Inga aktuella läkemedel bekräftades.' : 'Listan inkluderar pågående eller pausad behandling.'}</small></section>` : ''}`;
 }
 
-export function renderLabs(target, chart, actorId, memberName, hasEncounter) {
+export async function renderLabs(target, chart, actorId, memberName, hasEncounter, api) {
   const orders = chart.filter((r) => r.kind === 'labOrder');
-  target.innerHTML = `<div class="toolbar"><h2>Prover och svar</h2>${hasEncounter ? cmd('lab-order', 'Ny provbeställning', 'plus') : ''}</div><p class="quiet workflow-caption">Lokala beställningar · Manuell svarsregistrering</p>${
+  const deliveries = new Map();
+  for (const order of orders.filter((r) => r.data.connectorId)) {
+    try {
+      deliveries.set(order.id, await api(`/lab-orders/${order.id}/delivery`));
+    } catch {
+      deliveries.set(order.id, { state: 'unavailable' });
+    }
+  }
+  target.innerHTML = `<div class="toolbar"><h2>Prover och svar</h2><div class="actions"><button data-action="lab-refresh" title="Uppdatera provsvar" aria-label="Uppdatera provsvar"><i data-lucide="refresh-cw"></i></button>${hasEncounter ? cmd('lab-order', 'Ny provbeställning', 'plus') : ''}</div></div>${
     orders
       .map((order) => {
         const d = order.data,
@@ -75,7 +84,8 @@ export function renderLabs(target, chart, actorId, memberName, hasEncounter) {
         return `<section class="lab-order band" data-record-id="${order.id}"><div class="section-title"><div><h3>${e(d.test)}</h3><small>${e(d.specimen)} · ${e(memberName(task?.data.assigneeId))} · Senast ${e(task?.data.due ?? d.due)}</small></div><span class="badge ${d.critical && d.status === 'received' ? 'critical' : d.status === 'received' ? 'draft' : ''}">${d.critical && d.status === 'received' ? 'Kritiskt · ej granskat' : status[d.status]}</span></div><p>${e(d.question)}</p>
       ${report ? `${results(report)}<small>${e(report.data.source)} · Svar ${e(report.data.messageId)} · Prov taget ${date(report.data.collectedAt)}</small>${report.data.correctionReason ? `<p class="correction-note">Rättat svar: ${e(report.data.correctionReason)}</p>` : ''}` : '<p class="empty">Inget svar registrerat.</p>'}
       ${d.status === 'reviewed' && review ? `<div class="review-note"><strong>Granskat ${date(review.createdAt)} · ${e(memberName(review.data.author))}</strong><p>${e(review.data.assessment)}</p><p>Åtgärd: ${e(review.data.action)}</p><p>Kommunikation: ${e(review.data.communication)}</p></div>` : ''}
-      <div class="actions">${d.status !== 'cancelled' ? cmd('lab-receive', report ? 'Registrera rättat svar' : 'Registrera provsvar', 'flask-conical', order.id) : ''}${d.status === 'received' && owner ? cmd('lab-review', 'Granska och åtgärda', 'check-check', order.id) : ''}${d.status === 'requested' && owner ? cmd('lab-cancel', 'Avbryt beställning', 'x', order.id) : ''}${cmd('lab-history', 'Historik', 'history', order.id)}</div>
+      ${d.connectorId ? `<p class="workflow-caption"><strong>${e(deliveryStates[deliveries.get(order.id)?.state] ?? 'Leveransstatus ej tillgänglig')}</strong> · ${e(d.connectorId)}</p>` : '<p class="quiet workflow-caption">Lokal beställning · Manuell svarsregistrering</p>'}
+      <div class="actions">${d.status !== 'cancelled' && !d.connectorId ? cmd('lab-receive', report ? 'Registrera rättat svar' : 'Registrera provsvar', 'flask-conical', order.id) : ''}${d.status === 'received' && owner ? cmd('lab-review', 'Granska och åtgärda', 'check-check', order.id) : ''}${d.status === 'requested' && owner && !d.connectorId ? cmd('lab-cancel', 'Avbryt beställning', 'x', order.id) : ''}${cmd('lab-history', 'Historik', 'history', order.id)}</div>
       ${oldReports.length ? `<details class="evidence"><summary>${oldReports.length} ersatta svar</summary>${oldReports.map((r) => `<div class="history-row"><strong>Ersatt · ${e(r.data.messageId)}</strong>${results(r)}</div>`).join('')}</details>` : ''}</section>`;
       })
       .join('') || '<p class="empty">Inga provbeställningar.</p>'
@@ -146,15 +156,25 @@ export async function workflowAction(name, id, ctx) {
       'Bekräfta avstämning',
     );
   } else if (name === 'lab-order') {
+    const connectors = await api('/lab-connectors');
     modal(
       'Ny provbeställning',
-      input('test', 'Analys / undersökning') +
+      (connectors.length
+        ? `<label>Laboratorium<select name="connectorId" aria-label="Laboratorium"><option value="">Lokal beställning</option>${connectors.map((c) => `<option value="${e(c.id)}">${e(c.name)}</option>`).join('')}</select></label>`
+        : '') +
+        input('test', 'Analys / undersökning') +
         text('question', 'Frågeställning') +
         input('specimen', 'Provmaterial') +
         memberSelect('assigneeId', 'Svarsansvarig', actorId) +
         input('due', 'Svar bevakas senast', '', 'date') +
         select('priority', 'Prioritet', { routine: 'Normal', urgent: 'Hög' }, 'routine'),
-      (values) => api(`/patients/${patientId}/lab-orders`, { ...values, clientId, encounterId }),
+      ({ connectorId, ...values }) =>
+        api(`/patients/${patientId}/lab-orders`, {
+          ...values,
+          clientId,
+          encounterId,
+          ...(connectorId ? { connectorId } : {}),
+        }),
       'Skapa beställning',
     );
   } else if (name === 'lab-cancel') {

@@ -29,6 +29,24 @@ export async function createApp(
     }
   });
   const actors = new WeakMap<FastifyRequest, Actor>();
+  if (runtime.has('integrations')) {
+    // Machine credentials use a separate namespace and never create a clinician session.
+    app.post('/integrations/:connectorId/results', async (req, reply) => {
+      const result = await runtime
+        .get('integrations')
+        .receive((req.params as any).connectorId, req.headers.authorization ?? '', req.body);
+      return reply.code(202).send(result);
+    });
+    app.get('/integrations/:connectorId/receipts/:messageId', async (req) =>
+      runtime
+        .get('integrations')
+        .receipt(
+          (req.params as any).connectorId,
+          req.headers.authorization ?? '',
+          (req.params as any).messageId,
+        ),
+    );
+  }
   const actor = (request: FastifyRequest) => {
     const a = actors.get(request);
     assert(a, 401, 'Authentication required');
@@ -96,6 +114,7 @@ export async function createApp(
         vitals,
         renderers: rendererIds,
         defaultRenderer,
+        integrations: runtime.has('integrations'),
         authorization: (await runtime.get('access').context?.(actor(req))) ?? null,
         assignments: runtime.has('workforce')
           ? (await runtime.get('workforce').assignments(actor(req))).map((row) => ({
@@ -190,7 +209,31 @@ export async function createApp(
         });
       }
       api.get('/plugins', async () => runtime.active);
-      api.get('/openapi.json', async () => openApi(runtime.has('workforce'), secureCookies));
+      api.get('/lab-connectors', async (req) =>
+        runtime.has('integrations') ? runtime.get('integrations').connectors(actor(req)) : [],
+      );
+      if (runtime.has('integrations')) {
+        api.get('/integrations', async (req) =>
+          runtime.get('integrations').operations(actor(req), req.query),
+        );
+        api.get('/lab-orders/:id/delivery', async (req) =>
+          runtime.get('integrations').delivery(actor(req), uuid.parse((req.params as any).id)),
+        );
+        api.post('/integrations/:id/replay', async (req) =>
+          runtime
+            .get('integrations')
+            .replay(actor(req), uuid.parse((req.params as any).id), req.body),
+        );
+        api.post('/integrations/:id/connection', async (req) => {
+          await runtime
+            .get('integrations')
+            .connection(actor(req), uuid.parse((req.params as any).id), req.body);
+          return { ok: true };
+        });
+      }
+      api.get('/openapi.json', async () =>
+        openApi(runtime.has('workforce'), secureCookies, runtime.has('integrations')),
+      );
       api.get('/terminology/diagnoses', async (req) => {
         const query = z
           .object({
@@ -246,15 +289,25 @@ export async function createApp(
           .get('medications')
           .update(actor(req), uuid.parse((req.params as any).id), body.version, body.data);
       });
-      api.post('/patients/:id/lab-orders', async (req, reply) =>
-        reply
+      api.post('/patients/:id/lab-orders', async (req, reply) => {
+        const connected = (req.body as any)?.connectorId !== undefined;
+        assert(
+          !connected || runtime.has('integrations'),
+          409,
+          'Laboratory integrations are not enabled',
+        );
+        return reply
           .code(201)
           .send(
-            await runtime
-              .get('laboratories')
-              .order(actor(req), uuid.parse((req.params as any).id), req.body),
-          ),
-      );
+            connected
+              ? await runtime
+                  .get('integrations')
+                  .order(actor(req), uuid.parse((req.params as any).id), req.body)
+              : await runtime
+                  .get('laboratories')
+                  .order(actor(req), uuid.parse((req.params as any).id), req.body),
+          );
+      });
       for (const action of ['receive', 'review', 'cancel'] as const) {
         api.post(`/lab-orders/:id/${action}`, async (req) => {
           const body = z.object({ version, data: z.unknown() }).strict().parse(req.body);

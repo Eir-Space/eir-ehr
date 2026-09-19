@@ -1,7 +1,7 @@
 export type Actor = {
   id: string;
   tenant: string;
-  role: 'clinician' | 'patient' | 'proxy' | 'auditor' | 'administrator';
+  role: 'clinician' | 'patient' | 'proxy' | 'auditor' | 'administrator' | 'integration';
   patientId?: string;
   assignmentId?: string;
   unitId?: string;
@@ -31,6 +31,7 @@ export type Permission =
   | 'access.emergency'
   | 'patient.protected'
   | 'workforce.manage'
+  | 'integration.manage'
   | 'audit.review';
 export type AuditRow = {
   seq: number;
@@ -79,6 +80,12 @@ export interface Store {
   transaction<T>(fn: () => Promise<T>): Promise<T>;
   get(tenant: string, id: string): Promise<Entity | undefined>;
   list(tenant: string, patientId?: string, kind?: string): Promise<Entity[]>;
+  // Optional API-2 capability. Queue providers require database-side filtering.
+  searchEntities?(
+    tenant: string,
+    kind: string,
+    query: import('./entity-query.ts').EntityQuery,
+  ): Promise<Entity[]>;
   insert(
     actor: Actor,
     kind: string,
@@ -266,6 +273,8 @@ export interface AccessReview {
   protect(actor: Actor, patientId: string, version: number, input: unknown): Promise<Entity>;
 }
 export interface Services {
+  integrations: import('./integrations.ts').Integrations;
+  labTransport: import('./integrations.ts').LabTransport;
   workforce: Workforce;
   accessReview: AccessReview;
   medications: Medications;

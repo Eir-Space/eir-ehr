@@ -39,6 +39,8 @@ The shell itself can also be replaced: the JSON APIs are independent of its DOM/
 
 ## Compatibility And Trust
 
+The integration composition adds `integrations` and `labTransport` services. Its storage requirement is the optional API-2 `Store.searchEntities` capability; both bundled stores implement it, and startup fails if a selected store does not. Machine audit principals use role `integration` and never authenticate as staff. Keep `integration.manage` in a separate administrative assignment. See [INTEGRATIONS.md](INTEGRATIONS.md) for protocol/schema compatibility, transport replacement and queue migration requirements.
+
 The persistence release explicitly moves stateful services to promises and runtime API version 2. Version 1 manifests fail startup. Await all `Store`, `Access`, `Clinical`, `Workforce` (except pure `actor`), `Identity`, `CareTeam`, `Medications`, `Laboratories`, `Fhir`, and `AIReview` operations. Terminology/country lookups and chart-renderer signatures remain unchanged. Replace synchronous array predicates with awaited loops when they call authorization; `filter(async ...)` is never an access check.
 
 `Store.transaction(async () => ...)` callbacks must be database-only and replayable: PostgreSQL may retry the complete callback for a serialization failure or deadlock, with bounded backoff. Stale expected versions remain explicit conflicts and are not retried as newer writes. Nested failures poison the entire transaction. Model inference, network calls and other external effects must remain outside the callback. Domain code rechecks permissions and reference versions inside the committing transaction. See [PERSISTENCE.md](PERSISTENCE.md).

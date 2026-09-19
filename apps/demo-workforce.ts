@@ -9,7 +9,9 @@ export function demoWorkforce(tenant: string) {
     validUntil: '2099-01-01T00:00:00.000Z',
     enabled: true,
   };
-  const clinical = permissions.filter((p) => !['workforce.manage', 'audit.review'].includes(p));
+  const clinical = permissions.filter(
+    (p) => !['workforce.manage', 'integration.manage', 'audit.review'].includes(p),
+  );
   return {
     units: [{ id: unitId, tenant, name: 'Björkbackens vårdcentral' }],
     bootstrap: [
@@ -54,7 +56,7 @@ export function demoWorkforce(tenant: string) {
         subject: 'emma',
         name: 'Emma Sjöberg',
         role: 'administrator',
-        permissions: ['workforce.manage'],
+        permissions: ['workforce.manage', 'integration.manage'],
       },
     ],
   };

@@ -4,6 +4,7 @@ import { renderCareTeam, clinicDay, moveDay, taskOpen, statusLabel } from './car
 import { draftEditor } from './draft-editor.js';
 import { renderMedications, renderLabs, workflowAction } from './clinical-workflows.js';
 import { roleLabel, gateActions, renderAccessReview, renderWorkforce } from './access-workspace.js';
+import { renderIntegrations } from './integration-workspace.js';
 const $ = (s) => document.querySelector(s);
 const state = {
   token: '',
@@ -149,9 +150,11 @@ async function login(token) {
         b.hidden =
           b.dataset.view === 'audit'
             ? !permitted('audit.review') || !state.session.authorization
-            : b.dataset.view === 'workforce'
-              ? !permitted('workforce.manage') || !state.session.authorization
-              : !canWrite();
+            : b.dataset.view === 'integrations'
+              ? !permitted('integration.manage') || !state.session.integrations
+              : b.dataset.view === 'workforce'
+                ? !permitted('workforce.manage') || !state.session.authorization
+                : !canWrite();
       });
     $('#register').hidden = !permitted('patient.register');
     const clinicalWorkspace = !state.session.authorization || canWrite();
@@ -169,8 +172,9 @@ async function login(token) {
     $('#lock').hidden = !state.session.authorization;
     $('#emergency-access').hidden = !state.session.authorization || !permitted('access.emergency');
     if (state.session.actor.role === 'auditor') state.view = 'audit';
-    else if (state.session.actor.role === 'administrator') state.view = 'workforce';
-    else if (['audit', 'workforce'].includes(state.view)) state.view = 'chart';
+    else if (state.session.actor.role === 'administrator')
+      state.view = permitted('workforce.manage') ? 'workforce' : 'integrations';
+    else if (['audit', 'workforce', 'integrations'].includes(state.view)) state.view = 'chart';
     await refreshPatients();
     $('#login').hidden = true;
     $('#shell').hidden = false;
@@ -632,6 +636,7 @@ async function refreshChart() {
   await render();
 }
 async function render() {
+  $('#shell').dataset.view = state.view;
   $('#workspace-nav')
     .querySelectorAll('button')
     .forEach((b) => {
@@ -645,15 +650,17 @@ async function render() {
     });
   $('#patient-header').hidden = state.view !== 'chart';
   $('#tabs').hidden = state.view !== 'chart';
-  if (state.view === 'audit' || state.view === 'workforce') {
+  if (['audit', 'workforce', 'integrations'].includes(state.view)) {
     const options = {
       api,
       modal,
       perform,
       actorId: state.session.actor.id,
       filters: state.auditFilters,
+      scope: state.session.actor.assignmentId,
     };
     if (state.view === 'audit') await renderAccessReview($('#content'), options);
+    else if (state.view === 'integrations') await renderIntegrations($('#content'), options);
     else await renderWorkforce($('#content'), options);
     icons();
     return;
@@ -706,7 +713,8 @@ async function render() {
         (b.onclick = () =>
           perform(async () => {
             state.tab = b.dataset.tab;
-            await render();
+            if (state.tab === 'labs') await refreshChart();
+            else await render();
           })),
     );
   const content = $('#content');
@@ -729,7 +737,7 @@ async function render() {
   if (state.tab === 'medications' && canWrite())
     renderMedications(content, state.chart, memberName);
   if (state.tab === 'labs' && canWrite())
-    renderLabs(content, state.chart, state.session.actor.id, memberName, !!open);
+    await renderLabs(content, state.chart, state.session.actor.id, memberName, !!open, api);
   if (state.tab === 'tasks') renderTasks(content);
   if (state.tab === 'ai') renderAI(content);
   if (state.tab === 'plugins') {
@@ -873,8 +881,9 @@ async function action(name, id) {
     );
   if (name === 'open-labs') {
     state.tab = 'labs';
-    return render();
+    return refreshChart();
   }
+  if (name === 'lab-refresh') return refreshChart();
   if (name.startsWith('med-') || name.startsWith('lab-'))
     return workflowAction(name, id, {
       chart: state.chart,

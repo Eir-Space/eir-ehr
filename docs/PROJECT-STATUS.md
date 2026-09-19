@@ -8,19 +8,22 @@ An Apache-2.0 electronic health record for Swedish primary care, designed for la
 
 ## Working Today
 
-| Area                | Current capability                                                                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Clinical work       | Patient registration and search; encounters; notes with autosave, signing and amendments; vital signs; diagnoses; allergies                            |
-| Swedish terminology | Official ICD-10-SE 2026 search by code or text, with release metadata and canonical coding                                                             |
-| Care team           | Appointments, check-in, assigned tasks, handover and encounter-linked completion                                                                       |
-| Medicines           | Documented medication use and versioned medication/allergy reconciliation, not electronic prescribing                                                  |
-| Results             | Local lab orders, manually entered source-labelled results, corrections, assigned review and explicit critical-result acknowledgement                  |
-| Identity and access | Tested OIDC adapter; staff assignments; care-unit, patient and action permissions; revocation; protected-record exclusion; manual access-log review    |
-| AI                  | Replaceable extractive and local-model providers; evidence-linked proposals, clinician review and draft-only acceptance; changed-source detection      |
-| Interoperability    | Authenticated JSON APIs, record history/change feed and FHIR R4 projections; not a complete FHIR server or national implementation-guide certification |
-| Persistence         | Replaceable SQLite/PostgreSQL storage, role-bound provider isolation, version-conflict checks, encrypted logical backups and a tested EHR restore      |
+| Area                    | Current capability                                                                                                                                                                                        |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clinical work           | Patient registration and search; encounters; notes with autosave, signing and amendments; vital signs; diagnoses; allergies                                                                               |
+| Swedish terminology     | Official ICD-10-SE 2026 search by code or text, with release metadata and canonical coding                                                                                                                |
+| Care team               | Appointments, check-in, assigned tasks, handover and encounter-linked completion                                                                                                                          |
+| Medicines               | Documented medication use and versioned medication/allergy reconciliation, not electronic prescribing                                                                                                     |
+| Results                 | Local lab orders, manually entered source-labelled results, corrections, assigned review and explicit critical-result acknowledgement                                                                     |
+| Lab integration runtime | Atomic outbox, durable authenticated inbox, bounded leased workers, exact matching, correction sequencing and audited operator retry; real local HTTP adapter tests, no contracted Swedish lab connection |
+| Identity and access     | Tested OIDC adapter; staff assignments; care-unit, patient and action permissions; revocation; protected-record exclusion; manual access-log review                                                       |
+| AI                      | Replaceable extractive and local-model providers; evidence-linked proposals, clinician review and draft-only acceptance; changed-source detection                                                         |
+| Interoperability        | Authenticated JSON APIs, record history/change feed and FHIR R4 projections; not a complete FHIR server or national implementation-guide certification                                                    |
+| Persistence             | Replaceable SQLite/PostgreSQL storage, role-bound provider isolation, version-conflict checks, encrypted logical backups and a tested EHR restore                                                         |
 
 The public website remains a separate disposable synthetic demo. Persistent staging is a separate environment. Neither is permission to enter real patient data.
+
+The integration runtime is the next development milestone after persistence. See [INTEGRATIONS.md](INTEGRATIONS.md) for the executable protocol, deployment requirements and local test-laboratory console. Repository capabilities and the deployed public revision may differ until a reviewed release is deployed.
 
 Backend and browser tests exercise real PostgreSQL transactions, independent concurrent editors, access boundaries and restoration of application records. This is engineering verification, not clinical validation, service approval or an independent security certification.
 

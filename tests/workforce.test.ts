@@ -436,7 +436,7 @@ test('v1 migration invalidates old sessions, preserves records and audit, and re
     assert.equal(await migrated.session('old-session'), undefined);
     assert.equal((await migrated.list(actor.tenant)).length, 1);
     assert((await migrated.verifyAudit()).ok);
-    migrated.db.exec('PRAGMA user_version=3;');
+    migrated.db.exec('PRAGMA user_version=4;');
     await migrated.close();
     assert.throws(() => new SqliteStore(path), /newer/);
   } finally {

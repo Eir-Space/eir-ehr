@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Eir testlaboratorium</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/sandbox.js" type="module"></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Testlaboratorium</h1>
+        <p>Lokal utvecklingsmiljö · Endast syntetiska uppgifter</p>
+      </div>
+      <a id="ehr">Eir EHR</a>
+    </header>
+    <main>
+      <div class="toolbar">
+        <h2>Beställningar</h2>
+        <label
+          >Anslutningsläge<select id="mode">
+            <option value="accept">Normal drift</option>
+            <option value="unavailable">Driftstopp (503)</option>
+            <option value="lose-ack">Förlorat kvitto</option>
+            <option value="wrong-ack">Felaktigt kvitto</option>
+            <option value="reject">Avvisa beställningar</option>
+          </select></label
+        ><button id="refresh">Uppdatera</button>
+      </div>
+      <p id="error" role="alert"></p>
+      <div id="orders"></div>
+      <h2>Skickade svar</h2>
+      <div id="results"></div>
+    </main>
+    <dialog id="result-dialog">
+      <form id="result-form">
+        <h2>Laboratoriesvar</h2>
+        <label>Analys<input name="name" required maxlength="200" /></label
+        ><label>Resultat<input name="value" required maxlength="500" /></label
+        ><label>Enhet<input name="unit" maxlength="80" /></label
+        ><label>Referensintervall<input name="reference" maxlength="200" /></label
+        ><label
+          >Avvikelse<select name="flag">
+            <option value="unknown">Ej bedömt</option>
+            <option value="normal">Normal</option>
+            <option value="high">Hög</option>
+            <option value="low">Låg</option>
+            <option value="critical">Kritisk</option>
+          </select></label
+        ><label
+          >Ersätter svar<select name="supersedesMessageId">
+            <option value="">Första svaret</option>
+          </select></label
+        ><label
+          >Orsak till rättning<textarea name="correctionReason" maxlength="500"></textarea>
+        </label>
+        <div class="actions">
+          <button id="cancel" type="button">Avbryt</button
+          ><button type="submit">Skicka svar</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
