@@ -240,12 +240,13 @@ export default {
   version: '1.0.0',
   apiVersion: 1,
   provides: ['fhir'],
-  requires: ['clinical', 'store'],
+  requires: ['clinical', 'store', 'access'],
   setup(ctx) {
     const clinical = ctx.get('clinical'),
       store = ctx.get('store');
     ctx.provide('fhir', {
       bundle(actor, patientId) {
+        ctx.get('access').permit(actor, 'chart.export', patientId);
         const entities = clinical.chart(actor, patientId);
         // Superseded reports stay in the clinical history, not alongside current reports in an export.
         const currentReports = new Set(

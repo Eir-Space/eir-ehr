@@ -12,7 +12,7 @@ export default {
       access = ctx.get('access');
     const check = (actor: Actor, patientId: string, write = false) => {
       assert(actor.role === 'clinician', 403, 'Clinician role required');
-      access.check(actor, patientId, write);
+      access.permit(actor, write ? 'medication.write' : 'chart.read', patientId);
     };
     const snapshot = (actor: Actor, patientId: string) =>
       store
@@ -84,7 +84,7 @@ export default {
         );
       },
       reconcile(actor, patientId, input) {
-        check(actor, patientId, true);
+        access.permit(actor, 'medication.reconcile', patientId);
         const parsed = reconciliationInput.parse(input);
         parsed.snapshot.sort();
         return store.transaction(() => {

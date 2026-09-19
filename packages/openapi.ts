@@ -3,8 +3,15 @@ import { patientInput, inputs } from '../plugins/clinical.ts';
 import { bookingInput } from './care-team.ts';
 import { medicationInput, medicationUpdate, reconciliationInput } from './medications.ts';
 import { labOrderInput, labReportInput, labReviewInput, labCancelInput } from './laboratories.ts';
+import {
+  assignmentInput,
+  assignmentChange,
+  auditReviewInput,
+  protectionInput,
+  reasonInput,
+} from './workforce.ts';
 const json = (schema: Record<string, unknown>) => ({ 'application/json': { schema } });
-export function openApi() {
+export function openApi(clinic = false, secureCookie = false) {
   const paths: Record<string, any> = {};
   function route(
     path: string,
@@ -16,7 +23,7 @@ export function openApi() {
     paths[path] ??= {};
     paths[path][method] = {
       summary: description,
-      security: [{ bearerAuth: [] }],
+      security: [{ bearerAuth: [] }, ...(clinic ? [{ staffCookie: [] }] : [])],
       parameters: [...path.matchAll(/\{(\w+)\}/g)].map(([, name]) => ({
         in: 'path',
         name,
@@ -105,6 +112,67 @@ export function openApi() {
   );
   const expected = (data: z.ZodType) =>
     schema(z.object({ version: z.number().int().positive(), data }).strict());
+  route(
+    '/patients/{id}/permissions',
+    'get',
+    'Effective patient permissions in the current assignment, or null for legacy policy',
+  );
+  if (clinic) {
+    route(
+      '/session/assignment',
+      'post',
+      'Select an active assignment belonging to this identity',
+      schema(z.object({ assignmentId: z.uuid() }).strict()),
+    );
+    route('/workforce', 'get', 'Staff assignments in the administrative unit');
+    route(
+      '/workforce',
+      'post',
+      'Provision an explicitly mapped identity assignment in the current unit',
+      schema(assignmentInput),
+      '201',
+    );
+    route(
+      '/workforce/{id}',
+      'post',
+      'Change or revoke another staff assignment with a reason',
+      expected(assignmentChange),
+    );
+    route('/access-review', 'get', 'Unit-scoped audit page with immutable review history');
+    paths['/access-review'].get.parameters = [
+      { in: 'query', name: 'before', schema: { type: 'integer', minimum: 1 } },
+      {
+        in: 'query',
+        name: 'limit',
+        schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
+      },
+      ...['actorId', 'patientId', 'outcome'].map((name) => ({
+        in: 'query',
+        name,
+        schema: { type: 'string', ...(name === 'outcome' ? { enum: ['success', 'denied'] } : {}) },
+      })),
+    ];
+    route(
+      '/access-review',
+      'post',
+      'Record a hash-bound assessment; no self-review',
+      schema(auditReviewInput),
+      '201',
+    );
+    route(
+      '/patients/{id}/emergency-access',
+      'post',
+      'Reasoned 15-minute read-only exception; never overrides protection or restrictions',
+      schema(reasonInput),
+      '201',
+    );
+    route(
+      '/patients/{id}/protection',
+      'post',
+      'Update protected identity status with version and reason',
+      expected(protectionInput),
+    );
+  }
   route(
     '/medications/{id}',
     'post',
@@ -210,13 +278,14 @@ export function openApi() {
   route(
     '/patients/{id}/access',
     'post',
-    'Grant expiring development-policy access',
+    'Grant expiring care relationship; clinic policy requires reason and verified staff assignment',
     schema(
       z
         .object({
           actorId: z.string().min(1).max(100),
           role: z.enum(['clinician', 'proxy']),
           expires: z.iso.datetime({ offset: true }),
+          reason: z.string().trim().min(1).max(200).optional(),
         })
         .strict(),
     ),
@@ -227,12 +296,27 @@ export function openApi() {
     'Set patient self-service restriction',
     schema(z.object({ blocked: z.boolean() }).strict()),
   );
-  route('/audit', 'get', 'Authorized access audit');
+  if (!clinic) route('/audit', 'get', 'Authorized access audit (legacy policy)');
   return {
     openapi: '3.1.0',
     info: { title: 'Eir EHR clinical API', version: '0.1.0' },
     servers: [{ url: '/api' }],
-    components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } } },
+    components: {
+      securitySchemes: {
+        bearerAuth: { type: 'http', scheme: 'bearer' },
+        ...(clinic
+          ? {
+              staffCookie: {
+                type: 'apiKey',
+                in: 'cookie',
+                name: secureCookie ? '__Host-eir-session' : 'eir-session',
+                description:
+                  'OIDC profile only; unsafe requests also require the configured Origin',
+              },
+            }
+          : {}),
+      },
+    },
     paths,
   };
 }

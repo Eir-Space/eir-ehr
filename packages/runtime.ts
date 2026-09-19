@@ -16,6 +16,9 @@ export class Runtime {
   private services = new Map<ServiceName, unknown>();
   private disposers: (() => void)[] = [];
   readonly active: { id: string; version: string; provides: string[]; requires: string[] }[] = [];
+  has(name: ServiceName) {
+    return this.services.has(name);
+  }
   get<K extends ServiceName>(name: K): Services[K] {
     if (!this.services.has(name)) throw new Error(`Missing service: ${name}`);
     return this.services.get(name) as Services[K];

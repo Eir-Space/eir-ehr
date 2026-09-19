@@ -27,12 +27,14 @@
     "smoke:public": "tsx scripts/smoke-public.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^10.1.4",
     "@js-temporal/polyfill": "^0.5.1",
     "csv-parse": "^7.0.2",
     "fastify": "^5.6.0",
     "lucide": "^0.468.0",
+    "openid-client": "^6.8.8",
     "personnummer": "3.2.1",
     "tsx": "^4.23.13",
     "zod": "^4.1.0"
@@ -40,6 +42,7 @@
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "@types/node": "^22.18.0",
+    "jose": "^6.2.12",
     "prettier": "^3.9.8",
     "typescript": "^5.9.0"
   }

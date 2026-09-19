@@ -7,6 +7,7 @@ import { fromConfig, type Runtime } from '../packages/runtime.ts';
 import { createApp } from './app.ts';
 import { baseApp, webFiles } from './http.ts';
 import { seedDemo } from './seed.ts';
+import { demoWorkforce } from './demo-workforce.ts';
 
 type Workspace = {
   app: FastifyInstance;
@@ -72,8 +73,13 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
       let inner: FastifyInstance | undefined;
       try {
         // This separate profile never reads the local persistent clinical database.
-        const actor = { id: 'demo-clinician', tenant: randomUUID(), role: 'clinician' as const };
+        let actor: import('../packages/contracts.ts').Actor = {
+          id: 'demo-clinician',
+          tenant: randomUUID(),
+          role: 'clinician',
+        };
         const loaded = await fromConfig(resolve(root, 'eir.demo.config.json'), {
+          'eir.workforce': demoWorkforce(actor.tenant),
           'eir.care-team': {
             members: [
               { id: actor.id, tenant: actor.tenant, name: 'Emma Sjöberg', profession: 'Läkare' },
@@ -93,6 +99,12 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
           },
         });
         runtime = loaded.runtime;
+        const workforce = runtime.get('workforce');
+        actor = workforce.actor(
+          workforce
+            .forIdentity('https://local.eir.invalid', 'emma')
+            .find((a) => a.data.role === 'clinician')!,
+        );
         seedDemo(runtime, actor);
         const token = runtime.get('identity').issue!(actor);
         inner = await createApp(

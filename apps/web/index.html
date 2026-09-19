@@ -51,6 +51,9 @@
       <form id="login-form">
         <div class="wordmark"><i data-lucide="activity"></i> Eir <span>Journal</span></div>
         <h1>Logga in</h1>
+        <a id="staff-login" class="staff-login" href="/auth/login" hidden
+          >Logga in med vårdens e-legitimation <i data-lucide="shield-check"></i
+        ></a>
         <section id="demo-entry" hidden>
           <p class="lead">Ett öppet journalsystem för svensk vård. Byggt tillsammans.</p>
           <button id="start-demo" class="primary" type="button">
@@ -76,7 +79,10 @@
     <div id="shell" hidden>
       <header class="app-header">
         <div class="wordmark"><i data-lucide="activity"></i> Eir <span>Journal</span></div>
-        <span class="environment">Utvecklingsmiljö</span><span id="identity"></span
+        <span class="environment">Utvecklingsmiljö</span
+        ><label id="assignment-field" hidden
+          >Aktivt uppdrag<select id="assignment" aria-label="Aktivt uppdrag"></select></label
+        ><span id="identity"></span
         ><a
           class="icon-link"
           href="/guide.html"
@@ -85,6 +91,8 @@
           title="Walkthrough and contributing"
           aria-label="Walkthrough and contributing"
           ><i data-lucide="book-open"></i></a
+        ><button id="lock" title="Lås arbetsytan" aria-label="Lås arbetsytan" hidden>
+          <i data-lucide="lock-keyhole"></i></button
         ><button id="logout" title="Logga ut" aria-label="Logga ut">
           <i data-lucide="log-out"></i>
         </button>
@@ -97,7 +105,14 @@
             <button data-view="chart" class="active">
               <i data-lucide="folder-heart"></i>Patientjournal
             </button>
+            <button data-view="audit" hidden><i data-lucide="shield-check"></i>Åtkomstlogg</button>
+            <button data-view="workforce" hidden>
+              <i data-lucide="users-round"></i>Medarbetaruppdrag
+            </button>
           </nav>
+          <button id="emergency-access" hidden>
+            <i data-lucide="key-round"></i>Tillfällig läsåtkomst
+          </button>
           <div class="section-title">
             <h2>Patienter</h2>
             <button id="register" title="Registrera patient" aria-label="Registrera patient">

@@ -16,14 +16,22 @@ export default {
     const store = ctx.get('store'),
       access = ctx.get('access'),
       team = ctx.get('careTeam');
-    const check = (actor: Actor, patientId: string) => {
+    const check = (
+      actor: Actor,
+      patientId: string,
+      action: 'lab.order' | 'lab.receive' | 'lab.review' = 'lab.order',
+    ) => {
       assert(actor.role === 'clinician', 403, 'Clinician role required');
-      access.check(actor, patientId, true);
+      access.permit(actor, action, patientId);
     };
-    const order = (actor: Actor, id: string) => {
+    const order = (
+      actor: Actor,
+      id: string,
+      action: 'lab.order' | 'lab.receive' | 'lab.review' = 'lab.order',
+    ) => {
       const row = store.get(actor.tenant, id);
       assert(row?.kind === 'labOrder', 404, 'Lab order not found');
-      check(actor, row.patientId);
+      check(actor, row.patientId, action);
       return row;
     };
     ctx.provide('laboratories', {
@@ -72,7 +80,7 @@ export default {
         });
       },
       receive(actor, id, version, input) {
-        const row = order(actor, id);
+        const row = order(actor, id, 'lab.receive');
         const parsed = labReportInput.parse(input);
         assert(
           Date.parse(parsed.collectedAt) <= Date.parse(parsed.reportedAt) &&
@@ -134,7 +142,7 @@ export default {
         });
       },
       review(actor, id, version, input) {
-        const row = order(actor, id),
+        const row = order(actor, id, 'lab.review'),
           parsed = labReviewInput.parse(input);
         return store.transaction(() => {
           assert(

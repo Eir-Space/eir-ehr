@@ -6,6 +6,7 @@ import { vitals } from '../plugins/clinical.ts';
 import { openApi } from '../packages/openapi.ts';
 import { baseApp, webFiles } from './http.ts';
 import { visibleRecord } from '../packages/visibility.ts';
+import cookie from '@fastify/cookie';
 
 const uuid = z.uuid();
 const version = z.number().int().positive();
@@ -15,23 +16,71 @@ export async function createApp(
   rendererIds = ['timeline', 'table'],
   defaultRenderer = rendererIds[0],
 ) {
-  const app = await baseApp();
   const clinical = runtime.get('clinical'),
     identity = runtime.get('identity'),
     store = runtime.get('store');
+  const app = await baseApp(240, 128 * 1024, identity.browser ? [identity.browser.origin] : []);
+  await app.register(cookie);
   const actors = new WeakMap<FastifyRequest, Actor>();
   const actor = (request: FastifyRequest) => {
     const a = actors.get(request);
     assert(a, 401, 'Authentication required');
     return a;
   };
-  app.get('/deployment.json', async () => ({ mode: 'local' }));
+  const browser = identity.browser;
+  const secureCookies = !!browser?.origin.startsWith('https:');
+  const sessionCookie = secureCookies ? '__Host-eir-session' : 'eir-session';
+  const flowCookie = secureCookies ? '__Host-eir-login' : 'eir-login';
+  const cookieOptions = {
+    httpOnly: true,
+    secure: secureCookies,
+    sameSite: 'strict' as const,
+    path: '/',
+  };
+  const tokenFor = (req: FastifyRequest) => {
+    const auth = req.headers.authorization;
+    if (auth?.startsWith('Bearer ')) return auth.slice(7);
+    assert(!auth, 401, 'Unsupported authentication scheme');
+    return browser ? (req.cookies[sessionCookie] ?? '') : '';
+  };
+  app.get('/deployment.json', async () => ({
+    mode: 'local',
+    authentication: browser ? 'oidc' : 'local',
+    workforce: runtime.has('workforce'),
+  }));
+  if (browser) {
+    app.get('/auth/login', async (_, reply) => {
+      const { url, binding } = await browser.begin();
+      return reply
+        .setCookie(flowCookie, binding, { ...cookieOptions, sameSite: 'lax', maxAge: 300 })
+        .redirect(url);
+    });
+    app.get('/auth/callback', async (req, reply) => {
+      reply.clearCookie(flowCookie, { ...cookieOptions, sameSite: 'lax' });
+      const token = await browser.callback(
+        new URL(req.url, browser.origin),
+        req.cookies[flowCookie] ?? '',
+      );
+      const previous = req.cookies[sessionCookie];
+      if (previous) identity.revoke?.(previous);
+      return reply.setCookie(sessionCookie, token, cookieOptions).redirect('/');
+    });
+  }
   await app.register(
     async (api) => {
       api.addHook('onRequest', async (request) => {
-        const auth = request.headers.authorization;
-        if (!auth?.startsWith('Bearer ')) throw new Fault(401, 'Authentication required');
-        actors.set(request, await identity.authenticate(auth.slice(7)));
+        if (
+          browser &&
+          !request.headers.authorization?.startsWith('Bearer ') &&
+          !['GET', 'HEAD'].includes(request.method)
+        )
+          assert(request.headers.origin === browser.origin, 403, 'Same-origin request required');
+        actors.set(request, await identity.authenticate(tokenFor(request)));
+      });
+      api.addHook('onError', async (req, _reply, error) => {
+        const a = actors.get(req);
+        if (a && error instanceof Fault && error.status === 403)
+          store.audit(a, 'request.denied', undefined, undefined, 'denied');
       });
       api.get('/session', async (req) => ({
         actor: actor(req),
@@ -40,6 +89,20 @@ export async function createApp(
         vitals,
         renderers: rendererIds,
         defaultRenderer,
+        authorization: runtime.get('access').context?.(actor(req)) ?? null,
+        assignments: runtime.has('workforce')
+          ? runtime
+              .get('workforce')
+              .assignments(actor(req))
+              .map((row) => ({
+                id: row.id,
+                unitId: row.data.unitId,
+                role: row.data.role,
+                name:
+                  runtime.get('workforce').units.find((u) => u.id === row.data.unitId)?.name ??
+                  row.data.unitId,
+              }))
+          : [],
         careTeam:
           actor(req).role === 'clinician'
             ? {
@@ -74,12 +137,53 @@ export async function createApp(
             body.data,
           );
       });
-      api.post('/logout', async (req) => {
-        identity.revoke?.(req.headers.authorization!.slice(7));
+      api.post('/logout', async (req, reply) => {
+        identity.revoke?.(tokenFor(req));
+        if (browser) reply.clearCookie(sessionCookie, cookieOptions);
         return { ok: true };
       });
+      if (runtime.has('workforce')) {
+        api.post('/session/assignment', async (req) => {
+          const { assignmentId } = z.object({ assignmentId: uuid }).strict().parse(req.body);
+          assert(identity.select, 409, 'Assignment selection unavailable');
+          return identity.select(tokenFor(req), assignmentId);
+        });
+        api.get('/workforce', async (req) => runtime.get('workforce').staff(actor(req)));
+        api.post('/workforce', async (req, reply) =>
+          reply.code(201).send(runtime.get('workforce').create(actor(req), req.body)),
+        );
+        api.post('/workforce/:id', async (req) => {
+          const body = z.object({ version, data: z.unknown() }).strict().parse(req.body);
+          return runtime
+            .get('workforce')
+            .update(actor(req), uuid.parse((req.params as any).id), body.version, body.data);
+        });
+      }
+      if (runtime.has('accessReview')) {
+        api.get('/access-review', async (req) =>
+          runtime.get('accessReview').list(actor(req), req.query),
+        );
+        api.post('/access-review', async (req, reply) =>
+          reply.code(201).send(runtime.get('accessReview').review(actor(req), req.body)),
+        );
+        api.post('/patients/:id/emergency-access', async (req, reply) =>
+          reply
+            .code(201)
+            .send(
+              runtime
+                .get('accessReview')
+                .emergency(actor(req), uuid.parse((req.params as any).id), req.body),
+            ),
+        );
+        api.post('/patients/:id/protection', async (req) => {
+          const body = z.object({ version, data: z.unknown() }).strict().parse(req.body);
+          return runtime
+            .get('accessReview')
+            .protect(actor(req), uuid.parse((req.params as any).id), body.version, body.data);
+        });
+      }
       api.get('/plugins', async () => runtime.active);
-      api.get('/openapi.json', async () => openApi());
+      api.get('/openapi.json', async () => openApi(runtime.has('workforce'), secureCookies));
       api.get('/terminology/diagnoses', async (req) => {
         const query = z
           .object({
@@ -98,6 +202,13 @@ export async function createApp(
       api.get('/patients/:id/chart', async (req) =>
         clinical.chart(actor(req), uuid.parse((req.params as any).id)),
       );
+      api.get('/patients/:id/permissions', async (req) => {
+        const patientId = uuid.parse((req.params as any).id),
+          a = actor(req),
+          access = runtime.get('access');
+        access.check(a, patientId);
+        return access.context?.(a, patientId) ?? null;
+      });
       api.get('/patients/:id/medications', async (req) =>
         runtime.get('medications').list(actor(req), uuid.parse((req.params as any).id)),
       );
@@ -219,6 +330,7 @@ export async function createApp(
             actorId: z.string().min(1).max(100),
             role: z.enum(['clinician', 'proxy']),
             expires: z.iso.datetime({ offset: true }),
+            reason: z.string().trim().min(1).max(200).optional(),
           })
           .strict()
           .parse(req.body);
@@ -230,6 +342,7 @@ export async function createApp(
             body.actorId,
             body.role,
             body.expires,
+            body.reason,
           );
         return { ok: true };
       });
@@ -240,6 +353,7 @@ export async function createApp(
       });
       api.get('/audit', async (req) => {
         const a = actor(req);
+        assert(!runtime.has('workforce'), 403, 'Use the unit-scoped access review service');
         assert(
           a.role === 'auditor' || a.role === 'patient',
           403,

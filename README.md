@@ -22,21 +22,23 @@ Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.
 
 ## Working Modules
 
+The [staff identity and access release](docs/IDENTITY-AND-ACCESS.md) adds OIDC login, unit/assignment/action-level authorization, staff revocation, protected-record exclusion, audit review and temporary read access. The demo uses local identities; real SITHS/HSA connectivity still needs onboarding. The legacy `eir.config.json` remains development-only; consult the clinic profile and migration notes before changing a persistent installation.
+
 The [care-team release](docs/CARE-TEAM.md) adds daily booking/check-in, a shared assigned inbox with explicit handover, encounter-linked appointment completion and server-autosaved drafts with conflict recovery. It keeps the public workspace disposable; persistent draft recovery is available in the local persistent installation.
 
 The [medication and results release](docs/MEDICATIONS-AND-RESULTS.md) adds versioned medication reconciliation and a local order-to-result-to-review loop. Report corrections reopen assigned follow-up; critical results require explicit acknowledgement. Neither module claims external prescribing or laboratory connectivity.
 
-| Area                | Implemented behavior                                                                                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Clinical workspace  | Swedish patient directory, encounters, chart, notes, observations, diagnoses, allergies and follow-up tasks                                                              |
-| Diagnosis catalogue | Official ICD-10-SE 2026 code/name lookup, canonical label validation and versioned coding; replaceable terminology provider                                              |
-| Record integrity    | Transactions, compare-and-set versions, note signing, immutable signed notes, linked amendments, correction history                                                      |
-| Sweden country pack | Personnummer and samordningsnummer checksum/date validation using `personnummer`, explicit 12-digit identifiers, separate birth date, local reserve IDs                  |
-| Access              | Hashed local sessions, tenant scoping, expiring care relationships, expiring proxy grants, patient self-access and a coarse patient restriction                          |
-| Audit               | Persisted read/write decisions, append-only SQL guards, hash-chain verification on startup                                                                               |
-| AI                  | Replaceable extractive or local Ollama provider, bounded input, persisted evidence and exact citations, clinician review, stale-context rejection, draft-only acceptance |
-| APIs                | Authenticated JSON clinical API, ordered patient change feed, FHIR R4 projection including medication statements and lab orders/results                                  |
-| Extensibility       | Dependency-declared services, versioned manifests, startup validation, rollback/disposal, configurable server modules and chart renderers                                |
+| Area                | Implemented behavior                                                                                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Clinical workspace  | Swedish patient directory, encounters, chart, notes, observations, diagnoses, allergies and follow-up tasks                                                                          |
+| Diagnosis catalogue | Official ICD-10-SE 2026 code/name lookup, canonical label validation and versioned coding; replaceable terminology provider                                                          |
+| Record integrity    | Transactions, compare-and-set versions, note signing, immutable signed notes, linked amendments, correction history                                                                  |
+| Sweden country pack | Personnummer and samordningsnummer checksum/date validation using `personnummer`, explicit 12-digit identifiers, separate birth date, local reserve IDs                              |
+| Access              | Clinic profile: OIDC or local staff sessions, active unit/assignment/action policy, protected identity and expiring care relationships; legacy self/proxy policy is development-only |
+| Audit               | Persisted decisions with assignment context, append-only guards, hash verification and unit-scoped manual review with cursor paging                                                  |
+| AI                  | Replaceable extractive or local Ollama provider, bounded input, persisted evidence and exact citations, clinician review, stale-context rejection, draft-only acceptance             |
+| APIs                | Authenticated JSON clinical API, ordered patient change feed, FHIR R4 projection including medication statements and lab orders/results                                              |
+| Extensibility       | Dependency-declared services, versioned manifests, startup validation, rollback/disposal, configurable server modules and chart renderers                                            |
 
 All displayed national-service connections are **not connected**. No fictitious connectivity or eHealth maturity scores are generated. The extractive provider is visibly identified as not using a language model.
 

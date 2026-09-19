@@ -75,6 +75,7 @@ export default {
       },
       register(actor, input) {
         assert(actor.role === 'clinician', 403, 'Clinician role required');
+        access.permit(actor, 'patient.register');
         const parsed = patientInput.parse(input);
         assert(
           parsed.birthDate <= new Date().toISOString().slice(0, 10),
@@ -88,6 +89,7 @@ export default {
               ...parsed,
               identifier,
               country: country.code,
+              ...(access.context ? { careUnitId: access.context(actor).unitId } : {}),
             });
             store.grant(
               actor.tenant,
@@ -97,6 +99,13 @@ export default {
               new Date(Date.now() + 86400000 * 30).toISOString(),
             );
             store.audit(actor, 'care-relationship.created', patient.id);
+            if (access.context)
+              store.insert(actor, 'careRelationship', patient.id, {
+                target: actor.id,
+                assignmentId: actor.assignmentId,
+                reason: 'Patient registered for care in the active unit',
+                expires: new Date(Date.now() + 86400000 * 30).toISOString(),
+              });
             return patient;
           });
         } catch (error: any) {
@@ -110,7 +119,7 @@ export default {
         return store.list(actor.tenant, patientId).filter((e) => visibleRecord(actor, e));
       },
       create(actor, patientId, kind, input) {
-        access.check(actor, patientId, true);
+        access.permit(actor, kind === 'task' ? 'task.write' : 'record.write', patientId);
         if (kind === 'task') return careTeam.createTask(actor, patientId, input);
         assert(inputs[kind], 422, 'Unsupported clinical record type');
         const parsed = inputs[kind].parse(input) as Record<string, any>;
@@ -202,7 +211,11 @@ export default {
         const entity = store.get(actor.tenant, entityId);
         assert(entity, 404, 'Record not found');
         if (entity.kind === 'task') return careTeam.task(actor, entityId, action, version, input);
-        access.check(actor, entity.patientId, true);
+        access.permit(
+          actor,
+          entity.kind === 'note' && action === 'sign' ? 'note.sign' : 'record.write',
+          entity.patientId,
+        );
         assert(entity.version === version, 409, 'Record changed. Reload before saving.');
         return store.transaction(() => {
           let data = { ...entity.data };
@@ -219,6 +232,12 @@ export default {
               });
             }
             assert(data.status === 'draft', 409, 'Signed notes are immutable; create an amendment');
+            if (access.context)
+              assert(
+                data.author === actor.id,
+                403,
+                'Only the note author can edit or sign; co-signing is not enabled',
+              );
             if (action === 'save') data.text = z.object({ text }).strict().parse(input).text;
             else if (action === 'sign') {
               z.object({}).strict().parse(input);
@@ -227,6 +246,16 @@ export default {
                 status: 'signed',
                 signedBy: actor.id,
                 signedAt: new Date().toISOString(),
+                ...(actor.assignmentId
+                  ? {
+                      signedUnder: {
+                        assignmentId: actor.assignmentId,
+                        unitId: actor.unitId,
+                        authentication: actor.authentication?.method ?? 'local',
+                        acr: actor.authentication?.acr ?? null,
+                      },
+                    }
+                  : {}),
               };
             } else throw new Fault(422, 'Unsupported note action');
           } else if (entity.kind === 'encounter' && action === 'close') {

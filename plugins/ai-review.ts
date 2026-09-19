@@ -68,7 +68,7 @@ export default {
       provider = ctx.get('aiProvider');
     ctx.provide('aiReview', {
       async propose(actor, patientId, encounterId) {
-        access.check(actor, patientId, true);
+        access.permit(actor, 'ai.use', patientId);
         const encounter = store.get(actor.tenant, encounterId);
         assert(
           encounter?.kind === 'encounter' &&
@@ -92,7 +92,7 @@ export default {
           422,
           'AI returned an invalid source reference or quotation',
         );
-        access.check(actor, patientId, true);
+        access.permit(actor, 'ai.use', patientId);
         return store.transaction(() =>
           store.insert(actor, 'proposal', patientId, {
             ...output,
@@ -107,7 +107,8 @@ export default {
       review(actor, id, version, decision, text) {
         const proposal = store.get(actor.tenant, id);
         assert(proposal?.kind === 'proposal', 404, 'Proposal not found');
-        access.check(actor, proposal.patientId, true);
+        access.permit(actor, 'ai.use', proposal.patientId);
+        if (decision === 'accept') access.permit(actor, 'record.write', proposal.patientId);
         assert(
           proposal.version === version && proposal.data.status === 'pending',
           409,
