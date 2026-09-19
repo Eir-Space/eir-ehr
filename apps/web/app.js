@@ -64,6 +64,13 @@ async function perform(fn) {
   if (busy) return;
   busy = true;
   $('#error').hidden = true;
+  const inputs = [...document.querySelectorAll('#shell input, #shell select')].map((control) => ({
+    control,
+    disabled: control.disabled,
+  }));
+  inputs.forEach(({ control }) => {
+    control.disabled = true;
+  });
   document.querySelectorAll('button').forEach((b) => (b.disabled = true));
   try {
     await fn();
@@ -75,6 +82,9 @@ async function perform(fn) {
     }
   } finally {
     busy = false;
+    inputs.forEach(({ control, disabled }) => {
+      control.disabled = disabled;
+    });
     document.querySelectorAll('button').forEach((b) => (b.disabled = false));
     icons();
   }
@@ -86,9 +96,6 @@ async function login(token) {
     state.session = await api('/session');
     state.renderer = state.session.defaultRenderer;
     state.day = clinicDay(state.session.careTeam?.timeZone ?? 'Europe/Stockholm');
-    $('#login').hidden = true;
-    $('#shell').hidden = false;
-    $('#project-community').hidden = true;
     form.reset();
     $('#identity').textContent =
       state.session.careTeam?.members.find((m) => m.id === state.session.actor.id)?.name ??
@@ -96,6 +103,9 @@ async function login(token) {
     $('#workspace-nav').hidden = !canWrite();
     $('#register').hidden = !canWrite();
     await refreshPatients();
+    $('#login').hidden = true;
+    $('#shell').hidden = false;
+    $('#project-community').hidden = true;
   } catch (err) {
     state.token = '';
     $('#login').hidden = false;

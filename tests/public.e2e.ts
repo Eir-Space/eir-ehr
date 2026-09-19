@@ -5,14 +5,15 @@ import { createPublicDemo } from '../apps/public-demo.ts';
 import { root } from './helpers.ts';
 
 test('public visitor can start, use the real chart and read the contributor guide', async (t) => {
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  t.after(() => browser?.close());
   const remote = process.env.EIR_DEMO_TEST_URL;
   const app = remote ? undefined : await createPublicDemo(root);
   const address = remote
     ? new URL(remote).origin
     : await app!.listen({ port: 0, host: '127.0.0.1' });
   t.after(() => app?.close());
-  const browser = await chromium.launch({ headless: true });
-  t.after(() => browser.close());
+  browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
   page.setDefaultTimeout(15000);
   const errors: string[] = [];

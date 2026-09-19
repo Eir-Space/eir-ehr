@@ -9,15 +9,16 @@ test('care team books, checks in, signs, closes, assigns and resolves work at de
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(async () => {
+    await browser?.close();
     await app.close();
     f.runtime.stop();
   });
   f.runtime
     .get('access')
     .grant(doctor, f.patient.id, 'nurse-a', 'clinician', '2099-01-01T00:00:00Z');
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
     timezoneId: 'America/New_York',
@@ -32,8 +33,25 @@ test('care team books, checks in, signs, closes, assigns and resolves work at de
   await page.getByRole('button', { name: 'Boka besök', exact: true }).click();
   await page.getByLabel('Tid (Europe/Stockholm)').fill('2026-09-21T09:00');
   await page.getByLabel('Kontaktorsak').fill('Återbesök');
+  let releaseRefresh!: () => void;
+  const refreshed = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  await page.route(
+    '**/api/patients',
+    async (route) => {
+      await refreshed;
+      await route.continue();
+    },
+    { times: 1 },
+  );
   await page.getByRole('button', { name: 'Boka', exact: true }).click();
-  await expect(page.getByRole('dialog')).not.toBeVisible();
+  try {
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await expect(page.getByLabel('Datum', { exact: true })).toBeDisabled();
+  } finally {
+    releaseRefresh();
+  }
   await page.getByLabel('Datum', { exact: true }).fill('2026-09-21');
   await expect(page.locator('.appointment-row')).toHaveCount(1);
   await expect(page.locator('.slot-time strong')).toHaveText('09:00');
@@ -93,6 +111,8 @@ test('care team books, checks in, signs, closes, assigns and resolves work at de
 });
 
 test('autosave recovers after reload, preserves text offline, and refuses concurrent overwrite', async (t) => {
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  t.after(() => browser?.close());
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
@@ -100,8 +120,7 @@ test('autosave recovers after reload, preserves text offline, and refuses concur
     await app.close();
     f.runtime.stop();
   });
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const context = await browser.newContext(),
     page = await context.newPage();
   page.setDefaultTimeout(10000);
@@ -150,18 +169,40 @@ test('autosave recovers after reload, preserves text offline, and refuses concur
 });
 
 test('public care-team release exposes seeded worklists and working inbox on the deployed API', async (t) => {
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  t.after(() => browser?.close());
   let address = process.env.EIR_DEMO_TEST_URL;
   if (!address) {
     const app = await createPublicDemo(root);
     address = await app.listen({ host: '127.0.0.1', port: 0 });
     t.after(() => app.close());
   }
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(15000);
+  let releaseDirectory!: () => void;
+  const directoryReady = new Promise<void>((resolve) => {
+    releaseDirectory = resolve;
+  });
+  let directoryRequested = false;
+  await page.route(
+    '**/api/patients',
+    async (route) => {
+      directoryRequested = true;
+      await directoryReady;
+      await route.continue();
+    },
+    { times: 1 },
+  );
   await page.goto(address);
   await page.getByRole('button', { name: 'Öppna journalen' }).click();
+  try {
+    await expect.poll(() => directoryRequested).toBe(true);
+    await expect(page.locator('#shell')).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Öppna journalen' })).toBeDisabled();
+  } finally {
+    releaseDirectory();
+  }
   await page.getByRole('button', { name: 'Arbetslista', exact: true }).click();
   await expect(page.locator('.appointment-row')).toHaveCount(4);
   await page.screenshot({ path: root + 'test-results/care-team-public.png', fullPage: true });
@@ -181,12 +222,14 @@ test('a lost create response does not duplicate a draft and closing drains newer
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(async () => {
+    // Close the browser before Fastify waits for its last in-flight chart refresh.
+    await browser?.close();
     await app.close();
     f.runtime.stop();
   });
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const page = await browser.newPage();
   page.setDefaultTimeout(10000);
   await page.goto(address);
@@ -209,7 +252,6 @@ test('a lost create response does not duplicate a draft and closing drains newer
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  t.after(() => release());
   let saving = false;
   await page.route(
     '**/records/*/save',
@@ -220,11 +262,14 @@ test('a lost create response does not duplicate a draft and closing drains newer
     },
     { times: 1 },
   );
-  await page.getByLabel('Journaltext', { exact: true }).fill('Första uppdateringen');
-  await expect.poll(() => saving).toBe(true);
-  await page.getByLabel('Journaltext', { exact: true }).fill('Senaste uppdateringen');
-  await page.getByRole('dialog').getByRole('button', { name: 'Stäng', exact: true }).click();
-  release();
+  try {
+    await page.getByLabel('Journaltext', { exact: true }).fill('Första uppdateringen');
+    await expect.poll(() => saving).toBe(true);
+    await page.getByLabel('Journaltext', { exact: true }).fill('Senaste uppdateringen');
+    await page.getByRole('dialog').getByRole('button', { name: 'Stäng', exact: true }).click();
+  } finally {
+    release();
+  }
   await expect(page.getByRole('dialog')).not.toBeVisible();
   const notes = f.store.list(doctor.tenant, f.patient.id, 'note');
   assert.equal(notes.length, 1);

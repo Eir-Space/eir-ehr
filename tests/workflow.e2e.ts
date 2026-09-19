@@ -5,6 +5,8 @@ import { fixture, doctor, root } from './helpers.ts';
 import { createApp } from '../apps/app.ts';
 
 test('clinician workflow, plugin renderers, responsive layout and persisted source review', async (t) => {
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  t.after(() => browser?.close());
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
@@ -12,9 +14,9 @@ test('clinician workflow, plugin renderers, responsive layout and persisted sour
     await app.close();
     f.runtime.stop();
   });
-  const browser = await chromium.launch({ headless: true });
-  t.after(() => browser.close());
+  browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
+  page.setDefaultTimeout(15000);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(address);

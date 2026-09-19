@@ -6,6 +6,8 @@ import { createApp } from '../apps/app.ts';
 import { createPublicDemo } from '../apps/public-demo.ts';
 
 test('clinician reconciles medicines, records critical results, reviews and handles a corrected report', async (t) => {
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  t.after(() => browser?.close());
   const f = await fixture(),
     app = await createApp(f.runtime, root);
   const address = await app.listen({ host: '127.0.0.1', port: 0 });
@@ -13,8 +15,7 @@ test('clinician reconciles medicines, records critical results, reviews and hand
     await app.close();
     f.runtime.stop();
   });
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(10000);
   const errors: string[] = [];
@@ -120,14 +121,15 @@ test('clinician reconciles medicines, records critical results, reviews and hand
 });
 
 test('public medication and lab release exposes seeded data and completes result review', async (t) => {
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  t.after(() => browser?.close());
   let address = process.env.EIR_DEMO_TEST_URL;
   if (!address) {
     const app = await createPublicDemo(root);
     address = await app.listen({ host: '127.0.0.1', port: 0 });
     t.after(() => app.close());
   }
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(20000);
   await page.goto(address);
