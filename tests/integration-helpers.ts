@@ -137,7 +137,7 @@ export async function integrationFixture(
           : plugin.id === 'eir.storage.sqlite'
             ? { path: join(directory, 'ehr.sqlite') }
             : plugin.id === 'eir.workforce'
-              ? demoWorkforce(tenant)
+              ? (extra[plugin.id] ?? demoWorkforce(tenant))
               : plugin.id === 'eir.integrations'
                 ? {
                     connectors: [connector],
@@ -172,7 +172,11 @@ export async function integrationFixture(
     if (pg) await start(1);
     const workforce = runtimes[0].get('workforce');
     const assignments = await workforce.forIdentity('https://local.eir.invalid', 'emma');
-    const doctor = workforce.actor(assignments.find((r) => r.data.role === 'clinician')!);
+    const doctor = workforce.actor(
+      assignments.find(
+        (r) => r.data.role === 'clinician' && r.data.unitId === 'demo-primary-care',
+      )!,
+    );
     const admin = workforce.actor(assignments.find((r) => r.data.role === 'administrator')!);
     const patient = await runtimes[0].get('clinical').register(doctor, {
       name: 'Anna Lindberg',

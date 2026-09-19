@@ -22,6 +22,13 @@
       "config": {
         "definitions": [
           {
+            "id": "coordination",
+            "name": "Eir Samverkan",
+            "moduleVersion": "1.0.0",
+            "canEnable": true,
+            "restriction": "Samverkan i syntetisk utvecklingsmiljö"
+          },
+          {
             "id": "deterioration",
             "name": "Vitalövervakning",
             "moduleVersion": "1.0.0",
@@ -32,6 +39,46 @@
       }
     },
     { "module": "./plugins/risk-vitals.ts" },
+    {
+      "module": "./plugins/coordination-directory.ts",
+      "config": {
+        "units": [
+          {
+            "unitId": "demo-primary-care",
+            "organisationId": "demo-primary",
+            "organisationName": "Björkbackens vård",
+            "kind": "primary-care"
+          },
+          {
+            "unitId": "demo-hospital",
+            "organisationId": "demo-region",
+            "organisationName": "Region Lindängen",
+            "kind": "hospital"
+          },
+          {
+            "unitId": "demo-municipality",
+            "organisationId": "demo-municipality",
+            "organisationName": "Sjövik kommun",
+            "kind": "municipality"
+          }
+        ]
+      }
+    },
+    {
+      "module": "./plugins/coordination-payment.ts",
+      "config": {
+        "version": "synthetic-example-v1",
+        "dailyRateOre": 500000,
+        "developmentOnly": true
+      }
+    },
+    { "module": "./plugins/coordination.ts" },
+    { "module": "./plugins/sip-plans.ts" },
+    {
+      "module": "./plugins/coordination-documents.ts",
+      "config": { "maxBytes": 16384, "developmentPdfDownloads": true }
+    },
+    { "module": "./plugins/coordination-notifications.ts" },
     { "module": "./plugins/deterioration.ts", "config": { "worker": true } },
     { "module": "./plugins/ai-extractive.ts" },
     { "module": "./plugins/ai-review.ts" },

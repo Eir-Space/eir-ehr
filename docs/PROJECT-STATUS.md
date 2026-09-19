@@ -33,6 +33,8 @@ The optional [deterioration module](DETERIORATION.md) is off by default, with cl
 
 ## Not Yet Connected
 
+[Eir Samverkan](SAMVERKAN.md) now implements consented shared cases, three-unit inboxes, recipient receipts, discharge workflow, structured SIP, attachments/PDFs and versioned payment estimates. Its providers are independently replaceable. The demonstrated organisation separation is within one tenant, not live federation. Regional identity/exchange, complete statutory exception pathways, production document scanning and approved invoicing remain release gates.
+
 See [SWEDISH-INTEGRATIONS.md](SWEDISH-INTEGRATIONS.md) for the service owners, provider responsibilities and recommended first contacts.
 
 No live SITHS/HSA provisioning, NLL prescribing/dispensing, NPÖ/Journalen, external laboratory, Webcert or regional referral integration is claimed. OIDC protocol tests do not establish national identity-service approval. Medication documentation is not a prescription service, and manual result entry is not a laboratory connection.

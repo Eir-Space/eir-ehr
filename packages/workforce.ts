@@ -1,5 +1,11 @@
 import { z } from 'zod';
 export const permissions = [
+  'coordination.read',
+  'coordination.write',
+  'coordination.manage',
+  'coordination.export',
+  'coordination.billing',
+  'coordination.discharge',
   'modules.manage',
   'chart.read',
   'chart.export',

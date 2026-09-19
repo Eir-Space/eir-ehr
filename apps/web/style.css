@@ -1580,6 +1580,211 @@ a {
   overflow-wrap: anywhere;
   min-width: 0;
 }
+.sam-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: 24px;
+  border-top: 1px solid var(--line);
+}
+.sam-inbox {
+  border-right: 1px solid var(--line);
+  padding: 16px 16px 16px 0;
+  min-width: 0;
+}
+.sam-filter {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.sam-filter strong {
+  font-size: 12px;
+  color: var(--muted);
+}
+.sam-case {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 14px 10px;
+  gap: 5px;
+  overflow-wrap: anywhere;
+}
+.sam-case.selected {
+  background: #e4f1ed;
+  box-shadow: inset 3px 0 var(--accent);
+}
+.sam-case-content {
+  min-width: 0;
+  padding-top: 16px;
+  overflow-wrap: anywhere;
+}
+.sam-case-heading,
+.sam-consent,
+.sam-message > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sam-case-heading small {
+  display: block;
+  margin-top: 6px;
+}
+.sam-parties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 14px 0;
+}
+.sam-consent {
+  padding-bottom: 14px;
+}
+.sam-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-block: 1px solid var(--line);
+  padding: 6px 0;
+  margin-bottom: 18px;
+}
+.sam-tabs button {
+  border: 0;
+  border-radius: 0;
+  font-size: 12px;
+}
+.sam-tabs [aria-current='page'] {
+  background: #e4f1ed;
+  color: #075e55;
+}
+.sam-message {
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+}
+.sam-message p {
+  white-space: pre-wrap;
+  margin: 12px 0;
+}
+.sam-message time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.sam-message.withdrawn {
+  background: #f5f6f7;
+}
+.sam-message footer {
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+.sam-receipts {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.sam-facts {
+  display: grid;
+  grid-template-columns: minmax(100px, 160px) minmax(0, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+.sam-facts dt {
+  font-weight: 600;
+}
+.sam-facts dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.sam-goals article {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.sam-goals p {
+  margin: 8px 0;
+}
+.sam-checks {
+  border: 0;
+  padding: 8px 0;
+  display: grid;
+  gap: 8px;
+}
+.sam-checks label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sam-checks input {
+  min-height: 20px;
+  width: 20px;
+  height: 20px;
+}
+.sam-goal-editor {
+  border: 0;
+  border-top: 1px solid var(--line);
+  padding: 18px 0;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.sam-person-editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.sam-person-editor label:last-child {
+  grid-column: 1 / -1;
+}
+.sam-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sam-upload svg {
+  width: 18px;
+  height: 18px;
+}
+.sam-upload input {
+  width: 100%;
+  font-size: 12px;
+}
+.sam-subheading {
+  margin-top: 24px;
+}
+@media (max-width: 1100px) {
+  .sam-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .sam-inbox {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding-right: 0;
+  }
+  .sam-case {
+    padding: 10px;
+  }
+}
+@media (max-width: 500px) {
+  .sam-facts {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .sam-facts dd {
+    margin-bottom: 12px;
+  }
+  .sam-person-editor {
+    grid-template-columns: 1fr;
+  }
+}
 @media (max-width: 650px) {
   .module-setting,
   .monitor-patient > header,

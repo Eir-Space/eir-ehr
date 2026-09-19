@@ -8,6 +8,7 @@ import { renderIntegrations } from './integration-workspace.js';
 import { renderFollowUp } from './follow-up-workspace.js';
 import { renderModules } from './module-workspace.js';
 import { renderDeterioration } from './deterioration-workspace.js';
+import { renderCoordination } from './coordination-workspace.js';
 const $ = (s) => document.querySelector(s);
 const state = {
   token: '',
@@ -151,20 +152,22 @@ async function login(token) {
       .querySelectorAll('[data-view]')
       .forEach((b) => {
         b.hidden =
-          b.dataset.view === 'modules'
-            ? !state.session.modules ||
-              !['clinician', 'administrator'].includes(state.session.actor.role)
-            : b.dataset.view === 'monitoring'
-              ? !state.session.deterioration || !permitted('task.write')
-              : b.dataset.view === 'audit'
-                ? !permitted('audit.review') || !state.session.authorization
-                : b.dataset.view === 'follow-up'
-                  ? !permitted('task.write') || !state.session.followUp
-                  : b.dataset.view === 'integrations'
-                    ? !permitted('integration.manage') || !state.session.integrations
-                    : b.dataset.view === 'workforce'
-                      ? !permitted('workforce.manage') || !state.session.authorization
-                      : !canWrite();
+          b.dataset.view === 'coordination'
+            ? !state.session.coordination || !permitted('coordination.read')
+            : b.dataset.view === 'modules'
+              ? !state.session.modules ||
+                !['clinician', 'administrator'].includes(state.session.actor.role)
+              : b.dataset.view === 'monitoring'
+                ? !state.session.deterioration || !permitted('task.write')
+                : b.dataset.view === 'audit'
+                  ? !permitted('audit.review') || !state.session.authorization
+                  : b.dataset.view === 'follow-up'
+                    ? !permitted('task.write') || !state.session.followUp
+                    : b.dataset.view === 'integrations'
+                      ? !permitted('integration.manage') || !state.session.integrations
+                      : b.dataset.view === 'workforce'
+                        ? !permitted('workforce.manage') || !state.session.authorization
+                        : !canWrite();
       });
     $('#register').hidden = !permitted('patient.register');
     const clinicalWorkspace = !state.session.authorization || canWrite();
@@ -677,6 +680,18 @@ async function render() {
   $('#tabs').hidden = state.view !== 'chart';
   if (state.view === 'modules') {
     await renderModules($('#content'), { api, modal, perform });
+    icons();
+    return;
+  }
+  if (state.view === 'coordination') {
+    await renderCoordination($('#content'), {
+      api,
+      modal,
+      perform,
+      patientSelect,
+      actor: state.session.actor,
+      permissions: state.session.authorization?.permissions ?? [],
+    });
     icons();
     return;
   }

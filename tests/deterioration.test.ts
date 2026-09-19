@@ -93,7 +93,11 @@ test('vital engine: thresholds, trends, missingness, stale values, units, adult 
 test('module settings are off by default, authorized, versioned, audited and survive restart', async (t) => {
   const f = await fixture();
   t.after(f.cleanup);
-  assert.equal((await f.api(f.doctor, '/modules')).body.items[0].enabled, false);
+  assert.equal(
+    (await f.api(f.doctor, '/modules')).body.items.find((m: any) => m.id === 'deterioration')
+      .enabled,
+    false,
+  );
   assert.equal((await f.api(f.admin, '/modules')).body.canManage, true);
   const workforce = f.runtimes[0].get('workforce');
   const nurse = workforce.actor(
@@ -105,7 +109,11 @@ test('module settings are off by default, authorized, versioned, audited and sur
   assert.equal((await f.api(f.admin, '/modules/deterioration', body)).status, 200);
   assert.equal((await f.api(f.admin, '/modules/deterioration', body)).status, 409);
   await f.restart();
-  assert.equal((await f.api(f.doctor, '/modules')).body.items[0].enabled, true);
+  assert.equal(
+    (await f.api(f.doctor, '/modules')).body.items.find((m: any) => m.id === 'deterioration')
+      .enabled,
+    true,
+  );
   assert.equal((await f.runtimes[0].get('store').verifyAudit()).ok, true);
 });
 
