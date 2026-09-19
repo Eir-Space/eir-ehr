@@ -111,6 +111,8 @@ test('care team books, checks in, signs, closes, assigns and resolves work at de
 });
 
 test('autosave recovers after reload, preserves text offline, and refuses concurrent overwrite', async (t) => {
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  t.after(() => browser?.close());
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
@@ -118,8 +120,7 @@ test('autosave recovers after reload, preserves text offline, and refuses concur
     await app.close();
     f.runtime.stop();
   });
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const context = await browser.newContext(),
     page = await context.newPage();
   page.setDefaultTimeout(10000);
@@ -168,14 +169,15 @@ test('autosave recovers after reload, preserves text offline, and refuses concur
 });
 
 test('public care-team release exposes seeded worklists and working inbox on the deployed API', async (t) => {
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  t.after(() => browser?.close());
   let address = process.env.EIR_DEMO_TEST_URL;
   if (!address) {
     const app = await createPublicDemo(root);
     address = await app.listen({ host: '127.0.0.1', port: 0 });
     t.after(() => app.close());
   }
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
+  browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   page.setDefaultTimeout(15000);
   let releaseDirectory!: () => void;
