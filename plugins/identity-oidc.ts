@@ -7,7 +7,7 @@ const loopback = (url: URL) => ['127.0.0.1', '[::1]', 'localhost'].includes(url.
 export default {
   id: 'eir.identity.oidc',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['identity'],
   requires: ['store', 'workforce'],
   async setup(ctx, config) {
@@ -83,7 +83,7 @@ export default {
             nonce = oidc.randomNonce(),
             binding = oidc.randomState(),
             verifier = oidc.randomPKCECodeVerifier();
-          store.saveLogin(
+          await store.saveLogin(
             tokenHash(binding),
             { state, nonce, verifier },
             new Date(Date.now() + 5 * 60000).toISOString(),
@@ -110,7 +110,7 @@ export default {
             401,
             'Invalid authentication response',
           );
-          const transaction = store.consumeLogin(tokenHash(binding));
+          const transaction = await store.consumeLogin(tokenHash(binding));
           assert(transaction, 401, 'Authentication request expired or already used');
           try {
             const tokens = await oidc.authorizationCodeGrant(client, url, {
@@ -131,16 +131,19 @@ export default {
               401,
               'Required authentication assurance was not met',
             );
-            const assignments = workforce.forIdentity(settings.issuer, claims.sub);
-            assert(assignments.length, 403, 'No provisioned active staff assignment');
-            const actor = workforce.actor(assignments[0], {
-              method: 'oidc',
-              issuer: settings.issuer,
-              subject: claims.sub,
-              acr: claims.acr,
-              authenticatedAt: claims.auth_time,
+            const { sub, acr, auth_time: authenticatedAt } = claims;
+            return await store.transaction(async () => {
+              const assignments = await workforce.forIdentity(settings.issuer, sub);
+              assert(assignments.length, 403, 'No provisioned active staff assignment');
+              const actor = workforce.actor(assignments[0], {
+                method: 'oidc',
+                issuer: settings.issuer,
+                subject: sub,
+                acr,
+                authenticatedAt,
+              });
+              return sessions.issue!(actor);
             });
-            return sessions.issue!(actor);
           } catch (cause) {
             throw Object.assign(
               new Fault(401, 'Authentication failed or staff assignment unavailable'),

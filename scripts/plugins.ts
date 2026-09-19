@@ -11,4 +11,4 @@ console.table(
     requires: p.requires.join(', '),
   })),
 );
-runtime.stop();
+await runtime.stop();

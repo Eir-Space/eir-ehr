@@ -15,5 +15,5 @@ try {
     throw new Error('Invalid citation from live model');
   console.log(JSON.stringify(output, null, 2));
 } finally {
-  runtime.stop();
+  await runtime.stop();
 }

@@ -4,10 +4,9 @@ import { fixture, doctor, root } from './helpers.ts';
 import { createApp } from '../apps/app.ts';
 import { importIcd, icdSource } from '../packages/icd.ts';
 import { seedDemo } from '../apps/seed.ts';
-
-test('verified Swedish catalogue supports codes, accents, synonyms, categories and bounded results', async (t) => {
+await test('verified Swedish catalogue supports codes, accents, synonyms, categories and bounded results', async (t) => {
   const { runtime } = await fixture();
-  t.after(() => runtime.stop());
+  t.after(async () => await runtime.stop());
   const terms = runtime.get('terminology');
   assert.equal(terms.source.count, 38631);
   assert.equal(terms.source.version, '2026-01-01');
@@ -30,15 +29,14 @@ test('verified Swedish catalogue supports codes, accents, synonyms, categories a
   assert.throws(() => terms.search('x', 51));
   assert.throws(() => importIcd(Buffer.from('unreviewed release')), /checksum/);
 });
-
-test('diagnosis API authenticates, canonicalizes coding and exports its release version', async (t) => {
+await test('diagnosis API authenticates, canonicalizes coding and exports its release version', async (t) => {
   const { runtime, patient } = await fixture();
   const app = await createApp(runtime, root);
   t.after(async () => {
     await app.close();
-    runtime.stop();
+    await runtime.stop();
   });
-  const token = runtime.get('identity').issue!(doctor);
+  const token = await runtime.get('identity').issue!(doctor);
   const headers = { authorization: `Bearer ${token}` };
   assert.equal((await app.inject({ url: '/api/terminology/diagnoses?q=I10' })).statusCode, 401);
   const search = await app.inject({ url: '/api/terminology/diagnoses?q=I109&limit=5', headers });
@@ -49,8 +47,8 @@ test('diagnosis API authenticates, canonicalizes coding and exports its release 
       (await app.inject({ url: `/api/terminology/diagnoses?${query}`, headers })).statusCode,
       422,
     );
-  const create = (code: Record<string, unknown>) =>
-    app.inject({
+  const create = async (code: Record<string, unknown>) =>
+    await app.inject({
       method: 'POST',
       url: `/api/patients/${patient.id}/records/condition`,
       headers,
@@ -82,20 +80,19 @@ test('diagnosis API authenticates, canonicalizes coding and exports its release 
     icdSource.version,
   );
 });
-
-test('fictional patient scenarios have distinct records, open work and immutable signed history', async (t) => {
+await test('fictional patient scenarios have distinct records, open work and immutable signed history', async (t) => {
   const { runtime, clinical } = await fixture();
-  t.after(() => runtime.stop());
+  t.after(async () => await runtime.stop());
   const actor = { ...doctor, tenant: 'demo-clinic' };
-  seedDemo(runtime, actor);
-  const patients = clinical.patients(actor);
+  await seedDemo(runtime, actor);
+  const patients = await clinical.patients(actor);
   assert.equal(patients.length, 4);
   assert.equal(patients[0].data.name, 'Anna Lindberg');
   assert.equal(new Set(patients.map((p) => p.data.identifier.value)).size, 4);
   for (const patient of patients) {
     assert.equal(patient.data.identifier.type, 'local');
     assert.match(patient.data.identifier.value, /^DEMO-00[1-4]$/);
-    const chart = clinical.chart(actor, patient.id);
+    const chart = await clinical.chart(actor, patient.id);
     assert.equal(
       chart.filter((r) => r.kind === 'encounter' && r.data.status === 'in-progress').length,
       1,

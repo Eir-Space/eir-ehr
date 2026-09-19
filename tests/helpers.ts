@@ -17,11 +17,13 @@ export async function fixture(path = ':memory:') {
   });
   const clinical = runtime.get('clinical'),
     store = runtime.get('store') as SqliteStore;
-  const patient = clinical.register(doctor, {
+  const patient = await clinical.register(doctor, {
     name: 'Syntetisk Patient',
     birthDate: '1985-03-12',
     identifier: { type: 'local', value: 'TEST-001' },
   });
-  const encounter = clinical.create(doctor, patient.id, 'encounter', { reason: 'Testkontakt' });
+  const encounter = await clinical.create(doctor, patient.id, 'encounter', {
+    reason: 'Testkontakt',
+  });
   return { runtime, clinical, store, patient, encounter };
 }

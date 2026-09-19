@@ -9,39 +9,40 @@ import {
 export default {
   id: 'eir.laboratories',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['laboratories'],
   requires: ['store', 'access', 'careTeam'],
   setup(ctx) {
     const store = ctx.get('store'),
       access = ctx.get('access'),
       team = ctx.get('careTeam');
-    const check = (
+    const check = async (
       actor: Actor,
       patientId: string,
       action: 'lab.order' | 'lab.receive' | 'lab.review' = 'lab.order',
     ) => {
       assert(actor.role === 'clinician', 403, 'Clinician role required');
-      access.permit(actor, action, patientId);
+      await access.permit(actor, action, patientId);
     };
-    const order = (
+    const order = async (
       actor: Actor,
       id: string,
       action: 'lab.order' | 'lab.receive' | 'lab.review' = 'lab.order',
     ) => {
-      const row = store.get(actor.tenant, id);
+      const row = await store.get(actor.tenant, id);
       assert(row?.kind === 'labOrder', 404, 'Lab order not found');
-      check(actor, row.patientId, action);
+      await check(actor, row.patientId, action);
       return row;
     };
     ctx.provide('laboratories', {
-      order(actor, patientId, input) {
-        check(actor, patientId);
+      async order(actor, patientId, input) {
+        await check(actor, patientId);
         const parsed = labOrderInput.parse(input);
-        return store.transaction(() => {
-          const previous = store
-            .list(actor.tenant, patientId, 'labOrder')
-            .find((r) => r.data.clientId === parsed.clientId);
+        return await store.transaction(async () => {
+          await check(actor, patientId);
+          const previous = (await store.list(actor.tenant, patientId, 'labOrder')).find(
+            (r) => r.data.clientId === parsed.clientId,
+          );
           if (previous) {
             assert(
               previous.data.author === actor.id &&
@@ -51,7 +52,7 @@ export default {
             );
             return previous;
           }
-          const encounter = store.get(actor.tenant, parsed.encounterId);
+          const encounter = await store.get(actor.tenant, parsed.encounterId);
           assert(
             encounter?.kind === 'encounter' &&
               encounter.patientId === patientId &&
@@ -59,13 +60,13 @@ export default {
             409,
             'An open encounter for this patient is required',
           );
-          const row = store.insert(actor, 'labOrder', patientId, {
+          const row = await store.insert(actor, 'labOrder', patientId, {
             ...parsed,
             status: 'requested',
             author: actor.id,
             originalInput: JSON.stringify(parsed),
           });
-          team.createLinkedTask(
+          await team.createLinkedTask(
             actor,
             patientId,
             {
@@ -79,8 +80,8 @@ export default {
           return row;
         });
       },
-      receive(actor, id, version, input) {
-        const row = order(actor, id, 'lab.receive');
+      async receive(actor, id, version, input) {
+        await order(actor, id, 'lab.receive');
         const parsed = labReportInput.parse(input);
         assert(
           Date.parse(parsed.collectedAt) <= Date.parse(parsed.reportedAt) &&
@@ -88,10 +89,11 @@ export default {
           422,
           'Collection must precede reporting; neither time may be in the future',
         );
-        return store.transaction(() => {
-          const previous = store
-            .list(actor.tenant, undefined, 'labReport')
-            .find((r) => r.data.source === parsed.source && r.data.messageId === parsed.messageId);
+        return await store.transaction(async () => {
+          const row = await order(actor, id, 'lab.receive');
+          const previous = (await store.list(actor.tenant, undefined, 'labReport')).find(
+            (r) => r.data.source === parsed.source && r.data.messageId === parsed.messageId,
+          );
           if (previous) {
             assert(
               previous.patientId === row.patientId &&
@@ -114,7 +116,7 @@ export default {
             422,
             'There is no report to correct',
           );
-          const report = store.insert(actor, 'labReport', row.patientId, {
+          const report = await store.insert(actor, 'labReport', row.patientId, {
             ...parsed,
             orderId: id,
             encounterId: row.data.encounterId,
@@ -124,7 +126,7 @@ export default {
             status: row.data.reportId ? 'corrected' : 'final',
             originalInput: JSON.stringify(parsed),
           });
-          const updated = store.revise(
+          const updated = await store.revise(
             actor,
             row,
             version,
@@ -137,14 +139,15 @@ export default {
             },
             'labOrder.result',
           );
-          team.syncLinkedTask(actor, updated, 'result');
+          await team.syncLinkedTask(actor, updated, 'result');
           return report;
         });
       },
-      review(actor, id, version, input) {
-        const row = order(actor, id, 'lab.review'),
-          parsed = labReviewInput.parse(input);
-        return store.transaction(() => {
+      async review(actor, id, version, input) {
+        await order(actor, id, 'lab.review');
+        const parsed = labReviewInput.parse(input);
+        return await store.transaction(async () => {
+          const row = await order(actor, id, 'lab.review');
           assert(
             row.version === version &&
               row.data.status === 'received' &&
@@ -152,9 +155,9 @@ export default {
             409,
             'The report changed or was already reviewed. Reload before reviewing.',
           );
-          const task = store
-            .list(actor.tenant, row.patientId, 'task')
-            .find((r) => r.data.linkedOrderId === id);
+          const task = (await store.list(actor.tenant, row.patientId, 'task')).find(
+            (r) => r.data.linkedOrderId === id,
+          );
           assert(
             task && task.version === parsed.taskVersion,
             409,
@@ -170,13 +173,13 @@ export default {
             422,
             'Explicit acknowledgement of a critical report is required',
           );
-          const review = store.insert(actor, 'labReview', row.patientId, {
+          const review = await store.insert(actor, 'labReview', row.patientId, {
             ...parsed,
             orderId: id,
             author: actor.id,
             reviewedAt: new Date().toISOString(),
           });
-          const updated = store.revise(
+          const updated = await store.revise(
             actor,
             row,
             version,
@@ -188,28 +191,29 @@ export default {
             },
             'labOrder.review',
           );
-          team.syncLinkedTask(actor, updated, 'review', parsed.action);
+          await team.syncLinkedTask(actor, updated, 'review', parsed.action);
           return review;
         });
       },
-      cancel(actor, id, version, input) {
-        const row = order(actor, id),
-          parsed = labCancelInput.parse(input);
-        return store.transaction(() => {
+      async cancel(actor, id, version, input) {
+        await order(actor, id);
+        const parsed = labCancelInput.parse(input);
+        return await store.transaction(async () => {
+          const row = await order(actor, id);
           assert(row.version === version, 409, 'Order changed. Reload before cancelling.');
           assert(
             row.data.status === 'requested',
             409,
             'A received report must be reviewed, not cancelled',
           );
-          const updated = store.revise(
+          const updated = await store.revise(
             actor,
             row,
             version,
             { ...row.data, status: 'cancelled', cancelReason: parsed.reason },
             'labOrder.cancel',
           );
-          team.syncLinkedTask(actor, updated, 'cancel', parsed.reason);
+          await team.syncLinkedTask(actor, updated, 'cancel', parsed.reason);
           return updated;
         });
       },

@@ -6,7 +6,6 @@ import { tmpdir } from 'node:os';
 import { fixture, doctor, root } from './helpers.ts';
 import { createApp } from '../apps/app.ts';
 import { fromConfig } from '../packages/runtime.ts';
-
 const fails = (status: number) => (error: any) => error.status === status;
 const med = () => ({
   clientId: randomUUID(),
@@ -50,16 +49,18 @@ const reviewInput = (reportId: string, taskVersion: number) => ({
   communication: 'Patient contacted',
   criticalAcknowledged: true,
 });
-
 test('medication reconciliation snapshots medicines and allergies, rejects stale reviews and preserves history', async (t) => {
   const f = await fixture();
-  t.after(() => f.runtime.stop());
+  t.after(async () => await f.runtime.stop());
   const meds = f.runtime.get('medications'),
     input = med();
-  const added = meds.add(doctor, f.patient.id, input);
-  assert.equal(meds.add(doctor, f.patient.id, input).id, added.id);
-  assert.throws(() => meds.add(doctor, f.patient.id, { ...input, name: 'Different' }), fails(409));
-  const state = meds.list(doctor, f.patient.id);
+  const added = await meds.add(doctor, f.patient.id, input);
+  assert.equal((await meds.add(doctor, f.patient.id, input)).id, added.id);
+  await assert.rejects(
+    async () => await meds.add(doctor, f.patient.id, { ...input, name: 'Different' }),
+    fails(409),
+  );
+  const state = await meds.list(doctor, f.patient.id);
   const check = {
     clientId: randomUUID(),
     snapshot: state.snapshot,
@@ -68,51 +69,57 @@ test('medication reconciliation snapshots medicines and allergies, rejects stale
     confirmed: true,
     noCurrentMedicines: false,
   };
-  const review = meds.reconcile(doctor, f.patient.id, check);
-  assert.equal(meds.reconcile(doctor, f.patient.id, check).id, review.id);
-  assert.equal(meds.list(doctor, f.patient.id).current, true);
+  const review = await meds.reconcile(doctor, f.patient.id, check);
+  assert.equal((await meds.reconcile(doctor, f.patient.id, check)).id, review.id);
+  assert.equal((await meds.list(doctor, f.patient.id)).current, true);
   const { clientId, ...fields } = input;
-  const updated = meds.update(doctor, added.id, 1, {
+  const updated = await meds.update(doctor, added.id, 1, {
     ...fields,
     status: 'on-hold',
     reason: 'Patient reports temporary interruption',
   });
   assert.equal(updated.version, 2);
-  assert.throws(
-    () => meds.update(doctor, added.id, 1, { ...fields, reason: 'Stale edit' }),
+  await assert.rejects(
+    async () => await meds.update(doctor, added.id, 1, { ...fields, reason: 'Stale edit' }),
     fails(409),
   );
-  assert.equal(meds.list(doctor, f.patient.id).current, false);
-  assert.throws(
-    () => meds.reconcile(doctor, f.patient.id, { ...check, clientId: randomUUID() }),
+  assert.equal((await meds.list(doctor, f.patient.id)).current, false);
+  await assert.rejects(
+    async () => await meds.reconcile(doctor, f.patient.id, { ...check, clientId: randomUUID() }),
     fails(409),
   );
-  const snap = meds.list(doctor, f.patient.id).snapshot;
-  f.clinical.create(doctor, f.patient.id, 'allergy', {
+  const snap = (await meds.list(doctor, f.patient.id)).snapshot;
+  await f.clinical.create(doctor, f.patient.id, 'allergy', {
     substance: 'Test',
     reaction: 'Reported reaction',
     criticality: 'unable-to-assess',
   });
-  assert.throws(
-    () =>
-      meds.reconcile(doctor, f.patient.id, { ...check, clientId: randomUUID(), snapshot: snap }),
+  await assert.rejects(
+    async () =>
+      await meds.reconcile(doctor, f.patient.id, {
+        ...check,
+        clientId: randomUUID(),
+        snapshot: snap,
+      }),
     fails(409),
   );
-  meds.reconcile(doctor, f.patient.id, {
+  await meds.reconcile(doctor, f.patient.id, {
     ...check,
     clientId: randomUUID(),
-    snapshot: meds.list(doctor, f.patient.id).snapshot,
+    snapshot: (await meds.list(doctor, f.patient.id)).snapshot,
   });
-  assert.equal(meds.list(doctor, f.patient.id).review?.data.reviewNumber, 2);
-  assert.equal(f.clinical.history(doctor, added.id)[0].data.status, 'active');
-  assert.throws(() => f.clinical.transition(doctor, review.id, 'save', 1, {}), fails(422));
+  assert.equal((await meds.list(doctor, f.patient.id)).review?.data.reviewNumber, 2);
+  assert.equal((await f.clinical.history(doctor, added.id))[0].data.status, 'active');
+  await assert.rejects(
+    async () => await f.clinical.transition(doctor, review.id, 'save', 1, {}),
+    fails(422),
+  );
 });
-
 test('absence of medication entries is unknown until explicitly reconciled; voided entries cannot be restored', async (t) => {
   const f = await fixture();
-  t.after(() => f.runtime.stop());
+  t.after(async () => await f.runtime.stop());
   const meds = f.runtime.get('medications');
-  assert.equal(meds.list(doctor, f.patient.id).current, false);
+  assert.equal((await meds.list(doctor, f.patient.id)).current, false);
   const data = {
     clientId: randomUUID(),
     snapshot: [],
@@ -121,206 +128,244 @@ test('absence of medication entries is unknown until explicitly reconciled; void
     confirmed: true,
     noCurrentMedicines: false,
   };
-  assert.throws(() => meds.reconcile(doctor, f.patient.id, data), fails(422));
-  meds.reconcile(doctor, f.patient.id, { ...data, noCurrentMedicines: true });
-  assert.equal(meds.list(doctor, f.patient.id).current, true);
+  await assert.rejects(async () => await meds.reconcile(doctor, f.patient.id, data), fails(422));
+  await meds.reconcile(doctor, f.patient.id, { ...data, noCurrentMedicines: true });
+  assert.equal((await meds.list(doctor, f.patient.id)).current, true);
   const input = med(),
-    r = meds.add(doctor, f.patient.id, input);
+    r = await meds.add(doctor, f.patient.id, input);
   const { clientId, ...fields } = input;
-  meds.update(doctor, r.id, 1, {
+  await meds.update(doctor, r.id, 1, {
     ...fields,
     status: 'entered-in-error',
     reason: 'Wrong statement',
   });
-  assert.throws(() => meds.update(doctor, r.id, 2, { ...fields, reason: 'Restore' }), fails(409));
-  assert.equal(meds.list(doctor, f.patient.id).current, false);
+  await assert.rejects(
+    async () => await meds.update(doctor, r.id, 2, { ...fields, reason: 'Restore' }),
+    fails(409),
+  );
+  assert.equal((await meds.list(doctor, f.patient.id)).current, false);
 });
-
 test('orders create owned follow-up atomically; source message retries are idempotent and cannot replace content', async (t) => {
   const f = await fixture();
-  t.after(() => f.runtime.stop());
+  t.after(async () => await f.runtime.stop());
   const labs = f.runtime.get('laboratories');
   const input = orderInput(f.encounter.id),
-    order = labs.order(doctor, f.patient.id, input);
-  assert.equal(labs.order(doctor, f.patient.id, input).id, order.id);
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'task').length, 1);
+    order = await labs.order(doctor, f.patient.id, input);
+  assert.equal((await labs.order(doctor, f.patient.id, input)).id, order.id);
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'task')).length, 1);
   const reportData = reportInput(),
-    report = labs.receive(doctor, order.id, 1, reportData);
-  assert.equal(labs.receive(doctor, order.id, 1, reportData).id, report.id);
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'labReport').length, 1);
-  assert.throws(
-    () =>
-      labs.receive(doctor, order.id, 2, {
+    report = await labs.receive(doctor, order.id, 1, reportData);
+  assert.equal((await labs.receive(doctor, order.id, 1, reportData)).id, report.id);
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'labReport')).length, 1);
+  await assert.rejects(
+    async () =>
+      await labs.receive(doctor, order.id, 2, {
         ...reportData,
         results: [{ ...reportData.results[0], value: '8' }],
       }),
     fails(409),
   );
-  assert.throws(() => labs.receive(doctor, order.id, 2, reportInput()), fails(422));
-  const task = f.store.list(doctor.tenant, f.patient.id, 'task')[0];
+  await assert.rejects(
+    async () => await labs.receive(doctor, order.id, 2, reportInput()),
+    fails(422),
+  );
+  const task = (await f.store.list(doctor.tenant, f.patient.id, 'task'))[0];
   assert.equal(task.data.priority, 'urgent');
   for (const action of ['complete', 'cancel', 'reopen', 'reschedule'])
-    assert.throws(
-      () => f.clinical.transition(doctor, task.id, action, task.version, { resolution: 'Bypass' }),
+    await assert.rejects(
+      async () =>
+        await f.clinical.transition(doctor, task.id, action, task.version, {
+          resolution: 'Bypass',
+        }),
       fails(409),
     );
-  assert.throws(() => labs.cancel(doctor, order.id, 2, { reason: 'Hide result' }), fails(409));
-  assert.throws(
-    () =>
-      labs.review(doctor, order.id, 2, {
+  await assert.rejects(
+    async () => await labs.cancel(doctor, order.id, 2, { reason: 'Hide result' }),
+    fails(409),
+  );
+  await assert.rejects(
+    async () =>
+      await labs.review(doctor, order.id, 2, {
         ...reviewInput(report.id, task.version),
         criticalAcknowledged: false,
       }),
     fails(422),
   );
-  const reviewed = labs.review(doctor, order.id, 2, reviewInput(report.id, task.version));
+  const reviewed = await labs.review(doctor, order.id, 2, reviewInput(report.id, task.version));
   assert.equal(reviewed.data.author, doctor.id);
-  assert.equal(f.store.get(doctor.tenant, task.id)?.data.status, 'completed');
-  assert.throws(
-    () => labs.review(doctor, order.id, 2, reviewInput(report.id, task.version)),
+  assert.equal((await f.store.get(doctor.tenant, task.id))?.data.status, 'completed');
+  await assert.rejects(
+    async () => await labs.review(doctor, order.id, 2, reviewInput(report.id, task.version)),
     fails(409),
   );
 });
-
 test('corrected reports reopen review, preserve previous acknowledgement and reject stale or reassigned reviews', async (t) => {
   const f = await fixture();
-  t.after(() => f.runtime.stop());
+  t.after(async () => await f.runtime.stop());
   const labs = f.runtime.get('laboratories'),
     team = f.runtime.get('careTeam');
-  const order = labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
-  const first = labs.receive(doctor, order.id, 1, reportInput());
-  let task = f.store.list(doctor.tenant, f.patient.id, 'task')[0];
-  labs.review(doctor, order.id, 2, reviewInput(first.id, task.version));
-  const corrected = labs.receive(doctor, order.id, 3, {
+  const order = await labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
+  const first = await labs.receive(doctor, order.id, 1, reportInput());
+  let task = (await f.store.list(doctor.tenant, f.patient.id, 'task'))[0];
+  await labs.review(doctor, order.id, 2, reviewInput(first.id, task.version));
+  const corrected = await labs.receive(doctor, order.id, 3, {
     ...reportInput(),
     correctionReason: 'Laboratory corrected value',
   });
-  task = f.store.get(doctor.tenant, task.id)!;
+  task = (await f.store.get(doctor.tenant, task.id))!;
   assert.equal(task.data.status, 'requested');
   assert.equal(task.data.completedAt, undefined);
   assert.equal(corrected.data.supersedes, first.id);
-  assert.throws(
-    () => labs.review(doctor, order.id, 4, reviewInput(first.id, task.version)),
+  await assert.rejects(
+    async () => await labs.review(doctor, order.id, 4, reviewInput(first.id, task.version)),
     fails(409),
   );
   const nurse = { ...doctor, id: 'nurse-a' };
-  assert.throws(
-    () =>
-      team.task(doctor, task.id, 'assign', task.version, { assigneeId: nurse.id, reason: 'Cover' }),
+  await assert.rejects(
+    async () =>
+      await team.task(doctor, task.id, 'assign', task.version, {
+        assigneeId: nurse.id,
+        reason: 'Cover',
+      }),
     fails(403),
   );
-  f.runtime
+  await f.runtime
     .get('access')
     .grant(doctor, f.patient.id, nurse.id, 'clinician', '2099-01-01T00:00:00Z');
-  const assigned = team.task(doctor, task.id, 'assign', task.version, {
+  const assigned = await team.task(doctor, task.id, 'assign', task.version, {
     assigneeId: nurse.id,
     reason: 'Cover',
   });
-  assert.throws(
-    () => labs.review(doctor, order.id, 4, reviewInput(corrected.id, task.version)),
+  await assert.rejects(
+    async () => await labs.review(doctor, order.id, 4, reviewInput(corrected.id, task.version)),
     fails(409),
   );
-  assert.throws(
-    () => labs.review(doctor, order.id, 4, reviewInput(corrected.id, assigned.version)),
+  await assert.rejects(
+    async () => await labs.review(doctor, order.id, 4, reviewInput(corrected.id, assigned.version)),
     fails(403),
   );
-  labs.review(nurse, order.id, 4, reviewInput(corrected.id, assigned.version));
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'labReview').length, 2);
-  assert.equal(f.store.get(doctor.tenant, first.id)?.data.status, 'final');
+  await labs.review(nurse, order.id, 4, reviewInput(corrected.id, assigned.version));
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'labReview')).length, 2);
+  assert.equal((await f.store.get(doctor.tenant, first.id))?.data.status, 'final');
 });
-
 test('lab orders validate references/times and cancellation cannot leave orphaned follow-up', async (t) => {
   const f = await fixture();
-  t.after(() => f.runtime.stop());
+  t.after(async () => await f.runtime.stop());
   const labs = f.runtime.get('laboratories');
-  assert.throws(
-    () =>
-      labs.order(doctor, f.patient.id, { ...orderInput(f.encounter.id), assigneeId: 'unknown' }),
+  await assert.rejects(
+    async () =>
+      await labs.order(doctor, f.patient.id, {
+        ...orderInput(f.encounter.id),
+        assigneeId: 'unknown',
+      }),
     fails(422),
   );
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'labOrder').length, 0);
-  const order = labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
-  assert.throws(
-    () =>
-      labs.receive(doctor, order.id, 1, { ...reportInput(), collectedAt: '2099-01-01T00:00:00Z' }),
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'labOrder')).length, 0);
+  const order = await labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
+  await assert.rejects(
+    async () =>
+      await labs.receive(doctor, order.id, 1, {
+        ...reportInput(),
+        collectedAt: '2099-01-01T00:00:00Z',
+      }),
     fails(422),
   );
-  assert.throws(() => labs.receive(doctor, order.id, 1, { ...reportInput(), results: [] }));
-  labs.cancel(doctor, order.id, 1, { reason: 'No longer needed' });
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'task')[0].data.status, 'cancelled');
-  assert.throws(() => labs.receive(doctor, order.id, 2, reportInput()), fails(409));
-  const other = f.clinical.register(doctor, {
+  await assert.rejects(
+    async () => await labs.receive(doctor, order.id, 1, { ...reportInput(), results: [] }),
+  );
+  await labs.cancel(doctor, order.id, 1, { reason: 'No longer needed' });
+  assert.equal(
+    (await f.store.list(doctor.tenant, f.patient.id, 'task'))[0].data.status,
+    'cancelled',
+  );
+  await assert.rejects(
+    async () => await labs.receive(doctor, order.id, 2, reportInput()),
+    fails(409),
+  );
+  const other = await f.clinical.register(doctor, {
     name: 'Other',
     birthDate: '1980-01-01',
     identifier: { type: 'local', value: 'OTHER-2' },
   });
-  assert.throws(() => labs.order(doctor, other.id, orderInput(f.encounter.id)), fails(409));
+  await assert.rejects(
+    async () => await labs.order(doctor, other.id, orderInput(f.encounter.id)),
+    fails(409),
+  );
 });
-
 test('result and review writes roll back together with their tasks; restart preserves reconciled state', async (t) => {
   const dir = mkdtempSync(tmpdir() + '/eir-meds-labs-');
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const f = await fixture(dir + '/ehr.sqlite');
   const labs = f.runtime.get('laboratories'),
     meds = f.runtime.get('medications');
-  const medication = meds.add(doctor, f.patient.id, med());
-  meds.reconcile(doctor, f.patient.id, {
+  const medication = await meds.add(doctor, f.patient.id, med());
+  await meds.reconcile(doctor, f.patient.id, {
     clientId: randomUUID(),
-    snapshot: meds.list(doctor, f.patient.id).snapshot,
+    snapshot: (await meds.list(doctor, f.patient.id)).snapshot,
     source: 'Patient',
     note: 'Dose to verify',
     confirmed: true,
     noCurrentMedicines: false,
   });
-  const order = labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
+  const order = await labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
   f.store.db.exec(
     "CREATE TRIGGER fail_result BEFORE INSERT ON audit WHEN json_extract(NEW.body,'$.action')='task.lab-result' BEGIN SELECT RAISE(ABORT,'write failure'); END",
   );
-  assert.throws(() => labs.receive(doctor, order.id, 1, reportInput()), /write failure/);
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'labReport').length, 0);
-  assert.equal(f.store.get(doctor.tenant, order.id)?.version, 1);
+  await assert.rejects(
+    async () => await labs.receive(doctor, order.id, 1, reportInput()),
+    /write failure/,
+  );
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'labReport')).length, 0);
+  assert.equal((await f.store.get(doctor.tenant, order.id))?.version, 1);
   f.store.db.exec('DROP TRIGGER fail_result');
-  const report = labs.receive(doctor, order.id, 1, reportInput());
-  const task = f.store.list(doctor.tenant, f.patient.id, 'task')[0];
+  const report = await labs.receive(doctor, order.id, 1, reportInput());
+  const task = (await f.store.list(doctor.tenant, f.patient.id, 'task'))[0];
   f.store.db.exec(
     "CREATE TRIGGER fail_review BEFORE INSERT ON audit WHEN json_extract(NEW.body,'$.action')='task.lab-review' BEGIN SELECT RAISE(ABORT,'write failure'); END",
   );
-  assert.throws(
-    () => labs.review(doctor, order.id, 2, reviewInput(report.id, task.version)),
+  await assert.rejects(
+    async () => await labs.review(doctor, order.id, 2, reviewInput(report.id, task.version)),
     /write failure/,
   );
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'labReview').length, 0);
-  assert.equal(f.store.get(doctor.tenant, task.id)?.data.status, 'requested');
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'labReview')).length, 0);
+  assert.equal((await f.store.get(doctor.tenant, task.id))?.data.status, 'requested');
   f.store.db.exec('DROP TRIGGER fail_review');
-  labs.review(doctor, order.id, 2, reviewInput(report.id, task.version));
-  f.runtime.stop();
+  await labs.review(doctor, order.id, 2, reviewInput(report.id, task.version));
+  await f.runtime.stop();
   const reopened = await fromConfig(root + 'eir.config.json', {
     'eir.storage.sqlite': { path: dir + '/ehr.sqlite' },
   });
-  t.after(() => reopened.runtime.stop());
-  assert.equal(reopened.runtime.get('medications').list(doctor, f.patient.id).current, true);
+  t.after(async () => await reopened.runtime.stop());
   assert.equal(
-    reopened.runtime.get('store').get(doctor.tenant, medication.id)?.data.name,
+    (await reopened.runtime.get('medications').list(doctor, f.patient.id)).current,
+    true,
+  );
+  assert.equal(
+    (await reopened.runtime.get('store').get(doctor.tenant, medication.id))?.data.name,
     'Test medicine',
   );
-  assert.equal(reopened.runtime.get('store').get(doctor.tenant, task.id)?.data.status, 'completed');
-  assert.equal(reopened.runtime.get('store').verifyAudit().ok, true);
+  assert.equal(
+    (await reopened.runtime.get('store').get(doctor.tenant, task.id))?.data.status,
+    'completed',
+  );
+  assert.equal((await reopened.runtime.get('store').verifyAudit()).ok, true);
 });
-
 test('workflow APIs enforce identity, tenant and role across chart, history, feed and export', async (t) => {
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   t.after(async () => {
     await app.close();
-    f.runtime.stop();
+    await f.runtime.stop();
   });
   const meds = f.runtime.get('medications'),
     labs = f.runtime.get('laboratories');
-  const medication = meds.add(doctor, f.patient.id, med());
-  const order = labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
-  const report = labs.receive(doctor, order.id, 1, reportInput());
-  const token = (a: any) => ({ authorization: `Bearer ${f.runtime.get('identity').issue!(a)}` });
-  const headers = token(doctor);
+  const medication = await meds.add(doctor, f.patient.id, med());
+  const order = await labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
+  const report = await labs.receive(doctor, order.id, 1, reportInput());
+  const token = async (a: any) => ({
+    authorization: `Bearer ${await f.runtime.get('identity').issue!(a)}`,
+  });
+  const headers = await token(doctor);
   assert.equal(
     (await app.inject({ url: `/api/patients/${f.patient.id}/medications` })).statusCode,
     401,
@@ -330,7 +375,7 @@ test('workflow APIs enforce identity, tenant and role across chart, history, fee
       await app.inject({
         method: 'POST',
         url: `/api/lab-orders/${order.id}/cancel`,
-        headers: token({ ...doctor, tenant: 'another' }),
+        headers: await token({ ...doctor, tenant: 'another' }),
         payload: { version: 2, data: { reason: 'Wrong tenant' } },
       })
     ).statusCode,
@@ -338,9 +383,11 @@ test('workflow APIs enforce identity, tenant and role across chart, history, fee
   );
   const self = { ...doctor, id: 'self', role: 'patient', patientId: f.patient.id };
   const proxy = { ...doctor, id: 'proxy', role: 'proxy', patientId: f.patient.id };
-  f.runtime.get('access').grant(doctor, f.patient.id, proxy.id, 'proxy', '2099-01-01T00:00:00Z');
+  await f.runtime
+    .get('access')
+    .grant(doctor, f.patient.id, proxy.id, 'proxy', '2099-01-01T00:00:00Z');
   for (const actor of [self, proxy]) {
-    const auth = token(actor);
+    const auth = await token(actor);
     assert.equal(
       (await app.inject({ url: `/api/patients/${f.patient.id}/medications`, headers: auth }))
         .statusCode,
@@ -387,21 +434,20 @@ test('workflow APIs enforce identity, tenant and role across chart, history, fee
     payload: { version: 1, data: { ...med(), role: 'clinician' } },
   });
   assert.equal(response.statusCode, 422);
-  f.runtime.get('access').block(self as any, f.patient.id, true);
+  await f.runtime.get('access').block(self as any, f.patient.id, true);
   assert.equal(
     (await app.inject({ url: `/api/patients/${f.patient.id}/medications`, headers })).statusCode,
     403,
   );
 });
-
 test('AI evidence includes medication provenance and only latest reports; any clinical change invalidates drafts', async (t) => {
   const f = await fixture();
-  t.after(() => f.runtime.stop());
+  t.after(async () => await f.runtime.stop());
   const meds = f.runtime.get('medications'),
     labs = f.runtime.get('laboratories'),
     ai = f.runtime.get('aiReview');
   const input = med(),
-    medication = meds.add(doctor, f.patient.id, input);
+    medication = await meds.add(doctor, f.patient.id, input);
   const proposal = await ai.propose(doctor, f.patient.id, f.encounter.id);
   assert.ok(
     proposal.data.evidence.some(
@@ -409,24 +455,24 @@ test('AI evidence includes medication provenance and only latest reports; any cl
     ),
   );
   const { clientId, ...fields } = input;
-  meds.update(doctor, medication.id, 1, {
+  await meds.update(doctor, medication.id, 1, {
     ...fields,
     status: 'stopped',
     reason: 'Reported stopped',
   });
-  assert.throws(() => ai.review(doctor, proposal.id, 1, 'accept'), fails(409));
-  const order = labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
-  const report = labs.receive(doctor, order.id, 1, reportInput());
+  await assert.rejects(async () => await ai.review(doctor, proposal.id, 1, 'accept'), fails(409));
+  const order = await labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
+  const report = await labs.receive(doctor, order.id, 1, reportInput());
   const before = await ai.propose(doctor, f.patient.id, f.encounter.id);
-  const corrected = labs.receive(doctor, order.id, 2, {
+  const corrected = await labs.receive(doctor, order.id, 2, {
     ...reportInput(),
     correctionReason: 'Corrected source',
   });
-  assert.throws(() => ai.review(doctor, before.id, 1, 'accept'), fails(409));
+  await assert.rejects(async () => await ai.review(doctor, before.id, 1, 'accept'), fails(409));
   const after = await ai.propose(doctor, f.patient.id, f.encounter.id);
   assert.ok(after.data.evidence.some((e: any) => e.ref === `${corrected.id}@1`));
   assert.ok(!after.data.evidence.some((e: any) => e.ref === `${report.id}@1`));
-  const bundle = f.runtime.get('fhir').bundle(doctor, f.patient.id);
+  const bundle = await f.runtime.get('fhir').bundle(doctor, f.patient.id);
   const resources = bundle.entry.map((e: any) => e.resource);
   assert.equal(resources.filter((r: any) => r.resourceType === 'MedicationStatement').length, 1);
   assert.equal(
@@ -442,4 +488,79 @@ test('AI evidence includes medication provenance and only latest reports; any cl
   assert.equal(diagnostic.contained[0].interpretation[0].coding[0].code, 'AA');
   assert.equal(diagnostic.result[0].reference, '#' + diagnostic.contained[0].id);
   assert.ok(bundle.entry.some((r: any) => r.fullUrl === diagnostic.basedOn[0].reference));
+});
+
+test('concurrent lab corrections retain one current report and reviews acknowledge it only once', async (t) => {
+  const f = await fixture();
+  t.after(() => f.runtime.stop());
+  const labs = f.runtime.get('laboratories');
+  const order = await labs.order(doctor, f.patient.id, orderInput(f.encounter.id));
+  const original = await labs.receive(doctor, order.id, 1, reportInput());
+  const corrections = await Promise.allSettled([
+    labs.receive(doctor, order.id, 2, { ...reportInput(), correctionReason: 'First correction' }),
+    labs.receive(doctor, order.id, 2, {
+      ...reportInput(),
+      correctionReason: 'Competing correction',
+    }),
+  ]);
+  assert.equal(corrections.filter((r) => r.status === 'fulfilled').length, 1);
+  assert.equal(corrections.find((r) => r.status === 'rejected')?.reason.status, 409);
+  const current = await f.store.get(doctor.tenant, order.id);
+  assert(current);
+  const report = await f.store.get(doctor.tenant, current.data.reportId);
+  assert.equal(report?.data.supersedes, original.id);
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'labReport')).length, 2);
+  const task = (await f.store.list(doctor.tenant, f.patient.id, 'task'))[0];
+  const reviews = await Promise.allSettled([
+    labs.review(
+      doctor,
+      order.id,
+      current.version,
+      reviewInput(current.data.reportId, task.version),
+    ),
+    labs.review(
+      doctor,
+      order.id,
+      current.version,
+      reviewInput(current.data.reportId, task.version),
+    ),
+  ]);
+  assert.equal(reviews.filter((r) => r.status === 'fulfilled').length, 1);
+  assert.equal(reviews.find((r) => r.status === 'rejected')?.reason.status, 409);
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'labReview')).length, 1);
+  assert.equal((await f.store.get(doctor.tenant, task.id))?.data.status, 'completed');
+  assert.equal((await f.store.get(doctor.tenant, order.id))?.data.reviewedReportId, report?.id);
+});
+
+test('concurrent reconciliations preserve review numbering and allergy changes invalidate their snapshot', async (t) => {
+  const f = await fixture();
+  t.after(() => f.runtime.stop());
+  const meds = f.runtime.get('medications');
+  await meds.add(doctor, f.patient.id, med());
+  const input = {
+    snapshot: (await meds.list(doctor, f.patient.id)).snapshot,
+    source: 'Patient interview',
+    note: 'Concurrent reconciliation',
+    confirmed: true,
+    noCurrentMedicines: false,
+  };
+  const reviews = await Promise.all([
+    meds.reconcile(doctor, f.patient.id, { ...input, clientId: randomUUID() }),
+    meds.reconcile(doctor, f.patient.id, { ...input, clientId: randomUUID() }),
+  ]);
+  assert.deepEqual(reviews.map((r) => r.data.reviewNumber).sort(), [1, 2]);
+  const outcomes = await Promise.allSettled([
+    f.clinical.create(doctor, f.patient.id, 'allergy', {
+      substance: 'Newly reported substance',
+      reaction: 'Patient reported reaction',
+      criticality: 'unable-to-assess',
+    }),
+    meds.reconcile(doctor, f.patient.id, { ...input, clientId: randomUUID() }),
+  ]);
+  assert.equal(outcomes[0].status, 'fulfilled');
+  if (outcomes[1].status === 'rejected') assert.equal(outcomes[1].reason.status, 409);
+  const state = await meds.list(doctor, f.patient.id);
+  assert.equal(state.current, false);
+  assert.notDeepEqual(state.snapshot, input.snapshot);
+  assert.deepEqual(state.review?.data.snapshot, input.snapshot);
 });

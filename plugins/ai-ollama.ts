@@ -12,7 +12,7 @@ const output = z
 export default {
   id: 'eir.ai.ollama',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['aiProvider'],
   requires: [],
   setup(ctx, config) {

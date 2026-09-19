@@ -50,8 +50,8 @@ test('federated browser login keeps tokens HttpOnly, rejects CSRF, signs with id
   }
   const runtime = await new Runtime().start(entries);
   const workforce = runtime.get('workforce');
-  const doctor = workforce.actor(workforce.forIdentity(provider.issuer, 'emma')[0]);
-  runtime.get('clinical').register(doctor, {
+  const doctor = workforce.actor((await workforce.forIdentity(provider.issuer, 'emma'))[0]);
+  await runtime.get('clinical').register(doctor, {
     name: 'Anna Lindberg',
     birthDate: '1980-01-01',
     identifier: { type: 'local', value: 'OIDC-TEST' },
@@ -62,7 +62,7 @@ test('federated browser login keeps tokens HttpOnly, rejects CSRF, signs with id
   t.after(async () => {
     await browser.close();
     await app.close();
-    runtime.stop();
+    await runtime.stop();
     delete process.env.EIR_BROWSER_OIDC_SECRET;
   });
   const page = await browser.newPage();
@@ -108,12 +108,12 @@ test('federated browser login keeps tokens HttpOnly, rejects CSRF, signs with id
   await page.locator('#dialog').getByRole('button', { name: 'Signera', exact: true }).click();
   await page.locator('#content').getByText('Signerad', { exact: true }).waitFor();
   const store = runtime.get('store');
-  const signed = store.list(doctor.tenant, undefined, 'note')[0];
+  const signed = (await store.list(doctor.tenant, undefined, 'note'))[0];
   assert.equal(signed.data.signedBy, doctor.id);
   assert.equal(signed.data.signedUnder.authentication, 'oidc');
   assert.equal(signed.data.signedUnder.acr, 'urn:eir:test:strong');
-  const assignment = workforce.current(doctor);
-  store.transaction(() =>
+  const assignment = await workforce.current(doctor);
+  await store.transaction(async () =>
     store.revise(
       { ...doctor, role: 'administrator' },
       assignment,

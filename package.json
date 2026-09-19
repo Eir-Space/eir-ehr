@@ -1,6 +1,6 @@
 {
   "name": "@eir-space/eir-ehr",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -9,6 +9,12 @@
   },
   "scripts": {
     "dev": "tsx apps/server.ts",
+    "staging": "tsx apps/staging-server.ts",
+    "db:migrate": "tsx scripts/migrate-postgres.ts",
+    "test:postgres": "tsx scripts/test-postgres.ts",
+    "backup:postgres": "tsx scripts/postgres-backup.ts",
+    "backup:schedule": "tsx scripts/postgres-backup-loop.ts",
+    "restore:postgres": "tsx scripts/postgres-restore.ts",
     "terminology:import": "tsx scripts/import-icd.ts",
     "start": "tsx apps/server.ts",
     "demo:public": "tsx apps/public-server.ts",
@@ -36,12 +42,14 @@
     "lucide": "^0.468.0",
     "openid-client": "^6.8.8",
     "personnummer": "3.2.1",
+    "pg": "^8.23.0",
     "tsx": "^4.23.13",
     "zod": "^4.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "@types/node": "^22.18.0",
+    "@types/pg": "^8.23.1",
     "jose": "^6.2.12",
     "prettier": "^3.9.8",
     "typescript": "^5.9.0"

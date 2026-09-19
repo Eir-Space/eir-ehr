@@ -238,31 +238,34 @@ export function project(e: Entity): Record<string, any> | null {
 export default {
   id: 'eir.fhir.r4-export',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['fhir'],
   requires: ['clinical', 'store', 'access'],
   setup(ctx) {
     const clinical = ctx.get('clinical'),
       store = ctx.get('store');
     ctx.provide('fhir', {
-      bundle(actor, patientId) {
-        ctx.get('access').permit(actor, 'chart.export', patientId);
-        const entities = clinical.chart(actor, patientId);
-        // Superseded reports stay in the clinical history, not alongside current reports in an export.
-        const currentReports = new Set(
-          entities.filter((r) => r.kind === 'labOrder').map((r) => r.data.reportId),
-        );
-        const resources = entities
-          .filter((r) => r.kind !== 'labReport' || currentReports.has(r.id))
-          .map(project)
-          .filter((r): r is Record<string, any> => r !== null);
-        store.audit(actor, 'fhir.export', patientId);
-        return {
-          resourceType: 'Bundle',
-          type: 'collection',
-          timestamp: new Date().toISOString(),
-          entry: resources.map((resource) => ({ fullUrl: `urn:uuid:${resource.id}`, resource })),
-        };
+      async bundle(actor, patientId) {
+        await ctx.get('access').permit(actor, 'chart.export', patientId);
+        return await store.transaction(async () => {
+          await ctx.get('access').permit(actor, 'chart.export', patientId);
+          const entities = await clinical.chart(actor, patientId);
+          // Superseded reports stay in the clinical history, not alongside current reports in an export.
+          const currentReports = new Set(
+            entities.filter((r) => r.kind === 'labOrder').map((r) => r.data.reportId),
+          );
+          const resources = entities
+            .filter((r) => r.kind !== 'labReport' || currentReports.has(r.id))
+            .map(project)
+            .filter((r): r is Record<string, any> => r !== null);
+          await store.audit(actor, 'fhir.export', patientId);
+          return {
+            resourceType: 'Bundle',
+            type: 'collection',
+            timestamp: new Date().toISOString(),
+            entry: resources.map((resource) => ({ fullUrl: `urn:uuid:${resource.id}`, resource })),
+          };
+        });
       },
     });
   },

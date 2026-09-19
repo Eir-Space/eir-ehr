@@ -299,7 +299,7 @@ export function openApi(clinic = false, secureCookie = false) {
   if (!clinic) route('/audit', 'get', 'Authorized access audit (legacy policy)');
   return {
     openapi: '3.1.0',
-    info: { title: 'Eir EHR clinical API', version: '0.1.0' },
+    info: { title: 'Eir EHR clinical API', version: '0.2.0' },
     servers: [{ url: '/api' }],
     components: {
       securitySchemes: {

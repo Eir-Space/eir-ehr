@@ -3,7 +3,6 @@ import type { Runtime } from '../packages/runtime.ts';
 import { vitals } from '../plugins/clinical.ts';
 import { Temporal } from '@js-temporal/polyfill';
 import { randomUUID } from 'node:crypto';
-
 // Fictional clinical scenarios. Local identifiers never resemble national identity numbers.
 const patients = [
   {
@@ -61,25 +60,27 @@ const patients = [
     tasks: ['Boka fysioterapeut', 'Telefonuppföljning av funktion och smärta'],
   },
 ];
-
-export function seedDemo(runtime: Runtime, actor: Actor) {
+export async function seedDemo(runtime: Runtime, actor: Actor) {
+  return runtime.get('store').transaction(() => seedRecords(runtime, actor));
+}
+async function seedRecords(runtime: Runtime, actor: Actor) {
   const clinical = runtime.get('clinical');
   const terminology = runtime.get('terminology');
   const now = Date.now();
   const team = runtime.get('careTeam');
-  const staff = team.members(actor);
+  const staff = await team.members(actor);
   const today = Temporal.Now.plainDateISO(team.timeZone).toString();
   const days = (offset: number) => new Date(now + offset * 86400000).toISOString();
   // Insert in reverse so the newest-first directory opens Anna's follow-up.
   for (const [index, scenario] of [...patients.entries()].reverse()) {
-    const patient = clinical.register(actor, {
+    const patient = await clinical.register(actor, {
       name: scenario.name,
       birthDate: scenario.birthDate,
       identifier: { type: 'local', value: `DEMO-00${index + 1}` },
     });
     for (const member of staff)
       if (member.id !== actor.id)
-        runtime
+        await runtime
           .get('access')
           .grant(
             actor,
@@ -89,17 +90,18 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
             days(30),
             'Scheduled care in the synthetic clinic',
           );
-    const appointment = team.book(actor, patient.id, {
+    const appointment = await team.book(actor, patient.id, {
       practitionerId: actor.id,
       localStart: `${today}T${String(9 + index).padStart(2, '0')}:00`,
       durationMinutes: 30,
       reason: scenario.reason,
       type: index === 3 ? 'phone' : 'visit',
     });
-    if (index === 0) team.appointment(actor, appointment.id, 'arrive', appointment.version, {});
+    if (index === 0)
+      await team.appointment(actor, appointment.id, 'arrive', appointment.version, {});
     for (const code of scenario.codes) {
       const term = terminology.lookup(code)!;
-      clinical.create(actor, patient.id, 'condition', {
+      await clinical.create(actor, patient.id, 'condition', {
         code: {
           system: term.system,
           version: term.version,
@@ -108,24 +110,26 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
         },
       });
     }
-    if (scenario.allergy) clinical.create(actor, patient.id, 'allergy', scenario.allergy);
-    const intake = clinical.create(actor, patient.id, 'encounter', {
+    if (scenario.allergy) await clinical.create(actor, patient.id, 'allergy', scenario.allergy);
+    const intake = await clinical.create(actor, patient.id, 'encounter', {
       reason: 'Genomgång av bakgrund',
     });
-    const history = clinical.create(actor, patient.id, 'note', {
+    const history = await clinical.create(actor, patient.id, 'note', {
       encounterId: intake.id,
       text: scenario.background,
     });
-    clinical.transition(actor, history.id, 'sign', history.version, {});
-    clinical.transition(actor, intake.id, 'close', intake.version, {});
-    const encounter = clinical.create(actor, patient.id, 'encounter', { reason: scenario.reason });
+    await clinical.transition(actor, history.id, 'sign', history.version, {});
+    await clinical.transition(actor, intake.id, 'close', intake.version, {});
+    const encounter = await clinical.create(actor, patient.id, 'encounter', {
+      reason: scenario.reason,
+    });
     const medicine = [
       ['Enalapril 5 mg, tablett', 'Hypertoni'],
       ['Metformin 500 mg, tablett', 'Typ 2-diabetes'],
       ['Pulmicort Turbuhaler 200 mikrogram/dos', 'Astma'],
     ][index];
     if (medicine)
-      runtime.get('medications').add(actor, patient.id, {
+      await runtime.get('medications').add(actor, patient.id, {
         clientId: randomUUID(),
         name: medicine[0],
         indication: medicine[1],
@@ -137,7 +141,7 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
       });
     if (index < 2) {
       const labs = runtime.get('laboratories');
-      const order = labs.order(actor, patient.id, {
+      const order = await labs.order(actor, patient.id, {
         clientId: randomUUID(),
         encounterId: encounter.id,
         test: index === 0 ? 'Kreatinin och kalium' : 'HbA1c',
@@ -149,7 +153,7 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
         priority: 'routine',
       });
       if (index === 0)
-        labs.receive(actor, order.id, order.version, {
+        await labs.receive(actor, order.id, order.version, {
           source: 'Exempellaboratoriet',
           messageId: 'LAB-2026-001',
           collectedAt: days(-1),
@@ -166,7 +170,7 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
         [scenario.previous[i], -28],
         [scenario.current[i], 0],
       ]) {
-        clinical.create(actor, patient.id, 'observation', {
+        await clinical.create(actor, patient.id, 'observation', {
           encounterId: encounter.id,
           code,
           value,
@@ -175,9 +179,12 @@ export function seedDemo(runtime: Runtime, actor: Actor) {
         });
       }
     }
-    clinical.create(actor, patient.id, 'note', { encounterId: encounter.id, text: scenario.note });
+    await clinical.create(actor, patient.id, 'note', {
+      encounterId: encounter.id,
+      text: scenario.note,
+    });
     for (const [i, title] of scenario.tasks.entries()) {
-      clinical.create(actor, patient.id, 'task', {
+      await clinical.create(actor, patient.id, 'task', {
         title,
         due: days(index === 1 && i === 0 ? -1 : 3 + i * 11).slice(0, 10),
         assigneeId: i === 1 ? (staff[1]?.id ?? actor.id) : actor.id,

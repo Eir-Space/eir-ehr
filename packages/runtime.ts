@@ -8,13 +8,13 @@ const serviceName = z.string().regex(/^[a-zA-Z][a-zA-Z0-9.]*$/);
 const manifest = z.object({
   id: z.string().regex(/^[a-z][a-z0-9.-]+$/),
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
-  apiVersion: z.literal(1),
+  apiVersion: z.literal(2),
   provides: z.array(serviceName).min(1),
   requires: z.array(serviceName),
 });
 export class Runtime {
   private services = new Map<ServiceName, unknown>();
-  private disposers: (() => void)[] = [];
+  private disposers: (() => void | Promise<void>)[] = [];
   readonly active: { id: string; version: string; provides: string[]; requires: string[] }[] = [];
   has(name: ServiceName) {
     return this.services.has(name);
@@ -74,15 +74,15 @@ export class Runtime {
       }
       return this;
     } catch (error) {
-      this.stop();
+      await this.stop();
       throw error;
     }
   }
-  stop() {
+  async stop() {
     const errors: unknown[] = [];
     for (const dispose of this.disposers.reverse()) {
       try {
-        dispose();
+        await dispose();
       } catch (e) {
         errors.push(e);
       }

@@ -70,7 +70,7 @@ async function load(): Promise<Terminology> {
 export default {
   id: 'eir.terminology.icd-se',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['terminology'],
   requires: [],
   async setup(ctx) {

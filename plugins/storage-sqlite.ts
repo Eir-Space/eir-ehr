@@ -2,11 +2,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Actor, Entity, Plugin, Store, AuditQuery, AuditRow } from '../packages/contracts.ts';
 import { Fault } from '../packages/contracts.ts';
 
 export const digest = (value: string) => createHash('sha256').update(value).digest('hex');
-export class SqliteStore implements Store {
+class SqliteDatabase {
   db: DatabaseSync;
   constructor(path: string) {
     if (path !== ':memory:') mkdirSync(dirname(resolve(path)), { recursive: true, mode: 0o700 });
@@ -99,8 +100,18 @@ export class SqliteStore implements Store {
     return entity;
   }
   revise(actor: Actor, entity: Entity, version: number, data: Record<string, any>, action: string) {
+    if (actor.tenant !== entity.tenant) throw new Fault(403, 'Tenant does not match the record.');
+    const current = this.get(actor.tenant, entity.id);
+    if (
+      !current ||
+      !Number.isSafeInteger(version) ||
+      version < 1 ||
+      current.version !== version ||
+      entity.version !== version
+    )
+      throw new Fault(409, 'Record changed. Reload before saving.');
     const next: Entity = {
-      ...entity,
+      ...current,
       version: version + 1,
       updatedAt: new Date().toISOString(),
       data: structuredClone(data),
@@ -112,7 +123,7 @@ export class SqliteStore implements Store {
       .run(next.version, next.updatedAt, JSON.stringify(data), actor.tenant, entity.id, version);
     if (result.changes !== 1) throw new Fault(409, 'Record changed. Reload before saving.');
     this.version(next);
-    this.audit(actor, action, entity.patientId, entity.id);
+    this.audit(actor, action, next.patientId, next.id);
     return next;
   }
   version(entity: Entity) {
@@ -282,15 +293,103 @@ export class SqliteStore implements Store {
 function decode(row: any): Entity | undefined {
   return row ? { ...row, data: JSON.parse(row.data) } : undefined;
 }
+type DatabaseMethod = Exclude<keyof Store, 'transaction' | 'close' | 'health'>;
+type TransactionState = { active: boolean; failed: boolean };
+
+// One connection cannot interleave transactions across awaited domain operations.
+export class SqliteStore implements Store {
+  readonly db: DatabaseSync;
+  private readonly engine: SqliteDatabase;
+  private readonly context = new AsyncLocalStorage<TransactionState>();
+  private tail: Promise<unknown> = Promise.resolve();
+  private closing = false;
+  private closed?: Promise<void>;
+
+  constructor(path: string) {
+    this.engine = new SqliteDatabase(path);
+    this.db = this.engine.db;
+  }
+
+  async transaction<T>(fn: () => Promise<T>): Promise<T> {
+    const current = this.context.getStore();
+    if (current) {
+      if (!current.active) throw new Error('Transaction already finished');
+      try {
+        return await fn();
+      } catch (error) {
+        current.failed = true;
+        throw error;
+      }
+    }
+    if (this.closing) throw new Error('Storage is closing');
+    const run = this.tail.then(async () => {
+      const state = { active: true, failed: false };
+      this.db.exec('BEGIN IMMEDIATE');
+      try {
+        const result = await this.context.run(state, fn);
+        if (state.failed) throw new Fault(409, 'Transaction failed. Reload before retrying.');
+        this.db.exec('COMMIT');
+        return result;
+      } catch (error) {
+        this.db.exec('ROLLBACK');
+        throw error;
+      } finally {
+        state.active = false;
+      }
+    });
+    this.tail = run.catch(() => {});
+    return run;
+  }
+
+  private method<K extends DatabaseMethod>(name: K): Store[K] {
+    return ((...args: unknown[]) =>
+      this.transaction(async () =>
+        (this.engine[name] as (...args: unknown[]) => unknown).apply(this.engine, args),
+      )) as Store[K];
+  }
+  get = this.method('get');
+  list = this.method('list');
+  insert = this.method('insert');
+  revise = this.method('revise');
+  audit = this.method('audit');
+  history = this.method('history');
+  verifyAudit = this.method('verifyAudit');
+  grant = this.method('grant');
+  getGrant = this.method('getGrant');
+  restrict = this.method('restrict');
+  isBlocked = this.method('isBlocked');
+  saveSession = this.method('saveSession');
+  session = this.method('session');
+  updateSession = this.method('updateSession');
+  saveLogin = this.method('saveLogin');
+  consumeLogin = this.method('consumeLogin');
+  revokeSession = this.method('revokeSession');
+  auditEntries = this.method('auditEntries');
+  auditPage = this.method('auditPage');
+  auditEntry = this.method('auditEntry');
+  changes = this.method('changes');
+
+  async health() {
+    await this.transaction(async () => {
+      this.db.prepare('SELECT 1').get();
+    });
+  }
+  close() {
+    if (this.context.getStore()?.active)
+      return Promise.reject(new Error('Close SQLite storage outside its transaction'));
+    this.closing = true;
+    return (this.closed ??= this.tail.then(() => this.db.close()));
+  }
+}
 export default {
   id: 'eir.storage.sqlite',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['store'],
   requires: [],
   setup(ctx, config) {
     const store = new SqliteStore(String(config.path ?? '.data/ehr.sqlite'));
-    ctx.onDispose(() => store.db.close());
+    ctx.onDispose(() => store.close());
     ctx.provide('store', store);
   },
 } satisfies Plugin;

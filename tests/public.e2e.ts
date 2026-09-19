@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 import { createPublicDemo } from '../apps/public-demo.ts';
 import { root } from './helpers.ts';
-
-test('public visitor can start, use the real chart and read the contributor guide', async (t) => {
+await test('public visitor can start, use the real chart and read the contributor guide', async (t) => {
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(() => browser?.close());
   const remote = process.env.EIR_DEMO_TEST_URL;
@@ -57,12 +56,14 @@ test('public visitor can start, use the real chart and read the contributor guid
     .locator('#content')
     .getByText('Allergisk rinit orsakad av pollen', { exact: true })
     .waitFor();
-  await page.route('**/api/terminology/diagnoses?*', (route) =>
-    route.fulfill({
-      status: 503,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'Test outage' }),
-    }),
+  await page.route(
+    '**/api/terminology/diagnoses?*',
+    async (route) =>
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Test outage' }),
+      }),
   );
   await page.getByRole('button', { name: 'Lägg till', exact: true }).click();
   await page.getByText('Kunde inte hämta diagnoser.', { exact: true }).waitFor();

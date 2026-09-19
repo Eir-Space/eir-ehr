@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { assert, Fault, type Clinical, type Plugin } from '../packages/contracts.ts';
+import { assert, Fault, type Clinical, type Entity, type Plugin } from '../packages/contracts.ts';
 import { taskInput } from '../packages/care-team.ts';
 import { visibleRecord } from '../packages/visibility.ts';
 
@@ -53,7 +53,7 @@ export const inputs: Record<string, z.ZodType> = {
 export default {
   id: 'eir.clinical',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['clinical'],
   requires: ['store', 'country', 'access', 'terminology', 'careTeam'],
   setup(ctx) {
@@ -63,19 +63,21 @@ export default {
     const terminology = ctx.get('terminology');
     const careTeam = ctx.get('careTeam');
     const clinical: Clinical = {
-      patients(actor) {
-        store.audit(actor, 'patient.directory');
-        return store
-          .list(actor.tenant, undefined, 'patient')
-          .filter((patient) => access.allowed(actor, patient.id))
-          .map((patient) => {
-            access.check(actor, patient.id);
-            return patient;
-          });
+      async patients(actor) {
+        return await store.transaction(async () => {
+          await store.audit(actor, 'patient.directory');
+          const patients: Entity[] = [];
+          for (const patient of await store.list(actor.tenant, undefined, 'patient')) {
+            if (!(await access.allowed(actor, patient.id))) continue;
+            await access.check(actor, patient.id);
+            patients.push(patient);
+          }
+          return patients;
+        });
       },
-      register(actor, input) {
+      async register(actor, input) {
         assert(actor.role === 'clinician', 403, 'Clinician role required');
-        access.permit(actor, 'patient.register');
+        await access.permit(actor, 'patient.register');
         const parsed = patientInput.parse(input);
         assert(
           parsed.birthDate <= new Date().toISOString().slice(0, 10),
@@ -84,23 +86,24 @@ export default {
         );
         const identifier = country.identifier(parsed.identifier);
         try {
-          return store.transaction(() => {
-            const patient = store.insert(actor, 'patient', null, {
+          return await store.transaction(async () => {
+            await access.permit(actor, 'patient.register');
+            const patient = await store.insert(actor, 'patient', null, {
               ...parsed,
               identifier,
               country: country.code,
-              ...(access.context ? { careUnitId: access.context(actor).unitId } : {}),
+              ...(access.context ? { careUnitId: (await access.context(actor)).unitId } : {}),
             });
-            store.grant(
+            await store.grant(
               actor.tenant,
               patient.id,
               actor.id,
               'clinician',
               new Date(Date.now() + 86400000 * 30).toISOString(),
             );
-            store.audit(actor, 'care-relationship.created', patient.id);
+            await store.audit(actor, 'care-relationship.created', patient.id);
             if (access.context)
-              store.insert(actor, 'careRelationship', patient.id, {
+              await store.insert(actor, 'careRelationship', patient.id, {
                 target: actor.id,
                 assignmentId: actor.assignmentId,
                 reason: 'Patient registered for care in the active unit',
@@ -109,18 +112,21 @@ export default {
             return patient;
           });
         } catch (error: any) {
-          if (String(error.message).includes('UNIQUE constraint'))
+          if (error.code === '23505' || String(error.message).includes('UNIQUE constraint'))
             throw new Fault(409, 'Identifier already registered in this organisation');
           throw error;
         }
       },
-      chart(actor, patientId) {
-        access.check(actor, patientId);
-        return store.list(actor.tenant, patientId).filter((e) => visibleRecord(actor, e));
+      async chart(actor, patientId) {
+        await access.check(actor, patientId);
+        return await store.transaction(async () => {
+          await access.check(actor, patientId);
+          return (await store.list(actor.tenant, patientId)).filter((e) => visibleRecord(actor, e));
+        });
       },
-      create(actor, patientId, kind, input) {
-        access.permit(actor, kind === 'task' ? 'task.write' : 'record.write', patientId);
-        if (kind === 'task') return careTeam.createTask(actor, patientId, input);
+      async create(actor, patientId, kind, input) {
+        await access.permit(actor, kind === 'task' ? 'task.write' : 'record.write', patientId);
+        if (kind === 'task') return await careTeam.createTask(actor, patientId, input);
         assert(inputs[kind], 422, 'Unsupported clinical record type');
         const parsed = inputs[kind].parse(input) as Record<string, any>;
         if (kind === 'condition') {
@@ -142,16 +148,6 @@ export default {
             code: term.code,
             display: term.display,
           };
-        }
-        if (parsed.encounterId) {
-          const encounter = store.get(actor.tenant, parsed.encounterId);
-          assert(
-            encounter?.kind === 'encounter' &&
-              encounter.patientId === patientId &&
-              encounter.data.status === 'in-progress',
-            409,
-            'An open encounter for this patient is required',
-          );
         }
         if (kind === 'observation') {
           const definition = vitals[parsed.code];
@@ -179,11 +175,22 @@ export default {
             task: 'requested',
           } as Record<string, string>
         )[kind];
-        return store.transaction(() => {
+        return await store.transaction(async () => {
+          await access.permit(actor, 'record.write', patientId);
+          if (parsed.encounterId) {
+            const encounter = await store.get(actor.tenant, parsed.encounterId);
+            assert(
+              encounter?.kind === 'encounter' &&
+                encounter.patientId === patientId &&
+                encounter.data.status === 'in-progress',
+              409,
+              'An open encounter for this patient is required',
+            );
+          }
           if (kind === 'note' && parsed.clientId) {
-            const previous = store
-              .list(actor.tenant, patientId, 'note')
-              .find((r) => r.data.clientId === parsed.clientId);
+            const previous = (await store.list(actor.tenant, patientId, 'note')).find(
+              (r) => r.data.clientId === parsed.clientId,
+            );
             if (previous) {
               assert(
                 previous.data.author === actor.id &&
@@ -198,32 +205,44 @@ export default {
           }
           if (kind === 'encounter')
             assert(
-              !store
-                .list(actor.tenant, patientId, 'encounter')
-                .some((e) => e.data.status === 'in-progress'),
+              !(await store.list(actor.tenant, patientId, 'encounter')).some(
+                (e) => e.data.status === 'in-progress',
+              ),
               409,
               'This patient already has an open encounter',
             );
-          return store.insert(actor, kind, patientId, { ...parsed, status, author: actor.id });
+          return await store.insert(actor, kind, patientId, {
+            ...parsed,
+            status,
+            author: actor.id,
+          });
         });
       },
-      transition(actor, entityId, action, version, input) {
-        const entity = store.get(actor.tenant, entityId);
+      async transition(actor, entityId, action, version, input) {
+        const entity = await store.get(actor.tenant, entityId);
         assert(entity, 404, 'Record not found');
-        if (entity.kind === 'task') return careTeam.task(actor, entityId, action, version, input);
-        access.permit(
+        if (entity.kind === 'task')
+          return await careTeam.task(actor, entityId, action, version, input);
+        await access.permit(
           actor,
           entity.kind === 'note' && action === 'sign' ? 'note.sign' : 'record.write',
           entity.patientId,
         );
-        assert(entity.version === version, 409, 'Record changed. Reload before saving.');
-        return store.transaction(() => {
+        return await store.transaction(async () => {
+          const entity = await store.get(actor.tenant, entityId);
+          assert(entity, 404, 'Record not found');
+          await access.permit(
+            actor,
+            entity.kind === 'note' && action === 'sign' ? 'note.sign' : 'record.write',
+            entity.patientId,
+          );
+          assert(entity.version === version, 409, 'Record changed. Reload before saving.');
           let data = { ...entity.data };
           if (entity.kind === 'note') {
             if (action === 'amend') {
               assert(data.status === 'signed', 409, 'Only signed notes can be amended');
               const amendment = z.object({ text, reason: short }).strict().parse(input);
-              return store.insert(actor, 'note', entity.patientId, {
+              return await store.insert(actor, 'note', entity.patientId, {
                 ...amendment,
                 status: 'draft',
                 author: actor.id,
@@ -261,11 +280,9 @@ export default {
           } else if (entity.kind === 'encounter' && action === 'close') {
             assert(data.status === 'in-progress', 409, 'Encounter is already closed');
             assert(
-              !store
-                .list(actor.tenant, entity.patientId, 'note')
-                .some(
-                  (note) => note.data.encounterId === entity.id && note.data.status === 'draft',
-                ),
+              !(await store.list(actor.tenant, entity.patientId, 'note')).some(
+                (note) => note.data.encounterId === entity.id && note.data.status === 'draft',
+              ),
               409,
               'Sign draft notes before closing the encounter',
             );
@@ -278,17 +295,30 @@ export default {
             assert(data.status !== 'entered-in-error', 409, 'Record already corrected');
             data = { ...data, status: 'entered-in-error', correctionReason: reason };
           } else throw new Fault(422, 'Unsupported clinical transition');
-          const updated = store.revise(actor, entity, version, data, `${entity.kind}.${action}`);
+          const updated = await store.revise(
+            actor,
+            entity,
+            version,
+            data,
+            `${entity.kind}.${action}`,
+          );
           if (entity.kind === 'encounter' && action === 'close')
-            careTeam.encounterClosed(actor, entity.id);
+            await careTeam.encounterClosed(actor, entity.id);
           return updated;
         });
       },
-      history(actor, entityId) {
-        const entity = store.get(actor.tenant, entityId);
+      async history(actor, entityId) {
+        const entity = await store.get(actor.tenant, entityId);
         assert(entity, 404, 'Record not found');
-        access.check(actor, entity.patientId);
-        return store.history(actor.tenant, entityId).filter((e) => visibleRecord(actor, e));
+        await access.check(actor, entity.patientId);
+        return await store.transaction(async () => {
+          const entity = await store.get(actor.tenant, entityId);
+          assert(entity, 404, 'Record not found');
+          await access.check(actor, entity.patientId);
+          return (await store.history(actor.tenant, entityId)).filter((e) =>
+            visibleRecord(actor, e),
+          );
+        });
       },
     };
     ctx.provide('clinical', clinical);

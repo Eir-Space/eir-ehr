@@ -58,7 +58,7 @@ const outputSchema = z
 export default {
   id: 'eir.ai.review',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['aiReview'],
   requires: ['store', 'access', 'clinical', 'aiProvider'],
   setup(ctx) {
@@ -68,22 +68,26 @@ export default {
       provider = ctx.get('aiProvider');
     ctx.provide('aiReview', {
       async propose(actor, patientId, encounterId) {
-        access.permit(actor, 'ai.use', patientId);
-        const encounter = store.get(actor.tenant, encounterId);
-        assert(
-          encounter?.kind === 'encounter' &&
-            encounter.patientId === patientId &&
-            encounter.data.status === 'in-progress',
-          409,
-          'Open encounter required',
-        );
-        const evidence = evidenceFor(clinical.chart(actor, patientId), encounterId);
-        assert(
-          JSON.stringify(evidence).length < 60000,
-          422,
-          'Evidence exceeds model context limit',
-        );
-        store.audit(actor, 'ai.requested', patientId, encounterId);
+        await access.permit(actor, 'ai.use', patientId);
+        const evidence = await store.transaction(async () => {
+          await access.permit(actor, 'ai.use', patientId);
+          const encounter = await store.get(actor.tenant, encounterId);
+          assert(
+            encounter?.kind === 'encounter' &&
+              encounter.patientId === patientId &&
+              encounter.data.status === 'in-progress',
+            409,
+            'Open encounter required',
+          );
+          const evidence = evidenceFor(await clinical.chart(actor, patientId), encounterId);
+          assert(
+            JSON.stringify(evidence).length < 60000,
+            422,
+            'Evidence exceeds model context limit',
+          );
+          await store.audit(actor, 'ai.requested', patientId, encounterId);
+          return evidence;
+        });
         const output = outputSchema.parse(await provider.generate(structuredClone(evidence)));
         assert(
           output.citations.every((c) =>
@@ -92,36 +96,55 @@ export default {
           422,
           'AI returned an invalid source reference or quotation',
         );
-        access.permit(actor, 'ai.use', patientId);
-        return store.transaction(() =>
-          store.insert(actor, 'proposal', patientId, {
+        await access.permit(actor, 'ai.use', patientId);
+        return await store.transaction(async () => {
+          await access.permit(actor, 'ai.use', patientId);
+          const encounter = await store.get(actor.tenant, encounterId);
+          assert(
+            encounter?.kind === 'encounter' &&
+              encounter.patientId === patientId &&
+              encounter.data.status === 'in-progress',
+            409,
+            'Open encounter required',
+          );
+          const current = evidenceFor(await clinical.chart(actor, patientId), encounterId);
+          assert(
+            JSON.stringify(current) === JSON.stringify(evidence),
+            409,
+            'Clinical context changed; regenerate the proposal',
+          );
+          return await store.insert(actor, 'proposal', patientId, {
             ...output,
             evidence,
             encounterId,
             provider: provider.id,
             status: 'pending',
             requestedBy: actor.id,
-          }),
-        );
+          });
+        });
       },
-      review(actor, id, version, decision, text) {
-        const proposal = store.get(actor.tenant, id);
+      async review(actor, id, version, decision, text) {
+        const proposal = await store.get(actor.tenant, id);
         assert(proposal?.kind === 'proposal', 404, 'Proposal not found');
-        access.permit(actor, 'ai.use', proposal.patientId);
-        if (decision === 'accept') access.permit(actor, 'record.write', proposal.patientId);
-        assert(
-          proposal.version === version && proposal.data.status === 'pending',
-          409,
-          'Proposal already reviewed or changed',
-        );
+        await access.permit(actor, 'ai.use', proposal.patientId);
+        if (decision === 'accept') await access.permit(actor, 'record.write', proposal.patientId);
         assert(['accept', 'reject'].includes(decision), 422, 'Invalid review decision');
-        return store.transaction(() => {
+        return await store.transaction(async () => {
+          const proposal = await store.get(actor.tenant, id);
+          assert(proposal?.kind === 'proposal', 404, 'Proposal not found');
+          await access.permit(actor, 'ai.use', proposal.patientId);
+          if (decision === 'accept') await access.permit(actor, 'record.write', proposal.patientId);
+          assert(
+            proposal.version === version && proposal.data.status === 'pending',
+            409,
+            'Proposal already reviewed or changed',
+          );
           let note: Entity | undefined;
           if (decision === 'accept') {
-            const encounter = store.get(actor.tenant, proposal.data.encounterId);
+            const encounter = await store.get(actor.tenant, proposal.data.encounterId);
             assert(encounter?.data.status === 'in-progress', 409, 'Encounter closed');
             const current = evidenceFor(
-              store.list(actor.tenant, proposal.patientId),
+              await store.list(actor.tenant, proposal.patientId),
               proposal.data.encounterId,
             );
             assert(
@@ -135,7 +158,7 @@ export default {
               .min(1)
               .max(20000)
               .parse(text ?? proposal.data.text);
-            note = store.insert(actor, 'note', proposal.patientId, {
+            note = await store.insert(actor, 'note', proposal.patientId, {
               text: reviewedText,
               encounterId: proposal.data.encounterId,
               status: 'draft',
@@ -143,7 +166,7 @@ export default {
               proposalId: proposal.id,
             });
           }
-          return store.revise(
+          return await store.revise(
             actor,
             proposal,
             version,

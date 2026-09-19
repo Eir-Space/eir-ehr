@@ -6,7 +6,7 @@ Release: 2026-09-19. Working identity/authorization modules, not a completed SIT
 
 - `eir.config.json`: legacy development policy, retained for existing integrations/tests. Never use as a clinic deployment.
 - `eir.demo.config.json`: strict workforce policy; public launcher provisions fictional local identities into disposable stores. Run `PORT=4193 npm run demo:public` to try clinical, reviewer and administrator assignments. Demo permissions are not recommended clinic role templates.
-- `eir.clinic.config.example.json`: OIDC + strict authorization + workforce administration + audit review. Replace placeholders and provision staff before first startup. Storage remains SQLite, not the future PostgreSQL pilot architecture.
+- `eir.clinic.config.example.json`: OIDC + strict authorization + workforce administration + audit review. Replace placeholders and provision staff before first startup. The example retains SQLite; select the PostgreSQL provider using [PERSISTENCE.md](PERSISTENCE.md) for a separately provisioned database.
 
 Register a confidential OIDC client supporting Authorization Code flow, S256 PKCE, RS256 ID tokens and `client_secret_basic`. Register the exact callback `https://your-host/auth/callback`. Configure exact issuer, client ID, origin and approved `acr` assurance allowlist. Set the secret through the environment variable named by `clientSecretEnv`; never commit it. Start with `EIR_CONFIG=/absolute/path/to/profile.json npm start` behind a reviewed TLS reverse proxy. The server binds loopback. The `localTestOnly` HTTP exception is false by default and accepts only loopback endpoints; never use it in a real deployment.
 
@@ -59,7 +59,7 @@ SQLite v2 adds session inactivity and durable login transactions. Upgrade invali
 
 Tests cover permissions, provider/unit boundaries, protected disclosure routes, exceptional access, review pagination/self-review, session switching/expiry/revocation, restart/bootstrap, schema migration, post-inference revocation, signed OIDC failure paths, browser CSRF/HttpOnly, authenticated signing and UI clearing. The loopback IdP signs real protocol messages but does not establish national integration or independent security review.
 
-Before real data: a clinical design partner, approved access matrix/threat model, verified professional IdP and assignment source, privacy/safety/regulatory reviews, durable deployment with tested restore, external audit anchoring, incident/recovery exercises and independent testing. Next infrastructure milestone: asynchronous transaction-safe PostgreSQL and a separate supervised pilot environment.
+Before real data: a clinical design partner, approved access matrix/threat model, verified professional IdP and assignment source, privacy/safety/regulatory reviews, durable deployment with tested restore, external audit anchoring, incident/recovery exercises and independent testing. The asynchronous PostgreSQL provider and separate persistent synthetic staging are now described in [PERSISTENCE.md](PERSISTENCE.md); they are infrastructure groundwork, not a supervised clinical pilot approval.
 
 ## Primary References
 

@@ -8,7 +8,6 @@ import { createApp } from './app.ts';
 import { baseApp, webFiles } from './http.ts';
 import { seedDemo } from './seed.ts';
 import { demoWorkforce } from './demo-workforce.ts';
-
 type Workspace = {
   app: FastifyInstance;
   runtime: Runtime;
@@ -27,7 +26,6 @@ export type DemoLimits = {
   allowedOrigins?: string[];
 };
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
-
 export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
   const now = limits.now ?? Date.now;
   const ttl = limits.ttl ?? 30 * 60000;
@@ -38,7 +36,7 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
   const retire = async (key: string, workspace: Workspace) => {
     workspaces.delete(key);
     await workspace.app.close();
-    workspace.runtime.stop();
+    await workspace.runtime.stop();
   };
   const prune = async () => {
     for (const [key, workspace] of workspaces) {
@@ -101,12 +99,12 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
         runtime = loaded.runtime;
         const workforce = runtime.get('workforce');
         actor = workforce.actor(
-          workforce
-            .forIdentity('https://local.eir.invalid', 'emma')
-            .find((a) => a.data.role === 'clinician')!,
+          (await workforce.forIdentity('https://local.eir.invalid', 'emma')).find(
+            (a) => a.data.role === 'clinician',
+          )!,
         );
-        seedDemo(runtime, actor);
-        const token = runtime.get('identity').issue!(actor);
+        await seedDemo(runtime, actor);
+        const token = await runtime.get('identity').issue!(actor);
         inner = await createApp(
           runtime,
           root,
@@ -126,7 +124,7 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
         return reply.code(201).send({ token, expiresAt: new Date(expires).toISOString() });
       } catch (error) {
         await inner?.close();
-        runtime?.stop();
+        await runtime?.stop();
         throw error;
       } finally {
         pending--;
@@ -162,7 +160,13 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
     );
     if (req.method === 'POST' && req.url.split('?')[0] === '/api/patients') {
       assert(
-        (req.body as { identifier?: { type?: string } })?.identifier?.type === 'local',
+        (
+          req.body as {
+            identifier?: {
+              type?: string;
+            };
+          }
+        )?.identifier?.type === 'local',
         422,
         'Use a made-up local ID in the public demo, never a real national identifier.',
       );

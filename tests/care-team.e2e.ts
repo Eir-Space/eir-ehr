@@ -4,8 +4,7 @@ import { chromium, expect } from '@playwright/test';
 import { fixture, doctor, root } from './helpers.ts';
 import { createApp } from '../apps/app.ts';
 import { createPublicDemo } from '../apps/public-demo.ts';
-
-test('care team books, checks in, signs, closes, assigns and resolves work at desktop and mobile sizes', async (t) => {
+await test('care team books, checks in, signs, closes, assigns and resolves work at desktop and mobile sizes', async (t) => {
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
@@ -13,9 +12,9 @@ test('care team books, checks in, signs, closes, assigns and resolves work at de
   t.after(async () => {
     await browser?.close();
     await app.close();
-    f.runtime.stop();
+    await f.runtime.stop();
   });
-  f.runtime
+  await f.runtime
     .get('access')
     .grant(doctor, f.patient.id, 'nurse-a', 'clinician', '2099-01-01T00:00:00Z');
   browser = await chromium.launch();
@@ -27,7 +26,7 @@ test('care team books, checks in, signs, closes, assigns and resolves work at de
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(address);
-  await page.getByLabel('Sessionsnyckel').fill(f.runtime.get('identity').issue!(doctor));
+  await page.getByLabel('Sessionsnyckel').fill(await f.runtime.get('identity').issue!(doctor));
   await page.getByRole('button', { name: 'Öppna arbetsyta' }).click();
   await page.getByRole('button', { name: 'Arbetslista', exact: true }).click();
   await page.getByRole('button', { name: 'Boka besök', exact: true }).click();
@@ -109,8 +108,7 @@ test('care team books, checks in, signs, closes, assigns and resolves work at de
   await page.screenshot({ path: root + 'test-results/care-team-mobile.png', fullPage: true });
   assert.deepEqual(errors, []);
 });
-
-test('autosave recovers after reload, preserves text offline, and refuses concurrent overwrite', async (t) => {
+await test('autosave recovers after reload, preserves text offline, and refuses concurrent overwrite', async (t) => {
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(() => browser?.close());
   const f = await fixture();
@@ -118,13 +116,13 @@ test('autosave recovers after reload, preserves text offline, and refuses concur
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
   t.after(async () => {
     await app.close();
-    f.runtime.stop();
+    await f.runtime.stop();
   });
   browser = await chromium.launch();
   const context = await browser.newContext(),
     page = await context.newPage();
   page.setDefaultTimeout(10000);
-  const token = f.runtime.get('identity').issue!(doctor);
+  const token = await f.runtime.get('identity').issue!(doctor);
   async function login() {
     await page.getByLabel('Sessionsnyckel').fill(token);
     await page.getByRole('button', { name: 'Öppna arbetsyta' }).click();
@@ -153,13 +151,15 @@ test('autosave recovers after reload, preserves text offline, and refuses concur
   await context.setOffline(false);
   await page.getByRole('button', { name: 'Försök spara igen' }).click();
   await expect(page.locator('.draft-status')).toContainText('Sparat');
-  const note = f.store.list(doctor.tenant, f.patient.id, 'note')[0];
-  f.clinical.transition(doctor, note.id, 'save', note.version, { text: 'Kollegans uppdatering' });
+  const note = (await f.store.list(doctor.tenant, f.patient.id, 'note'))[0];
+  await f.clinical.transition(doctor, note.id, 'save', note.version, {
+    text: 'Kollegans uppdatering',
+  });
   await page.getByLabel('Journaltext', { exact: true }).fill('Mitt andra utkast');
   await expect(page.locator('.draft-conflict')).toBeVisible();
   await expect(page.getByLabel('Journaltext', { exact: true })).toHaveValue('Mitt andra utkast');
-  assert.equal(f.store.get(doctor.tenant, note.id)?.data.text, 'Kollegans uppdatering');
-  page.once('dialog', (dialog) => dialog.accept());
+  assert.equal((await f.store.get(doctor.tenant, note.id))?.data.text, 'Kollegans uppdatering');
+  page.once('dialog', async (dialog) => await dialog.accept());
   await page.getByRole('button', { name: 'Läs in sparad version' }).click();
   await expect(page.getByLabel('Journaltext', { exact: true })).toHaveValue(
     'Kollegans uppdatering',
@@ -167,15 +167,14 @@ test('autosave recovers after reload, preserves text offline, and refuses concur
   await page.getByRole('dialog').getByRole('button', { name: 'Stäng', exact: true }).click();
   assert.deepEqual(await page.evaluate(() => [localStorage.length, sessionStorage.length]), [0, 0]);
 });
-
-test('public care-team release exposes seeded worklists and working inbox on the deployed API', async (t) => {
+await test('public care-team release exposes seeded worklists and working inbox on the deployed API', async (t) => {
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(() => browser?.close());
   let address = process.env.EIR_DEMO_TEST_URL;
   if (!address) {
     const app = await createPublicDemo(root);
     address = await app.listen({ host: '127.0.0.1', port: 0 });
-    t.after(() => app.close());
+    t.after(async () => await app.close());
   }
   browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -217,8 +216,7 @@ test('public care-team release exposes seeded worklists and working inbox on the
   await page.getByRole('button', { name: 'Logga ut', exact: true }).click();
   await expect(page.locator('#login')).toBeVisible();
 });
-
-test('a lost create response does not duplicate a draft and closing drains newer text after an in-flight save', async (t) => {
+await test('a lost create response does not duplicate a draft and closing drains newer text after an in-flight save', async (t) => {
   const f = await fixture();
   const app = await createApp(f.runtime, root);
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
@@ -227,13 +225,13 @@ test('a lost create response does not duplicate a draft and closing drains newer
     // Close the browser before Fastify waits for its last in-flight chart refresh.
     await browser?.close();
     await app.close();
-    f.runtime.stop();
+    await f.runtime.stop();
   });
   browser = await chromium.launch();
   const page = await browser.newPage();
   page.setDefaultTimeout(10000);
   await page.goto(address);
-  await page.getByLabel('Sessionsnyckel').fill(f.runtime.get('identity').issue!(doctor));
+  await page.getByLabel('Sessionsnyckel').fill(await f.runtime.get('identity').issue!(doctor));
   await page.getByRole('button', { name: 'Öppna arbetsyta' }).click();
   await page.getByRole('button', { name: 'Anteckningar', exact: true }).click();
   await page.getByRole('button', { name: 'Ny anteckning' }).click();
@@ -247,7 +245,7 @@ test('a lost create response does not duplicate a draft and closing drains newer
   );
   await page.getByLabel('Journaltext', { exact: true }).fill('Servern tog emot texten');
   await expect(page.locator('.draft-status')).toContainText('Sparat');
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'note').length, 1);
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'note')).length, 1);
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -271,7 +269,7 @@ test('a lost create response does not duplicate a draft and closing drains newer
     release();
   }
   await expect(page.getByRole('dialog')).not.toBeVisible();
-  const notes = f.store.list(doctor.tenant, f.patient.id, 'note');
+  const notes = await f.store.list(doctor.tenant, f.patient.id, 'note');
   assert.equal(notes.length, 1);
   assert.equal(notes[0].data.text, 'Senaste uppdateringen');
   assert.equal(notes[0].version, 3);

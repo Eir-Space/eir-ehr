@@ -2,7 +2,7 @@ import type { Plugin } from '../packages/contracts.ts';
 export default {
   id: 'eir.ai.extractive',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['aiProvider'],
   requires: [],
   setup(ctx) {
