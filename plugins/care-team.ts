@@ -323,6 +323,14 @@ export default {
             completedAt: new Date().toISOString(),
             completedBy: actor.id,
           };
+          if (event === 'review' && saved.data.actionRequired) {
+            data.status = 'requested';
+            data.dueAt = saved.data.actionDueAt;
+            data.title = `Uppföljning efter provsvar: ${saved.data.test}`.slice(0, 200);
+            delete data.completedAt;
+            delete data.completedBy;
+            delete data.followUp;
+          }
         }
         return await store.revise(actor, row, row.version, data, `task.lab-${event}`);
       },
@@ -356,6 +364,7 @@ export default {
             const parsed = z.object({ due: z.iso.date(), reason: short }).strict().parse(input);
             assert(['requested', 'in-progress'].includes(data.status), 409, 'Task is closed');
             data = { ...data, due: parsed.due, rescheduleReason: parsed.reason };
+            delete data.dueAt;
           } else if (action === 'reopen') {
             const parsed = reason.parse(input);
             assert(['completed', 'cancelled'].includes(data.status), 409, 'Task is already open');

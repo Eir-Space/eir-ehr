@@ -365,6 +365,7 @@ export class PostgresStore implements Store {
       `SELECT * FROM eir.entities WHERE tenant = $1 AND kind = $2 AND data @> $3::jsonb
       AND ($4::text IS NULL OR data->>'availableAt' <= $4)
       AND ($5::text IS NULL OR (created_at, id) > ($5, $6))
+      AND ($8::text[] IS NULL OR data->>'status' = ANY($8::text[]))
       ORDER BY created_at, id LIMIT $7`,
       [
         tenant,
@@ -374,6 +375,7 @@ export class PostgresStore implements Store {
         q.after?.createdAt ?? null,
         q.after?.id ?? null,
         q.limit,
+        q.statuses ?? null,
       ],
     );
     return rows.map(entityRow);

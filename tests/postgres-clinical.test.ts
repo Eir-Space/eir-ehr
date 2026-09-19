@@ -57,6 +57,7 @@ const reviewInput = (reportId: string, taskVersion: number) => ({
   action: 'Synthetic follow-up recorded',
   communication: 'Synthetic patient contacted',
   criticalAcknowledged: true,
+  disposition: 'completed',
 });
 
 test(

@@ -39,6 +39,8 @@ The shell itself can also be replaced: the JSON APIs are independent of its DOM/
 
 ## Compatibility And Trust
 
+Clinical follow-up uses independent `followUp`, `followUpPolicy` and `notificationTransport` services. The engine requires bounded `Store.searchEntities` with the new validated `statuses` filter; both bundled stores implement it. Review requests without an explicit disposition now leave action open. Replacement policy providers return versioned clinic-specific deadlines; transports must honor stable message IDs and have a timeout shorter than the engine lease. See [FOLLOW-UP.md](FOLLOW-UP.md) for configuration, payloads and upgrade behavior. These modules remain trusted server code.
+
 The integration composition adds `integrations` and `labTransport` services. Its storage requirement is the optional API-2 `Store.searchEntities` capability; both bundled stores implement it, and startup fails if a selected store does not. Machine audit principals use role `integration` and never authenticate as staff. Keep `integration.manage` in a separate administrative assignment. See [INTEGRATIONS.md](INTEGRATIONS.md) for protocol/schema compatibility, transport replacement and queue migration requirements.
 
 The persistence release explicitly moves stateful services to promises and runtime API version 2. Version 1 manifests fail startup. Await all `Store`, `Access`, `Clinical`, `Workforce` (except pure `actor`), `Identity`, `CareTeam`, `Medications`, `Laboratories`, `Fhir`, and `AIReview` operations. Terminology/country lookups and chart-renderer signatures remain unchanged. Replace synchronous array predicates with awaited loops when they call authorization; `filter(async ...)` is never an access check.

@@ -62,6 +62,9 @@
     {
       "module": "./plugins/integrations.ts"
     },
+    { "module": "./plugins/follow-up-policy.ts" },
+    { "module": "./plugins/notification-http.ts" },
+    { "module": "./plugins/follow-up.ts" },
     {
       "module": "./plugins/ai-extractive.ts"
     },

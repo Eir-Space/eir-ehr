@@ -85,6 +85,7 @@ for (const pg of [false, true]) {
         action: 'Responsible team contacted',
         communication: 'Contact recorded',
         criticalAcknowledged: false,
+        disposition: 'completed',
       };
       assert.equal(
         (

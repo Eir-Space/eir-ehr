@@ -4,6 +4,7 @@ import { bookingInput } from './care-team.ts';
 import { medicationInput, medicationUpdate, reconciliationInput } from './medications.ts';
 import { labOrderInput, labReportInput, labReviewInput, labCancelInput } from './laboratories.ts';
 import { connectedOrderInput, resultMessage, operatorAction } from './integrations.ts';
+import { coverageInput } from './follow-up.ts';
 import {
   assignmentInput,
   assignmentChange,
@@ -12,7 +13,12 @@ import {
   reasonInput,
 } from './workforce.ts';
 const json = (schema: Record<string, unknown>) => ({ 'application/json': { schema } });
-export function openApi(clinic = false, secureCookie = false, integrations = false) {
+export function openApi(
+  clinic = false,
+  secureCookie = false,
+  integrations = false,
+  followUp = false,
+) {
   const paths: Record<string, any> = {};
   function route(
     path: string,
@@ -45,6 +51,54 @@ export function openApi(clinic = false, secureCookie = false, integrations = fal
     };
   }
   const schema = (value: z.ZodType) => z.toJSONSchema(value);
+  if (followUp) {
+    const version = z.number().int().positive(),
+      reason = z.string().min(5).max(2000);
+    route('/follow-up', 'get', 'Authorized clinical follow-up with bounded cursor pagination');
+    paths['/follow-up'].get.parameters = [
+      {
+        in: 'query',
+        name: 'status',
+        schema: { type: 'string', enum: ['open', 'closed'], default: 'open' },
+      },
+      { in: 'query', name: 'after', schema: { type: 'string', maxLength: 1000 } },
+      { in: 'query', name: 'taskId', schema: { type: 'string', format: 'uuid' } },
+      { in: 'query', name: 'eventAfter', schema: { type: 'string', maxLength: 1000 } },
+    ];
+    route(
+      '/follow-up/coverage',
+      'post',
+      "Schedule the authenticated clinician's covering colleague without granting access",
+      schema(coverageInput),
+    );
+    route(
+      '/follow-up/coverage/{id}/cancel',
+      'post',
+      'Cancel own coverage period with a reason',
+      schema(z.object({ version, reason }).strict()),
+    );
+    route(
+      '/follow-up/{id}/action',
+      'post',
+      'Record contact, action or explicit completion against the current report',
+      schema(
+        z
+          .object({
+            version,
+            data: z
+              .object({ type: z.enum(['contact-attempt', 'action', 'complete']), note: reason })
+              .strict(),
+          })
+          .strict(),
+      ),
+    );
+    route(
+      '/follow-up/notifications/{id}/replay',
+      'post',
+      'Audited retry of a failed notification for current owned work',
+      schema(z.object({ version, reason }).strict()),
+    );
+  }
   route('/session', 'get', 'Authenticated context');
   route('/logout', 'post', 'Revoke local session', { type: 'object' });
   route('/plugins', 'get', 'Active plugin manifests');

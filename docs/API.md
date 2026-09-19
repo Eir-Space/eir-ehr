@@ -33,6 +33,20 @@ Local care assignments, proxy grants and the coarse restriction are development 
 
 ## Payloads
 
+### Clinical follow up
+
+When the profile provides `followUp`, `/api/session` advertises it and the OpenAPI document includes:
+
+| Method | Path                                  | Purpose                                                                               |
+| ------ | ------------------------------------- | ------------------------------------------------------------------------------------- |
+| GET    | `/follow-up`                          | Authorized open/closed tasks, policy, worker freshness and own coverage; cursor-paged |
+| POST   | `/follow-up/coverage`                 | Create own dated coverage period, with reason                                         |
+| POST   | `/follow-up/coverage/:id/cancel`      | Cancel own coverage using `version` and `reason`                                      |
+| POST   | `/follow-up/:id/action`               | `version`, `data: {type, note}`; contact-attempt, action or complete                  |
+| POST   | `/follow-up/notifications/:id/replay` | Current owner retries a failed notification with `version` and `reason`               |
+
+The list accepts `status` (`open` or `closed`), `after`, or `taskId` with `eventAfter` for history. A missing review `disposition` fails safe to open follow-up; explicit `action-required` requires `actionDueAt`. Use `completed` only when required action is actually complete. `labOrder.expectedAt` and task `dueAt` accept offset datetimes for precise deadlines. See [FOLLOW-UP.md](FOLLOW-UP.md) for permissions, notification semantics and failure handling.
+
 Medication reconciliation and laboratory order/result routes have dedicated request schemas and ownership rules. See [the complete medication/results API and lifecycle](MEDICATIONS-AND-RESULTS.md). These are clinician-only workflows; patient/proxy chart, history, changes and export also omit their entities. Linked lab tasks can only be assigned/started through ordinary task transitions; receipt, review and cancellation are governed by the lab service.
 
 Care-team additions:

@@ -231,7 +231,7 @@ export function project(e: Entity): Record<string, any> | null {
           : {}),
         priority: d.priority === 'urgent' ? 'urgent' : 'routine',
         for: subject,
-        restriction: { period: { end: d.due } },
+        restriction: { period: { end: d.dueAt ?? d.due } },
       };
     default:
       return null;

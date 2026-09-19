@@ -39,10 +39,12 @@ export async function integrationFixture(
   pg = false,
   settings: Record<string, unknown> = {},
   uiPort = 0,
+  overrides: (tenant: string) => Record<string, Record<string, unknown>> = () => ({}),
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'eir-integration-test-'));
   const database = pg ? await postgresFixture() : undefined;
   const tenant = database?.configA.tenant ?? 'clinic-a';
+  const extra = overrides(tenant);
   const outbound = randomBytes(32).toString('base64url'),
     inbound = randomBytes(32).toString('base64url');
   const suffix = randomBytes(5).toString('hex');
@@ -144,7 +146,7 @@ export async function integrationFixture(
                     retryMs: 10,
                     ...settings,
                   }
-                : entry.config,
+                : (extra[plugin.id] ?? entry.config),
     });
   }
   const runtimes: Runtime[] = [],

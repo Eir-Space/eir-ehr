@@ -9,6 +9,7 @@ export const labOrderInput = z
     specimen: short,
     assigneeId: short,
     due: z.iso.date(),
+    expectedAt: z.iso.datetime({ offset: true }).optional(),
     priority: z.enum(['routine', 'urgent']),
   })
   .strict();
@@ -39,6 +40,12 @@ export const labReviewInput = z
     action: z.string().trim().min(1).max(2000),
     communication: z.string().trim().min(1).max(1000),
     criticalAcknowledged: z.boolean(),
+    disposition: z.enum(['completed', 'action-required']).optional(),
+    actionDueAt: z.iso.datetime({ offset: true }).optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (v) => v.disposition !== 'action-required' || !!v.actionDueAt,
+    'An action deadline is required',
+  );
 export const labCancelInput = z.object({ reason: z.string().trim().min(1).max(500) }).strict();
