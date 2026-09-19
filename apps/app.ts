@@ -118,6 +118,7 @@ export async function createApp(
         followUp: runtime.has('followUp'),
         modules: runtime.has('modules'),
         deterioration: runtime.has('deterioration'),
+        coordination: runtime.has('coordination'),
         authorization: (await runtime.get('access').context?.(actor(req))) ?? null,
         assignments: runtime.has('workforce')
           ? (await runtime.get('workforce').assignments(actor(req))).map((row) => ({
@@ -212,6 +213,73 @@ export async function createApp(
         });
       }
       api.get('/plugins', async () => runtime.active);
+      if (runtime.has('coordination')) {
+        const service = runtime.get('coordination');
+        api.get('/coordination', async (req) => ({
+          ...(await service.workspace(actor(req), req.query)),
+          features: {
+            sip: runtime.has('sipPlans'),
+            documents: runtime.has('coordinationDocuments'),
+          },
+        }));
+        api.get('/coordination/report', (req) => service.report(actor(req), req.query));
+        api.post('/coordination/cases', async (req, reply) =>
+          reply.code(201).send(await service.create(actor(req), req.body)),
+        );
+        api.get('/coordination/cases/:id', (req) =>
+          service.detail(actor(req), uuid.parse((req.params as any).id)),
+        );
+        api.post('/coordination/cases/:id/consent', (req) =>
+          service.consent(actor(req), uuid.parse((req.params as any).id), req.body),
+        );
+        api.post('/coordination/cases/:id/action', (req) =>
+          service.action(actor(req), uuid.parse((req.params as any).id), req.body),
+        );
+        api.post('/coordination/cases/:id/messages', (req) =>
+          service.send(actor(req), uuid.parse((req.params as any).id), req.body),
+        );
+        api.post('/coordination/messages/:id/acknowledge', (req) => {
+          const body = z.object({ version }).strict().parse(req.body);
+          return service.receipt(actor(req), uuid.parse((req.params as any).id), body.version);
+        });
+        api.post('/coordination/messages/:id/withdraw', (req) => {
+          const body = z.object({ version, reason: z.string() }).strict().parse(req.body);
+          return service.voidMessage(
+            actor(req),
+            uuid.parse((req.params as any).id),
+            body.version,
+            body.reason,
+          );
+        });
+      }
+      if (runtime.has('sipPlans')) {
+        api.get('/coordination/cases/:id/sip', (req) =>
+          runtime.get('sipPlans').get(actor(req), uuid.parse((req.params as any).id)),
+        );
+        api.post('/coordination/cases/:id/sip', (req) =>
+          runtime.get('sipPlans').save(actor(req), uuid.parse((req.params as any).id), req.body),
+        );
+        api.post('/coordination/cases/:id/sip/action', (req) =>
+          runtime.get('sipPlans').action(actor(req), uuid.parse((req.params as any).id), req.body),
+        );
+      }
+      if (runtime.has('coordinationDocuments')) {
+        const documents = runtime.get('coordinationDocuments');
+        const result = (file: { name: string; contentType: string; bytes: Uint8Array }) => ({
+          name: file.name,
+          contentType: file.contentType,
+          base64: Buffer.from(file.bytes).toString('base64'),
+        });
+        api.post('/coordination/cases/:id/attachments', (req) =>
+          documents.upload(actor(req), uuid.parse((req.params as any).id), req.body),
+        );
+        api.get('/coordination/attachments/:id', async (req) =>
+          result(await documents.download(actor(req), uuid.parse((req.params as any).id))),
+        );
+        api.get('/coordination/cases/:id/pdf', async (req) =>
+          result(await documents.export(actor(req), uuid.parse((req.params as any).id))),
+        );
+      }
       if (runtime.has('modules')) {
         api.get('/modules', async (req) => runtime.get('modules').list(actor(req)));
         api.post('/modules/:id', async (req) =>
@@ -317,6 +385,8 @@ export async function createApp(
           runtime.has('followUp'),
           runtime.has('modules'),
           runtime.has('deterioration'),
+          runtime.has('coordination'),
+          { sip: runtime.has('sipPlans'), documents: runtime.has('coordinationDocuments') },
         ),
       );
       api.get('/terminology/diagnoses', async (req) => {

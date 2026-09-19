@@ -79,7 +79,7 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
         const loaded = await fromConfig(resolve(root, 'eir.demo.config.json'), {
           'eir.follow-up': { worker: false, routes: [] },
           'eir.deterioration': { worker: true },
-          'eir.workforce': demoWorkforce(actor.tenant),
+          'eir.workforce': demoWorkforce(actor.tenant, true),
           'eir.care-team': {
             members: [
               { id: actor.id, tenant: actor.tenant, name: 'Emma Sjöberg', profession: 'Läkare' },
@@ -102,7 +102,7 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
         const workforce = runtime.get('workforce');
         actor = workforce.actor(
           (await workforce.forIdentity('https://local.eir.invalid', 'emma')).find(
-            (a) => a.data.role === 'clinician',
+            (a) => a.data.role === 'clinician' && a.data.unitId === 'demo-primary-care',
           )!,
         );
         await seedDemo(runtime, actor);

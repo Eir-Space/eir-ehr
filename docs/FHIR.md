@@ -37,6 +37,8 @@ Optional deterioration monitoring uses the `eir.risk.v1` model input contract, n
 
 ## Next Interoperability Milestone
 
+Eir Samverkan uses authenticated Eir JSON APIs for shared cases, messages and SIP. Its private `sam*` entities are deliberately excluded from chart exports. FHIR CarePlan, Communication, Consent and DocumentReference mappings for this module are not implemented; sharing a case does not grant access to a patient's existing FHIR chart projection. See [SAMVERKAN.md](SAMVERKAN.md).
+
 Choose one real receiving system and pin its FHIR version, implementation-guide package, terminology releases and supported interactions. Add the official HL7 validator to CI with reproducible offline package inputs, representative exports and negative cases. Resolve diagnostics and validate reference resolution before claiming that profile. Then implement the required resource endpoints and accurate CapabilityStatement behind existing authorization, audit and optimistic concurrency controls. Evaluate SMART only when the intended client workflow requires it.
 
 Do not replace the internal database with a FHIR server merely to acquire the label. The export/provider boundary already permits a reviewed adapter or server-backed implementation; clinical authorization and lifecycle guarantees must survive either choice.

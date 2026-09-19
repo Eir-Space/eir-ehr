@@ -1,6 +1,6 @@
 import { permissions } from '../packages/workforce.ts';
 // Only for disposable/local synthetic workspaces. Never use this provisioning in a clinic.
-export function demoWorkforce(tenant: string) {
+export function demoWorkforce(tenant: string, coordination = false) {
   const unitId = 'demo-primary-care';
   const base = {
     unitId,
@@ -13,8 +13,31 @@ export function demoWorkforce(tenant: string) {
     (p) => !['workforce.manage', 'integration.manage', 'audit.review'].includes(p),
   );
   return {
-    units: [{ id: unitId, tenant, name: 'Björkbackens vårdcentral' }],
+    units: [
+      { id: unitId, tenant, name: 'Björkbackens vårdcentral' },
+      ...(coordination
+        ? [
+            { id: 'demo-hospital', tenant, name: 'Lindängens sjukhus' },
+            { id: 'demo-municipality', tenant, name: 'Sjövik kommun' },
+          ]
+        : []),
+    ],
     bootstrap: [
+      ...(coordination
+        ? ['demo-hospital', 'demo-municipality'].map((id) => ({
+            ...base,
+            unitId: id,
+            actorId: 'demo-clinician',
+            subject: 'emma',
+            name: 'Emma Sjöberg',
+            role: 'clinician',
+            permissions: clinical.filter(
+              (p) =>
+                p.startsWith('coordination.') ||
+                ['modules.manage', 'chart.read', 'schedule.write', 'task.write'].includes(p),
+            ),
+          }))
+        : []),
       {
         ...base,
         actorId: 'demo-clinician',

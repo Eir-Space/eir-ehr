@@ -22,6 +22,8 @@ Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.
 
 ## Working Modules
 
+[Eir Samverkan](docs/SAMVERKAN.md) adds shared unit inboxes, consented cases, recipient acknowledgements, admission/discharge transitions, structured SIP, attachments/PDFs and configurable payment estimates. Directory, case workflow, SIP, documents, payment and notifications are separate providers. The demo offers hospital, municipality and primary-care assignments; this is not yet a federated regional service or a complete SAMSA replacement.
+
 The [optional deterioration module](docs/DETERIORATION.md) adds audited care-unit activation, encounter-scoped monitoring, vital-sign and trend warnings, assigned alerts and evidence-bound clinician reassessment. A local rules engine or an authenticated external model adapter can provide predictions without replacing the response workflow. The bundled rules are development fixtures, not CHARTwatch, NEWS2 or a validated mortality model; clinical activation is blocked in the clinic example.
 
 The [clinical follow-up module](docs/FOLLOW-UP.md) separates result review from completed action, tracks contact attempts and deadlines, checks temporary cover against live permissions, and delivers generic notifications through a replaceable HTTP gateway with durable retries. The Swedish `Bevakning` view exposes outstanding work, delivery failures and worker freshness. Clinical policies and a staffed notification destination must be configured before use.
@@ -72,6 +74,7 @@ npm run backup -- .data/ehr.sqlite /secure/path/ehr-backup.sqlite
 - [Regulatory alignment, evidence and release gates](docs/REGULATORY-ALIGNMENT.md)
 - [Clinical follow-up, coverage and notification operations](docs/FOLLOW-UP.md)
 - [Optional modules, deterioration monitoring and risk engines](docs/DETERIORATION.md)
+- [Eir Samverkan: shared care coordination and SIP](docs/SAMVERKAN.md)
 - [Diagnosis catalogue, import and data rights](docs/TERMINOLOGY.md)
 - [Sweden, Estonia, Denmark and EU evidence](docs/SOURCES.md)
 - [Operations and security boundaries](docs/OPERATIONS.md)

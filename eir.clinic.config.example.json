@@ -70,6 +70,13 @@
       "config": {
         "definitions": [
           {
+            "id": "coordination",
+            "name": "Eir Samverkan",
+            "moduleVersion": "1.0.0",
+            "canEnable": false,
+            "restriction": "Kräver godkänd samverkansmiljö, avtal och verifierad åtkomstpolicy"
+          },
+          {
             "id": "deterioration",
             "name": "Vitalövervakning",
             "moduleVersion": "1.0.0",
@@ -80,6 +87,15 @@
       }
     },
     { "module": "./plugins/risk-vitals.ts" },
+    { "module": "./plugins/coordination-directory.ts", "config": { "units": [] } },
+    { "module": "./plugins/coordination-payment.ts", "config": {} },
+    { "module": "./plugins/coordination.ts" },
+    { "module": "./plugins/sip-plans.ts" },
+    {
+      "module": "./plugins/coordination-documents.ts",
+      "config": { "maxBytes": 65536, "developmentPdfDownloads": false }
+    },
+    { "module": "./plugins/coordination-notifications.ts" },
     { "module": "./plugins/deterioration.ts" },
     {
       "module": "./plugins/ai-extractive.ts"

@@ -105,6 +105,8 @@ Access grant: `{actorId, role: "clinician" | "proxy", expires: ISO-8601 timestam
 
 ## Export And Change Feed
 
+The optional [Eir Samverkan API](SAMVERKAN.md#api) adds unit-scoped cases, consent, messages/receipts, SIP, attachments and CSV/PDF export. These routes are conditional on installed providers and use the existing staff session/CSRF controls. Case sharing is not chart access. Private coordination records are excluded from generic chart/history/change-feed and FHIR endpoints. Exact request schemas and installed routes appear in `/api/openapi.json`.
+
 FHIR output covers Patient, Encounter, Observation, Condition, AllergyIntolerance, DocumentReference, Task, MedicationStatement, ServiceRequest and DiagnosticReport. Laboratory reports contain their own Observation resources and only the latest report per order is exported. Local references use Bundle UUID URNs and contained-resource references; note content is base64 UTF-8. Local identifiers are institution-scoped; Swedish identifiers use the namespaces from the cited HL7 Sweden base guide. No profile conformance is asserted. Run a full FHIR validator and the intended national IG suite before exchange with another health system.
 
 The change feed exposes immutable historical versions in database cursor order, scoped to one authorized patient. Persist `nextCursor` even when the page contains no visible entries: hidden draft/proposal versions may have been scanned. Delivery is polling-based and at-least-once from a consumer's perspective. Deduplicate by `record.id` plus `record.version`. It is not a FHIR Subscription endpoint or a push webhook system. Audit access and chart changes are separate streams.

@@ -5,6 +5,12 @@ export const roleLabel = {
   administrator: 'Behörighetsadministratör',
 };
 export const permissionLabels = {
+  'coordination.read': 'Läsa samverkansärenden',
+  'coordination.write': 'Dokumentera samverkan',
+  'coordination.manage': 'Hantera samtycke och parter',
+  'coordination.export': 'Exportera samverkansunderlag',
+  'coordination.billing': 'Beräkna betalningsunderlag',
+  'coordination.discharge': 'Ansvara för utskrivningsprocess',
   'chart.read': 'Läsa journal',
   'chart.export': 'Exportera journal',
   'patient.register': 'Registrera patient',

@@ -6,6 +6,14 @@ import { labOrderInput, labReportInput, labReviewInput, labCancelInput } from '.
 import { connectedOrderInput, resultMessage, operatorAction } from './integrations.ts';
 import { coverageInput } from './follow-up.ts';
 import {
+  caseInput,
+  consentInput,
+  caseActionInput,
+  messageInput,
+  sipSaveInput,
+  sipActionInput,
+} from './coordination.ts';
+import {
   assignmentInput,
   assignmentChange,
   auditReviewInput,
@@ -20,6 +28,8 @@ export function openApi(
   followUp = false,
   modules = false,
   deterioration = false,
+  coordination = false,
+  coordinationFeatures = { sip: false, documents: false },
 ) {
   const paths: Record<string, any> = {};
   function route(
@@ -53,6 +63,93 @@ export function openApi(
     };
   }
   const schema = (value: z.ZodType) => z.toJSONSchema(value);
+  if (coordination) {
+    route('/coordination', 'get', 'Unit-scoped case inbox with optional after/status query');
+    route(
+      '/coordination/report',
+      'get',
+      'Audited, permission-checked CSV export of the selected inbox page as base64 JSON',
+    );
+    route(
+      '/coordination/cases',
+      'post',
+      'Create a coordination case without granting chart access',
+      schema(caseInput),
+      '201',
+    );
+    route('/coordination/cases/{id}', 'get', 'Consented case detail and recipient-scoped messages');
+    route(
+      '/coordination/cases/{id}/consent',
+      'post',
+      'Record or withdraw expiring scoped consent',
+      schema(consentInput),
+    );
+    route(
+      '/coordination/cases/{id}/action',
+      'post',
+      'Versioned case, participant and responsibility action',
+      schema(caseActionInput),
+    );
+    route(
+      '/coordination/cases/{id}/messages',
+      'post',
+      'Atomically deliver a message and recipient receipts',
+      schema(messageInput),
+    );
+    route(
+      '/coordination/messages/{id}/acknowledge',
+      'post',
+      'Recipient acknowledgement',
+      schema(z.object({ version: z.number().int().positive() }).strict()),
+    );
+    route(
+      '/coordination/messages/{id}/withdraw',
+      'post',
+      'Sender retraction with retained history',
+      schema(
+        z
+          .object({ version: z.number().int().positive(), reason: z.string().min(5).max(1000) })
+          .strict(),
+      ),
+    );
+    if (coordinationFeatures.sip) {
+      route('/coordination/cases/{id}/sip', 'get', 'Current structured SIP');
+      route(
+        '/coordination/cases/{id}/sip',
+        'post',
+        'Save versioned SIP draft',
+        schema(sipSaveInput),
+      );
+      route(
+        '/coordination/cases/{id}/sip/action',
+        'post',
+        'Invite, confirm, finalize or revise a SIP',
+        schema(sipActionInput),
+      );
+    }
+    if (coordinationFeatures.documents) {
+      route(
+        '/coordination/cases/{id}/attachments',
+        'post',
+        'Bounded PDF or UTF-8 text attachment',
+        schema(
+          z
+            .object({
+              name: z.string().max(120),
+              contentType: z.enum(['application/pdf', 'text/plain']),
+              base64: z.string().max(87384),
+            })
+            .strict(),
+        ),
+      );
+      route(
+        '/coordination/attachments/{id}',
+        'get',
+        'Authorized attachment download as base64 JSON',
+      );
+      route('/coordination/cases/{id}/pdf', 'get', 'Authorized case and SIP PDF as base64 JSON');
+    }
+  }
   if (modules) {
     route('/modules', 'get', 'Installed optional modules and unit-scoped activation state');
     route(

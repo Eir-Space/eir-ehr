@@ -2,6 +2,7 @@ import type { Actor, Entity } from './contracts.ts';
 
 // New workflow records are clinician-only until a patient-release policy is implemented.
 export function visibleRecord(actor: Actor, record: Entity) {
+  if (record.kind.startsWith('sam')) return false;
   if (
     [
       'moduleSetting',

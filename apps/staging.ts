@@ -9,12 +9,14 @@ export const stagingTenant = 'eir-synthetic-staging';
 // This profile is deliberately separate from both public visitor workspaces and clinic OIDC.
 export async function createStaging(root: string) {
   const { runtime, config } = await fromConfig(resolve(root, 'eir.staging.config.json'), {
-    'eir.workforce': demoWorkforce(stagingTenant),
+    'eir.workforce': demoWorkforce(stagingTenant, true),
   });
   try {
     const workforce = runtime.get('workforce');
     const assignments = await workforce.forIdentity('https://local.eir.invalid', 'emma');
-    const assignment = assignments.find((row) => row.data.role === 'clinician');
+    const assignment = assignments.find(
+      (row) => row.data.role === 'clinician' && row.data.unitId === 'demo-primary-care',
+    );
     if (!assignment) throw new Error('Synthetic staging clinician assignment is unavailable');
     const actor = workforce.actor(assignment);
     const store = runtime.get('store');

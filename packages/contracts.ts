@@ -14,6 +14,12 @@ export type Actor = {
   };
 };
 export type Permission =
+  | 'coordination.read'
+  | 'coordination.write'
+  | 'coordination.manage'
+  | 'coordination.export'
+  | 'coordination.billing'
+  | 'coordination.discharge'
   | 'modules.manage'
   | 'chart.read'
   | 'chart.export'
@@ -274,6 +280,12 @@ export interface AccessReview {
   protect(actor: Actor, patientId: string, version: number, input: unknown): Promise<Entity>;
 }
 export interface Services {
+  coordinationDirectory: import('./coordination.ts').CoordinationDirectory;
+  coordination: import('./coordination.ts').Coordination;
+  sipPlans: import('./coordination.ts').SipPlans;
+  coordinationPayment: import('./coordination.ts').CoordinationPayment;
+  coordinationDocuments: import('./coordination.ts').CoordinationDocuments;
+  coordinationNotifications: import('./coordination.ts').CoordinationNotifications;
   modules: import('./modules.ts').Modules;
   riskEngine: import('./deterioration.ts').RiskEngine;
   deterioration: import('./deterioration.ts').Deterioration;

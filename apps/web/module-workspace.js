@@ -12,7 +12,7 @@ export async function renderModules(target, { api, modal, perform }) {
       control.checked = module.enabled;
       modal(
         enabled ? `Aktivera ${module.name}` : `Stäng av ${module.name}`,
-        `<p>${enabled ? e(module.restriction) : 'Nya beräkningar stoppas. Öppna larm och uppgifter finns kvar.'}</p><label>Orsak<textarea name="reason" required minlength="5" maxlength="500"></textarea></label>`,
+        `<p>${enabled ? e(module.restriction) : module.id === 'coordination' ? 'Nya ändringar stoppas. Befintliga ärenden kan fortfarande läsas med giltigt samtycke.' : 'Nya beräkningar stoppas. Öppna larm och uppgifter finns kvar.'}</p><label>Orsak<textarea name="reason" required minlength="5" maxlength="500"></textarea></label>`,
         async (values) => {
           await api(`/modules/${module.id}`, {
             enabled,

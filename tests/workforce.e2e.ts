@@ -26,10 +26,12 @@ test('public workspace switches between care, audit and administration without e
     .evaluateAll((els) =>
       els.map((el) => ({ value: (el as HTMLOptionElement).value, text: el.textContent! })),
     );
-  const select = async (role: string) =>
+  const select = async (role: string, unit?: string) =>
     page
       .getByLabel('Aktivt uppdrag', { exact: true })
-      .selectOption(options.find((o) => o.text.endsWith(role))!.value);
+      .selectOption(
+        options.find((o) => o.text.endsWith(role) && (!unit || o.text.startsWith(unit)))!.value,
+      );
   await select('Logggranskare');
   await page.getByRole('heading', { name: 'Åtkomstlogg', exact: true }).waitFor();
   assert.equal(await page.locator('.patient-option').count(), 0);
@@ -51,7 +53,7 @@ test('public workspace switches between care, audit and administration without e
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: root + 'test-results/workforce-mobile.png', fullPage: true });
-  await select('Vårdpersonal');
+  await select('Vårdpersonal', 'Björkbackens vårdcentral');
   await page.getByRole('heading', { name: 'Anna Lindberg' }).waitFor();
   await page.getByRole('button', { name: 'Lås arbetsytan' }).click();
   await page.getByRole('button', { name: 'Öppna journalen' }).waitFor();
