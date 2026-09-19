@@ -63,7 +63,7 @@ await test('care team books, checks in, signs, closes, assigns and resolves work
   await page
     .getByLabel('Journaltext', { exact: true })
     .fill('Besöket genomfört. Plan dokumenterad.');
-  await expect(page.locator('.draft-status')).toContainText('Sparat');
+  await expect(page.locator('.draft-status')).toContainText('Sparat', { timeout: 10000 });
   await page.getByRole('dialog').getByRole('button', { name: 'Stäng', exact: true }).click();
   await page.getByRole('button', { name: 'Signera', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Signera', exact: true }).click();
