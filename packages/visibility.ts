@@ -11,6 +11,9 @@ export function visibleRecord(actor: Actor, record: Entity) {
       'assignmentChange',
       'workforceBootstrap',
       'accessReview',
+      'integrationConnection',
+      'integrationOutbox',
+      'integrationInbox',
     ].includes(record.kind)
   )
     return false;

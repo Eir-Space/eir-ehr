@@ -17,6 +17,7 @@ export const permissions = [
   'access.emergency',
   'patient.protected',
   'workforce.manage',
+  'integration.manage',
   'audit.review',
 ] as const;
 const short = z.string().trim().min(1).max(200);
@@ -39,10 +40,12 @@ export const assignmentInput = z
       ctx.addIssue({ code: 'custom', message: 'Invalid assignment validity' });
     const allowed =
       data.role === 'administrator'
-        ? ['workforce.manage']
+        ? ['workforce.manage', 'integration.manage']
         : data.role === 'auditor'
           ? ['audit.review']
-          : permissions.filter((p) => !['workforce.manage', 'audit.review'].includes(p));
+          : permissions.filter(
+              (p) => !['workforce.manage', 'integration.manage', 'audit.review'].includes(p),
+            );
     if (data.permissions.some((p) => !allowed.includes(p)))
       ctx.addIssue({
         code: 'custom',

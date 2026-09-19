@@ -213,6 +213,35 @@ REVOKE ALL ON ALL FUNCTIONS IN SCHEMA eir FROM PUBLIC;
 
 export const postgresMigrations = [
   { version: 1, name: 'tenant-role-storage', sql: initialSchema },
+  {
+    version: 2,
+    name: 'durable-integration-indexes',
+    sql: `
+CREATE INDEX entity_page ON eir.entities (tenant, kind, created_at, id);
+CREATE INDEX integration_due ON eir.entities (tenant, kind, (data->>'connectorId'), (data->>'state'), (data->>'availableAt'));
+CREATE INDEX entity_data_filter ON eir.entities USING gin (data jsonb_path_ops);
+CREATE UNIQUE INDEX integration_message ON eir.entities (tenant, kind, (data->>'connectorId'), (data->>'messageId'))
+  WHERE kind IN ('integrationOutbox', 'integrationInbox');
+CREATE UNIQUE INDEX integration_connector ON eir.entities (tenant, (data->>'connectorId')) WHERE kind = 'integrationConnection';
+CREATE FUNCTION eir.guard_integration_message() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+  IF OLD.kind IN ('integrationOutbox', 'integrationInbox') AND
+    (NEW.data->'payload' IS DISTINCT FROM OLD.data->'payload' OR
+     NEW.data->'payloadHash' IS DISTINCT FROM OLD.data->'payloadHash' OR
+     NEW.data->'messageId' IS DISTINCT FROM OLD.data->'messageId' OR
+     NEW.data->'orderId' IS DISTINCT FROM OLD.data->'orderId' OR
+     NEW.data->'connectorId' IS DISTINCT FROM OLD.data->'connectorId' OR
+     NEW.data->'unitId' IS DISTINCT FROM OLD.data->'unitId') THEN
+    RAISE EXCEPTION 'Integration message is immutable' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION eir.guard_integration_message() FROM PUBLIC;
+CREATE TRIGGER integration_message_guard BEFORE UPDATE ON eir.entities
+  FOR EACH ROW EXECUTE FUNCTION eir.guard_integration_message();
+`,
+  },
 ].map((migration) => ({
   ...migration,
   checksum: createHash('sha256').update(migration.sql).digest('hex'),

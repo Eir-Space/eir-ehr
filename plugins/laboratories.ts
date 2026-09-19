@@ -1,4 +1,5 @@
 import { assert, type Actor, type Plugin } from '../packages/contracts.ts';
+import { applyLabReport } from '../packages/lab-application.ts';
 import {
   labOrderInput,
   labReportInput,
@@ -105,42 +106,14 @@ export default {
             return previous;
           }
           assert(row.version === version, 409, 'Order changed. Reload before recording a result.');
-          assert(row.data.status !== 'cancelled', 409, 'Order is cancelled');
           assert(
-            !row.data.reportId || parsed.correctionReason,
-            422,
-            'A replacement report requires a correction reason',
+            !row.data.connectorId,
+            409,
+            'Connected orders receive results through their connector',
           );
-          assert(
-            row.data.reportId || !parsed.correctionReason,
-            422,
-            'There is no report to correct',
+          return applyLabReport(store, actor, row, parsed, (updated) =>
+            team.syncLinkedTask(actor, updated, 'result'),
           );
-          const report = await store.insert(actor, 'labReport', row.patientId, {
-            ...parsed,
-            orderId: id,
-            encounterId: row.data.encounterId,
-            author: actor.id,
-            supersedes: row.data.reportId ?? null,
-            receivedAt: new Date().toISOString(),
-            status: row.data.reportId ? 'corrected' : 'final',
-            originalInput: JSON.stringify(parsed),
-          });
-          const updated = await store.revise(
-            actor,
-            row,
-            version,
-            {
-              ...row.data,
-              status: 'received',
-              reportId: report.id,
-              reviewedReportId: null,
-              critical: parsed.results.some((r) => r.flag === 'critical'),
-            },
-            'labOrder.result',
-          );
-          await team.syncLinkedTask(actor, updated, 'result');
-          return report;
         });
       },
       async review(actor, id, version, input) {
@@ -201,6 +174,11 @@ export default {
         return await store.transaction(async () => {
           const row = await order(actor, id);
           assert(row.version === version, 409, 'Order changed. Reload before cancelling.');
+          assert(
+            !row.data.connectorId,
+            409,
+            'Connected orders require confirmed cancellation with the laboratory',
+          );
           assert(
             row.data.status === 'requested',
             409,

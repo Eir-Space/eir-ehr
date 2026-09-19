@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Actor, Entity, Plugin, Store, AuditQuery, AuditRow } from '../packages/contracts.ts';
 import { Fault } from '../packages/contracts.ts';
+import { entityQuery, type EntityQuery } from '../packages/entity-query.ts';
 
 export const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 class SqliteDatabase {
@@ -17,7 +18,7 @@ class SqliteDatabase {
     );
     this.db.function('eir_hash', (value) => digest(String(value)));
     const version = this.db.prepare('PRAGMA user_version').get() as { user_version: number };
-    if (version.user_version > 2) {
+    if (version.user_version > 3) {
       this.db.close();
       throw new Error('Database version newer than application');
     }
@@ -50,6 +51,26 @@ class SqliteDatabase {
       PRAGMA user_version=2;
       COMMIT;
     `);
+    if (version.user_version < 3)
+      this.db.exec(`
+      BEGIN IMMEDIATE;
+      CREATE INDEX IF NOT EXISTS entity_page ON entities(tenant,kind,createdAt,id);
+      CREATE INDEX IF NOT EXISTS integration_due ON entities(tenant,kind,json_extract(data,'$.connectorId'),json_extract(data,'$.state'),json_extract(data,'$.availableAt'));
+      CREATE UNIQUE INDEX IF NOT EXISTS integration_message ON entities(tenant,kind,json_extract(data,'$.connectorId'),json_extract(data,'$.messageId')) WHERE kind IN ('integrationOutbox','integrationInbox');
+      CREATE UNIQUE INDEX IF NOT EXISTS integration_connector ON entities(tenant,json_extract(data,'$.connectorId')) WHERE kind='integrationConnection';
+      CREATE TRIGGER IF NOT EXISTS integration_message_guard BEFORE UPDATE ON entities
+        WHEN OLD.kind IN ('integrationOutbox','integrationInbox') AND (
+          NEW.kind IS NOT OLD.kind OR NEW.tenant IS NOT OLD.tenant OR NEW.id IS NOT OLD.id OR NEW.patientId IS NOT OLD.patientId OR
+          json_extract(NEW.data,'$.payload') IS NOT json_extract(OLD.data,'$.payload') OR
+          json_extract(NEW.data,'$.payloadHash') IS NOT json_extract(OLD.data,'$.payloadHash') OR
+          json_extract(NEW.data,'$.messageId') IS NOT json_extract(OLD.data,'$.messageId') OR
+          json_extract(NEW.data,'$.orderId') IS NOT json_extract(OLD.data,'$.orderId') OR
+          json_extract(NEW.data,'$.connectorId') IS NOT json_extract(OLD.data,'$.connectorId') OR
+          json_extract(NEW.data,'$.unitId') IS NOT json_extract(OLD.data,'$.unitId'))
+        BEGIN SELECT RAISE(ABORT,'integration message is immutable'); END;
+      PRAGMA user_version=3;
+      COMMIT;
+    `);
     if (!this.verifyAudit().ok) {
       this.db.close();
       throw new Error('Audit verification failed');
@@ -77,6 +98,29 @@ class SqliteDatabase {
         'SELECT * FROM entities WHERE tenant=? AND (? IS NULL OR patientId=?) AND (? IS NULL OR kind=?) ORDER BY createdAt DESC, id',
       )
       .all(tenant, patientId ?? null, patientId ?? null, kind ?? null, kind ?? null)
+      .map((row) => decode(row)!);
+  }
+  searchEntities(tenant: string, kind: string, input: EntityQuery) {
+    const q = entityQuery.parse(input);
+    const filters = Object.entries(q.equals);
+    return this.db
+      .prepare(
+        `SELECT * FROM entities WHERE tenant=? AND kind=?
+      ${filters.map(([key]) => `AND json_extract(data,'$.${key}') = ?`).join(' ')}
+      AND (? IS NULL OR json_extract(data,'$.availableAt') <= ?)
+      AND (? IS NULL OR (createdAt,id) > (?,?)) ORDER BY createdAt,id LIMIT ?`,
+      )
+      .all(
+        tenant,
+        kind,
+        ...filters.map(([, value]) => (typeof value === 'boolean' ? Number(value) : value)),
+        q.dueBefore ?? null,
+        q.dueBefore ?? null,
+        q.after?.createdAt ?? null,
+        q.after?.createdAt ?? null,
+        q.after?.id ?? null,
+        q.limit,
+      )
       .map((row) => decode(row)!);
   }
   insert(actor: Actor, kind: string, patientId: string | null, data: Record<string, any>) {
@@ -145,7 +189,8 @@ class SqliteDatabase {
       role: actor.role,
       unitId: actor.unitId ?? null,
       assignmentId: actor.assignmentId ?? null,
-      authentication: actor.authentication?.method ?? 'local',
+      authentication:
+        actor.role === 'integration' ? 'machine' : (actor.authentication?.method ?? 'local'),
       purpose: actor.role === 'clinician' ? 'treatment' : actor.role,
       action,
       patientId: patientId ?? null,
@@ -349,6 +394,7 @@ export class SqliteStore implements Store {
   }
   get = this.method('get');
   list = this.method('list');
+  searchEntities = this.method('searchEntities')!;
   insert = this.method('insert');
   revise = this.method('revise');
   audit = this.method('audit');

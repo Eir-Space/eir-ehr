@@ -40,7 +40,9 @@ export function project(e: Entity): Record<string, any> | null {
         requester: { identifier: { system: 'urn:eir:actor', value: d.author } },
         reasonCode: [{ text: d.question }],
         note: [
-          { text: `Provmaterial: ${d.specimen}. Local order; no external transmission recorded.` },
+          {
+            text: `Provmaterial: ${d.specimen}. ${d.connectorId ? `Delivery managed by connector ${d.connectorId}; acknowledgement tracked separately.` : 'Local order; no external transmission recorded.'}`,
+          },
         ],
       };
     case 'labReport':

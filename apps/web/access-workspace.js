@@ -22,6 +22,7 @@ export const permissionLabels = {
   'access.emergency': 'Tillfällig läsåtkomst',
   'patient.protected': 'Skyddad identitet',
   'workforce.manage': 'Administrera uppdrag',
+  'integration.manage': 'Administrera integrationer',
   'audit.review': 'Granska åtkomstlogg',
 };
 export function gateActions(root, permissions) {
@@ -144,11 +145,11 @@ export async function renderWorkforce(target, { api, modal, actorId }) {
         const row = rows.find((r) => r.id === b.dataset.assignment);
         const allowed =
           row.data.role === 'administrator'
-            ? ['workforce.manage']
+            ? ['workforce.manage', 'integration.manage']
             : row.data.role === 'auditor'
               ? ['audit.review']
               : Object.keys(permissionLabels).filter(
-                  (p) => !['workforce.manage', 'audit.review'].includes(p),
+                  (p) => !['workforce.manage', 'integration.manage', 'audit.review'].includes(p),
                 );
         modal(
           'Ändra medarbetaruppdrag',

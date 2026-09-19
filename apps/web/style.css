@@ -528,6 +528,50 @@ main {
   font-size: 13px;
   overflow-wrap: anywhere;
 }
+.integration-table {
+  overflow-x: auto;
+}
+.integration-table table {
+  min-width: 650px;
+}
+.integration-table td {
+  vertical-align: top;
+}
+.integration-table small,
+.integration-connections small {
+  display: block;
+  margin-top: 4px;
+}
+.integration-id {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+}
+.integration-detail dd {
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+}
+.integration-detail dt {
+  font-weight: 600;
+}
+.integration-connections {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.integration-connections .section-title > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.integration-connections .check-label {
+  flex-shrink: 0;
+}
+.integration-table .icon {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .table-wrap {
   overflow-x: auto;
 }
@@ -1042,6 +1086,64 @@ a {
   }
 }
 @media (max-width: 700px) {
+  #shell[data-view='integrations'] .layout {
+    grid-template-rows: auto 1fr;
+  }
+  .integration-table table,
+  .integration-table tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .integration-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .integration-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .integration-table td {
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .integration-table td:nth-child(1) {
+    grid-row: 3;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .integration-table td:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .integration-table td:nth-child(3) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .integration-table td:nth-child(4) {
+    grid-row: 3;
+    font-size: 12px;
+  }
+  .integration-table td:nth-child(4)::before {
+    content: 'Försök: ';
+  }
+  .integration-table td:nth-child(5) {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .integration-id {
+    max-width: none;
+  }
   #workspace-nav {
     display: flex;
     flex-wrap: wrap;

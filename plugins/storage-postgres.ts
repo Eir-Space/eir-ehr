@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import pg, { type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
 import type { Actor, AuditQuery, AuditRow, Entity, Plugin, Store } from '../packages/contracts.ts';
 import { Fault } from '../packages/contracts.ts';
+import { entityQuery, type EntityQuery } from '../packages/entity-query.ts';
 import {
   checkPostgresMigrations,
   checkRuntimeRole,
@@ -357,6 +358,27 @@ export class PostgresStore implements Store {
     return rows.map(entityRow);
   }
 
+  async searchEntities(tenant: string, kind: string, input: EntityQuery): Promise<Entity[]> {
+    this.assertTenant(tenant);
+    const q = entityQuery.parse(input);
+    const { rows } = await this.query(
+      `SELECT * FROM eir.entities WHERE tenant = $1 AND kind = $2 AND data @> $3::jsonb
+      AND ($4::text IS NULL OR data->>'availableAt' <= $4)
+      AND ($5::text IS NULL OR (created_at, id) > ($5, $6))
+      ORDER BY created_at, id LIMIT $7`,
+      [
+        tenant,
+        kind,
+        JSON.stringify(q.equals),
+        q.dueBefore ?? null,
+        q.after?.createdAt ?? null,
+        q.after?.id ?? null,
+        q.limit,
+      ],
+    );
+    return rows.map(entityRow);
+  }
+
   async insert(
     actor: Actor,
     kind: string,
@@ -441,7 +463,8 @@ export class PostgresStore implements Store {
         role: actor.role,
         unitId: actor.unitId ?? null,
         assignmentId: actor.assignmentId ?? null,
-        authentication: actor.authentication?.method ?? 'local',
+        authentication:
+          actor.role === 'integration' ? 'machine' : (actor.authentication?.method ?? 'local'),
         purpose: actor.role === 'clinician' ? 'treatment' : actor.role,
         action,
         patientId: patientId ?? null,

@@ -22,6 +22,8 @@ Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.
 
 ## Working Modules
 
+The [laboratory integration runtime](docs/INTEGRATIONS.md) adds atomic order dispatch, durable authenticated result receipt, leased workers, retry/reconciliation, exact patient/order/correction matching and an administrative operations view. `npm run demo:integrations` runs a real local HTTP round trip with an interactive test laboratory. External Swedish lab onboarding remains separate; the public profile has no configured lab destination.
+
 The [persistent backend release](docs/PERSISTENCE.md) adds an asynchronous transaction contract, a replaceable PostgreSQL provider, database role-bound provider isolation, guarded migrations, encrypted logical backup/recovery tooling and a separate persistent synthetic staging profile. SQLite and the disposable public demo remain supported. See the [project overview and LinkedIn draft](docs/PROJECT-STATUS.md) for a shareable account of what works and what remains.
 
 The [staff identity and access release](docs/IDENTITY-AND-ACCESS.md) adds OIDC login, unit/assignment/action-level authorization, staff revocation, protected-record exclusion, audit review and temporary read access. The demo uses local identities; real SITHS/HSA connectivity still needs onboarding. The legacy `eir.config.json` remains development-only; consult the clinic profile and migration notes before changing a persistent installation.

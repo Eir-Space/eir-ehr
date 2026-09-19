@@ -3,6 +3,7 @@ import { patientInput, inputs } from '../plugins/clinical.ts';
 import { bookingInput } from './care-team.ts';
 import { medicationInput, medicationUpdate, reconciliationInput } from './medications.ts';
 import { labOrderInput, labReportInput, labReviewInput, labCancelInput } from './laboratories.ts';
+import { connectedOrderInput, resultMessage, operatorAction } from './integrations.ts';
 import {
   assignmentInput,
   assignmentChange,
@@ -11,7 +12,7 @@ import {
   reasonInput,
 } from './workforce.ts';
 const json = (schema: Record<string, unknown>) => ({ 'application/json': { schema } });
-export function openApi(clinic = false, secureCookie = false) {
+export function openApi(clinic = false, secureCookie = false, integrations = false) {
   const paths: Record<string, any> = {};
   function route(
     path: string,
@@ -182,8 +183,10 @@ export function openApi(clinic = false, secureCookie = false) {
   route(
     '/patients/{id}/lab-orders',
     'post',
-    'Create local lab order and owned result follow-up',
-    schema(labOrderInput),
+    'Create lab order and owned follow-up; connected orders commit delivery intent atomically',
+    integrations
+      ? { oneOf: [schema(labOrderInput), schema(connectedOrderInput)] }
+      : schema(labOrderInput),
     '201',
   );
   route(
@@ -297,6 +300,67 @@ export function openApi(clinic = false, secureCookie = false) {
     schema(z.object({ blocked: z.boolean() }).strict()),
   );
   if (!clinic) route('/audit', 'get', 'Authorized access audit (legacy policy)');
+  if (integrations) {
+    route('/lab-connectors', 'get', 'Active laboratory connectors for the selected clinical unit');
+    route(
+      '/lab-orders/{id}/delivery',
+      'get',
+      'Authorized delivery status; does not expose message payloads',
+    );
+    route(
+      '/integrations',
+      'get',
+      'Unit-scoped integration operations; integration.manage required',
+    );
+    paths['/integrations'].get.parameters = [
+      {
+        name: 'direction',
+        in: 'query',
+        schema: { type: 'string', enum: ['inbox', 'outbox'], default: 'outbox' },
+      },
+      { name: 'connectorId', in: 'query', schema: { type: 'string' } },
+      { name: 'state', in: 'query', schema: { type: 'string' } },
+      { name: 'after', in: 'query', schema: { type: 'string' } },
+      {
+        name: 'limit',
+        in: 'query',
+        schema: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
+      },
+    ];
+    route(
+      '/integrations/{id}/replay',
+      'post',
+      'Retry immutable failed message with version and audit reason',
+      schema(operatorAction),
+    );
+    route(
+      '/integrations/{id}/connection',
+      'post',
+      'Pause or enable a configured connector',
+      schema(operatorAction.extend({ enabled: z.boolean() })),
+    );
+    route(
+      '/integrations/{connectorId}/results',
+      'post',
+      'Persist authenticated result envelope before acknowledgement; 202 is NOT clinical application',
+      schema(resultMessage),
+      '202',
+    );
+    route(
+      '/integrations/{connectorId}/receipts/{messageId}',
+      'get',
+      'Read connector-scoped processing state',
+    );
+    for (const path of [
+      '/integrations/{connectorId}/results',
+      '/integrations/{connectorId}/receipts/{messageId}',
+    ]) {
+      for (const operation of Object.values(paths[path]) as any[]) {
+        operation.servers = [{ url: '/' }];
+        operation.security = [{ connectorAuth: [] }];
+      }
+    }
+  }
   return {
     openapi: '3.1.0',
     info: { title: 'Eir EHR clinical API', version: '0.2.0' },
@@ -304,6 +368,16 @@ export function openApi(clinic = false, secureCookie = false) {
     components: {
       securitySchemes: {
         bearerAuth: { type: 'http', scheme: 'bearer' },
+        ...(integrations
+          ? {
+              connectorAuth: {
+                type: 'http',
+                scheme: 'bearer',
+                description:
+                  'Separate tenant/unit/laboratory result-ingestion credential. Not a clinician token.',
+              },
+            }
+          : {}),
         ...(clinic
           ? {
               staffCookie: {
