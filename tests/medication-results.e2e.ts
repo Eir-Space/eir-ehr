@@ -4,8 +4,7 @@ import { chromium, expect } from '@playwright/test';
 import { fixture, doctor, root } from './helpers.ts';
 import { createApp } from '../apps/app.ts';
 import { createPublicDemo } from '../apps/public-demo.ts';
-
-test('clinician reconciles medicines, records critical results, reviews and handles a corrected report', async (t) => {
+await test('clinician reconciles medicines, records critical results, reviews and handles a corrected report', async (t) => {
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(() => browser?.close());
   const f = await fixture(),
@@ -13,7 +12,7 @@ test('clinician reconciles medicines, records critical results, reviews and hand
   const address = await app.listen({ host: '127.0.0.1', port: 0 });
   t.after(async () => {
     await app.close();
-    f.runtime.stop();
+    await f.runtime.stop();
   });
   browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -21,7 +20,7 @@ test('clinician reconciles medicines, records critical results, reviews and hand
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(address);
-  await page.getByLabel('Sessionsnyckel').fill(f.runtime.get('identity').issue!(doctor));
+  await page.getByLabel('Sessionsnyckel').fill(await f.runtime.get('identity').issue!(doctor));
   await page.getByRole('button', { name: 'Öppna arbetsyta' }).click();
   await page.getByRole('button', { name: 'Läkemedel', exact: true }).click();
   await expect(page.getByText('Inte avstämd', { exact: true })).toBeVisible();
@@ -116,18 +115,17 @@ test('clinician reconciles medicines, records critical results, reviews and hand
   await expect(page.locator('.task-row')).toHaveCount(0);
   await page.getByLabel('Status', { exact: true }).selectOption('closed');
   await expect(page.locator('.task-row')).toHaveCount(1);
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'labReview').length, 2);
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'labReview')).length, 2);
   assert.deepEqual(errors, []);
 });
-
-test('public medication and lab release exposes seeded data and completes result review', async (t) => {
+await test('public medication and lab release exposes seeded data and completes result review', async (t) => {
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(() => browser?.close());
   let address = process.env.EIR_DEMO_TEST_URL;
   if (!address) {
     const app = await createPublicDemo(root);
     address = await app.listen({ host: '127.0.0.1', port: 0 });
-    t.after(() => app.close());
+    t.after(async () => await app.close());
   }
   browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });

@@ -28,11 +28,13 @@ Plan for a multidisciplinary team: 3–4 product/backend engineers, 1 integratio
 
 ## Next Concrete Backlog
 
+Persistence v2 is implemented in the 2026-09-19 development milestone: asynchronous stateful services, SQLite compatibility, a real PostgreSQL provider with role-bound RLS, guarded migrations, encrypted logical recovery and a separate persistent synthetic staging profile. The P0 persistence foundation now has executable tests; deployed key management, off-host retention, load/soak testing, PITR/failover and clinic-agreed recovery objectives remain operational pilot gates. See [PERSISTENCE.md](PERSISTENCE.md) and [RECOVERY.md](RECOVERY.md). Next connected workflow: one laboratory partner's real order/result transport with reliable delivery and critical-result escalation.
+
 | Priority | Work package                | Acceptance criterion                                                                                                                                                                             |
 | -------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | P0       | Strong identity adapter     | Validate issuer, audience, nonce/PKCE where applicable, assurance and actor attributes; no browser-supplied role/tenant; test logout/revocation with the selected IdP                            |
 | P0       | Swedish authorization model | Map HSA unit/assignment, patient relationship, within-provider vs cross-provider use, consent, protected identity, restrictions, proxy validity and emergency access; exercise every deny branch |
-| P0       | Persistence v2              | Async unit-of-work contracts; PostgreSQL integration tests with two concurrent clients and RLS; migration rollback/recovery path                                                                 |
+| P0       | Persistent pilot operations | Build on implemented async/PostgreSQL/RLS/recovery foundation; establish external key custody, off-host backups, monitored restore drills and clinic-agreed availability/RPO/RTO                 |
 | P0       | Audit export and review     | Externally anchor log digests, archive immutably, assign a log-review queue, test tamper/deletion detection and patient-specific access reports                                                  |
 | P1       | Patient identity lifecycle  | Local reserve ID, corrected birth dates, deceased/unknown patients, protected identity masking, merge/unmerge with evidence and no silent reattachment                                           |
 | P1       | Complete note workflow      | Autosave/recovery, co-sign rules, template plugins, dictated text, patient-release policy, corrected authorship and cross-cover handover                                                         |

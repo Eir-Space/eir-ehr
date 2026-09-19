@@ -61,19 +61,19 @@ test('public workspace switches between care, audit and administration without e
 
 test('reviewer records a durable assessment without receiving clinical access', async (t) => {
   const f = await staffFixture();
-  f.store.audit(f.doctor, 'access.emergency-opened', f.patient.id);
+  await f.store.audit(f.doctor, 'access.emergency-opened', f.patient.id);
   const app = await createApp(f.runtime, root),
     address = await app.listen({ host: '127.0.0.1', port: 0 });
   const browser = await chromium.launch({ headless: true });
   t.after(async () => {
     await browser.close();
     await app.close();
-    f.runtime.stop();
+    await f.runtime.stop();
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
   page.setDefaultTimeout(15000);
   await page.goto(address);
-  await page.locator('[name=token]').fill(f.runtime.get('identity').issue!(f.reviewer));
+  await page.locator('[name=token]').fill(await f.runtime.get('identity').issue!(f.reviewer));
   await page.getByRole('button', { name: 'Öppna arbetsyta' }).click();
   await page.getByRole('heading', { name: 'Åtkomstlogg', exact: true }).waitFor();
   assert.equal(await page.locator('.patient-option').count(), 0);
@@ -85,7 +85,7 @@ test('reviewer records a durable assessment without receiving clinical access', 
   await page.getByRole('button', { name: 'Registrera granskning' }).click();
   await event.locator('summary').click();
   await event.getByText('Utredning krävs', { exact: true }).waitFor();
-  assert.equal(f.store.list(f.doctor.tenant, undefined, 'accessReview').length, 1);
+  assert.equal((await f.store.list(f.doctor.tenant, undefined, 'accessReview')).length, 1);
   await page.getByLabel('Utfall', { exact: true }).selectOption('denied');
   await page.getByRole('button', { name: 'Filtrera', exact: true }).click();
   await page.getByText('Inga händelser för valt filter.').waitFor();

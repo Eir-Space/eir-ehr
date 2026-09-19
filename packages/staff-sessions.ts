@@ -13,52 +13,74 @@ export function staffSessions(
   workforce: Workforce,
   options: { idleMinutes: number; absoluteHours: number },
 ) {
-  const identity: Identity = {
-    issue(actor) {
-      workforce.current(actor);
-      const token = randomBytes(32).toString('base64url');
-      store.saveSession(
-        tokenHash(token),
-        actor,
-        new Date(Date.now() + options.absoluteHours * 3600000).toISOString(),
+  // Return failures from the unit of work so revocation and its audit commit before rejection.
+  const authenticateSession = async (token: string): Promise<Actor | Fault> => {
+    assert(/^[A-Za-z0-9_-]{43}$/.test(token), 401, 'Authentication required');
+    const hash = tokenHash(token);
+    const session = await store.session(hash);
+    if (
+      !session ||
+      Date.parse(session.expires) <= Date.now() ||
+      Date.parse(session.lastSeen) + options.idleMinutes * 60000 <= Date.now()
+    ) {
+      await store.revokeSession(hash);
+      return new Fault(401, 'Session expired');
+    }
+    try {
+      await workforce.current(session.actor);
+    } catch {
+      await store.revokeSession(hash);
+      await store.audit(
+        session.actor,
+        'session.assignment-revoked',
+        undefined,
+        undefined,
+        'denied',
       );
-      store.audit(actor, 'session.started');
-      return token;
+      return new Fault(401, 'Staff assignment has expired or been revoked');
+    }
+    await store.updateSession(hash, session.actor);
+    return session.actor;
+  };
+  const identity: Identity = {
+    async issue(actor) {
+      return store.transaction(async () => {
+        await workforce.current(actor);
+        const token = randomBytes(32).toString('base64url');
+        await store.saveSession(
+          tokenHash(token),
+          actor,
+          new Date(Date.now() + options.absoluteHours * 3600000).toISOString(),
+        );
+        await store.audit(actor, 'session.started');
+        return token;
+      });
     },
     async authenticate(token) {
-      assert(/^[A-Za-z0-9_-]{43}$/.test(token), 401, 'Authentication required');
-      const session = store.session(tokenHash(token));
-      if (
-        !session ||
-        Date.parse(session.expires) <= Date.now() ||
-        Date.parse(session.lastSeen) + options.idleMinutes * 60000 <= Date.now()
-      ) {
-        store.revokeSession(tokenHash(token));
-        throw new Fault(401, 'Session expired');
-      }
-      try {
-        workforce.current(session.actor);
-      } catch {
-        store.revokeSession(tokenHash(token));
-        store.audit(session.actor, 'session.assignment-revoked', undefined, undefined, 'denied');
-        throw new Fault(401, 'Staff assignment has expired or been revoked');
-      }
-      store.updateSession(tokenHash(token), session.actor);
-      return session.actor;
+      const result = await store.transaction(async () => authenticateSession(token));
+      if (result instanceof Fault) throw result;
+      return result;
     },
     async select(token, assignmentId) {
-      const actor = await identity.authenticate(token);
-      const assignment = workforce.assignments(actor).find((a) => a.id === assignmentId);
-      assert(assignment, 403, 'Assignment is unavailable');
-      const selected = workforce.actor(assignment, actor.authentication);
-      store.updateSession(tokenHash(token), selected);
-      store.audit(selected, 'session.assignment-selected');
-      return selected;
+      const result = await store.transaction(async () => {
+        const actor = await authenticateSession(token);
+        if (actor instanceof Fault) return actor;
+        const assignment = (await workforce.assignments(actor)).find((a) => a.id === assignmentId);
+        assert(assignment, 403, 'Assignment is unavailable');
+        const selected = workforce.actor(assignment, actor.authentication);
+        await store.updateSession(tokenHash(token), selected);
+        await store.audit(selected, 'session.assignment-selected');
+        return selected;
+      });
+      if (result instanceof Fault) throw result;
+      return result;
     },
-    revoke(token) {
-      const session = store.session(tokenHash(token));
-      if (session) store.audit(session.actor, 'session.ended');
-      store.revokeSession(tokenHash(token));
+    async revoke(token) {
+      await store.transaction(async () => {
+        const session = await store.session(tokenHash(token));
+        if (session) await store.audit(session.actor, 'session.ended');
+        await store.revokeSession(tokenHash(token));
+      });
     },
   };
   return identity;

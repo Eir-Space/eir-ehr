@@ -7,7 +7,6 @@ import { openApi } from '../packages/openapi.ts';
 import { baseApp, webFiles } from './http.ts';
 import { visibleRecord } from '../packages/visibility.ts';
 import cookie from '@fastify/cookie';
-
 const uuid = z.uuid();
 const version = z.number().int().positive();
 export async function createApp(
@@ -21,6 +20,14 @@ export async function createApp(
     store = runtime.get('store');
   const app = await baseApp(240, 128 * 1024, identity.browser ? [identity.browser.origin] : []);
   await app.register(cookie);
+  app.get('/ready', async (_req, reply) => {
+    try {
+      await store.health();
+      return { status: 'ready' };
+    } catch {
+      return reply.code(503).send({ status: 'unavailable' });
+    }
+  });
   const actors = new WeakMap<FastifyRequest, Actor>();
   const actor = (request: FastifyRequest) => {
     const a = actors.get(request);
@@ -62,7 +69,7 @@ export async function createApp(
         req.cookies[flowCookie] ?? '',
       );
       const previous = req.cookies[sessionCookie];
-      if (previous) identity.revoke?.(previous);
+      if (previous) await identity.revoke?.(previous);
       return reply.setCookie(sessionCookie, token, cookieOptions).redirect('/');
     });
   }
@@ -80,7 +87,7 @@ export async function createApp(
       api.addHook('onError', async (req, _reply, error) => {
         const a = actors.get(req);
         if (a && error instanceof Fault && error.status === 403)
-          store.audit(a, 'request.denied', undefined, undefined, 'denied');
+          await store.audit(a, 'request.denied', undefined, undefined, 'denied');
       });
       api.get('/session', async (req) => ({
         actor: actor(req),
@@ -89,37 +96,36 @@ export async function createApp(
         vitals,
         renderers: rendererIds,
         defaultRenderer,
-        authorization: runtime.get('access').context?.(actor(req)) ?? null,
+        authorization: (await runtime.get('access').context?.(actor(req))) ?? null,
         assignments: runtime.has('workforce')
-          ? runtime
-              .get('workforce')
-              .assignments(actor(req))
-              .map((row) => ({
-                id: row.id,
-                unitId: row.data.unitId,
-                role: row.data.role,
-                name:
-                  runtime.get('workforce').units.find((u) => u.id === row.data.unitId)?.name ??
-                  row.data.unitId,
-              }))
+          ? (await runtime.get('workforce').assignments(actor(req))).map((row) => ({
+              id: row.id,
+              unitId: row.data.unitId,
+              role: row.data.role,
+              name:
+                runtime.get('workforce').units.find((u) => u.id === row.data.unitId)?.name ??
+                row.data.unitId,
+            }))
           : [],
         careTeam:
           actor(req).role === 'clinician'
             ? {
-                members: runtime.get('careTeam').members(actor(req)),
+                members: await runtime.get('careTeam').members(actor(req)),
                 timeZone: runtime.get('careTeam').timeZone,
               }
             : null,
       }));
       api.get('/care-team', async (req) => {
         const query = z.object({ day: z.iso.date() }).strict().parse(req.query);
-        return runtime.get('careTeam').workspace(actor(req), query.day);
+        return await runtime.get('careTeam').workspace(actor(req), query.day);
       });
       api.post('/patients/:id/appointments', async (req, reply) =>
         reply
           .code(201)
           .send(
-            runtime.get('careTeam').book(actor(req), uuid.parse((req.params as any).id), req.body),
+            await runtime
+              .get('careTeam')
+              .book(actor(req), uuid.parse((req.params as any).id), req.body),
           ),
       );
       api.post('/appointments/:id/:action', async (req) => {
@@ -127,7 +133,7 @@ export async function createApp(
           .object({ version, data: z.unknown().default({}) })
           .strict()
           .parse(req.body);
-        return runtime
+        return await runtime
           .get('careTeam')
           .appointment(
             actor(req),
@@ -138,7 +144,7 @@ export async function createApp(
           );
       });
       api.post('/logout', async (req, reply) => {
-        identity.revoke?.(tokenFor(req));
+        await identity.revoke?.(tokenFor(req));
         if (browser) reply.clearCookie(sessionCookie, cookieOptions);
         return { ok: true };
       });
@@ -146,38 +152,39 @@ export async function createApp(
         api.post('/session/assignment', async (req) => {
           const { assignmentId } = z.object({ assignmentId: uuid }).strict().parse(req.body);
           assert(identity.select, 409, 'Assignment selection unavailable');
-          return identity.select(tokenFor(req), assignmentId);
+          return await identity.select(tokenFor(req), assignmentId);
         });
-        api.get('/workforce', async (req) => runtime.get('workforce').staff(actor(req)));
+        api.get('/workforce', async (req) => await runtime.get('workforce').staff(actor(req)));
         api.post('/workforce', async (req, reply) =>
-          reply.code(201).send(runtime.get('workforce').create(actor(req), req.body)),
+          reply.code(201).send(await runtime.get('workforce').create(actor(req), req.body)),
         );
         api.post('/workforce/:id', async (req) => {
           const body = z.object({ version, data: z.unknown() }).strict().parse(req.body);
-          return runtime
+          return await runtime
             .get('workforce')
             .update(actor(req), uuid.parse((req.params as any).id), body.version, body.data);
         });
       }
       if (runtime.has('accessReview')) {
-        api.get('/access-review', async (req) =>
-          runtime.get('accessReview').list(actor(req), req.query),
+        api.get(
+          '/access-review',
+          async (req) => await runtime.get('accessReview').list(actor(req), req.query),
         );
         api.post('/access-review', async (req, reply) =>
-          reply.code(201).send(runtime.get('accessReview').review(actor(req), req.body)),
+          reply.code(201).send(await runtime.get('accessReview').review(actor(req), req.body)),
         );
         api.post('/patients/:id/emergency-access', async (req, reply) =>
           reply
             .code(201)
             .send(
-              runtime
+              await runtime
                 .get('accessReview')
                 .emergency(actor(req), uuid.parse((req.params as any).id), req.body),
             ),
         );
         api.post('/patients/:id/protection', async (req) => {
           const body = z.object({ version, data: z.unknown() }).strict().parse(req.body);
-          return runtime
+          return await runtime
             .get('accessReview')
             .protect(actor(req), uuid.parse((req.params as any).id), body.version, body.data);
         });
@@ -195,28 +202,31 @@ export async function createApp(
         const terminology = runtime.get('terminology');
         return { ...terminology.search(query.q, query.limit), source: terminology.source };
       });
-      api.get('/patients', async (req) => clinical.patients(actor(req)));
+      api.get('/patients', async (req) => await clinical.patients(actor(req)));
       api.post('/patients', async (req, reply) =>
-        reply.code(201).send(clinical.register(actor(req), req.body)),
+        reply.code(201).send(await clinical.register(actor(req), req.body)),
       );
-      api.get('/patients/:id/chart', async (req) =>
-        clinical.chart(actor(req), uuid.parse((req.params as any).id)),
+      api.get(
+        '/patients/:id/chart',
+        async (req) => await clinical.chart(actor(req), uuid.parse((req.params as any).id)),
       );
       api.get('/patients/:id/permissions', async (req) => {
         const patientId = uuid.parse((req.params as any).id),
           a = actor(req),
           access = runtime.get('access');
-        access.check(a, patientId);
+        await access.check(a, patientId);
         return access.context?.(a, patientId) ?? null;
       });
-      api.get('/patients/:id/medications', async (req) =>
-        runtime.get('medications').list(actor(req), uuid.parse((req.params as any).id)),
+      api.get(
+        '/patients/:id/medications',
+        async (req) =>
+          await runtime.get('medications').list(actor(req), uuid.parse((req.params as any).id)),
       );
       api.post('/patients/:id/medications', async (req, reply) =>
         reply
           .code(201)
           .send(
-            runtime
+            await runtime
               .get('medications')
               .add(actor(req), uuid.parse((req.params as any).id), req.body),
           ),
@@ -225,14 +235,14 @@ export async function createApp(
         reply
           .code(201)
           .send(
-            runtime
+            await runtime
               .get('medications')
               .reconcile(actor(req), uuid.parse((req.params as any).id), req.body),
           ),
       );
       api.post('/medications/:id', async (req) => {
         const body = z.object({ version, data: z.unknown() }).strict().parse(req.body);
-        return runtime
+        return await runtime
           .get('medications')
           .update(actor(req), uuid.parse((req.params as any).id), body.version, body.data);
       });
@@ -240,7 +250,7 @@ export async function createApp(
         reply
           .code(201)
           .send(
-            runtime
+            await runtime
               .get('laboratories')
               .order(actor(req), uuid.parse((req.params as any).id), req.body),
           ),
@@ -248,7 +258,7 @@ export async function createApp(
       for (const action of ['receive', 'review', 'cancel'] as const) {
         api.post(`/lab-orders/:id/${action}`, async (req) => {
           const body = z.object({ version, data: z.unknown() }).strict().parse(req.body);
-          return runtime
+          return await runtime
             .get('laboratories')
             [action](actor(req), uuid.parse((req.params as any).id), body.version, body.data);
         });
@@ -257,7 +267,7 @@ export async function createApp(
         reply
           .code(201)
           .send(
-            clinical.create(
+            await clinical.create(
               actor(req),
               uuid.parse((req.params as any).id),
               (req.params as any).kind,
@@ -270,7 +280,7 @@ export async function createApp(
           .object({ version, data: z.unknown().default({}) })
           .strict()
           .parse(req.body);
-        return clinical.transition(
+        return await clinical.transition(
           actor(req),
           uuid.parse((req.params as any).id),
           (req.params as any).action,
@@ -278,30 +288,33 @@ export async function createApp(
           body.data,
         );
       });
-      api.get('/records/:id/history', async (req) =>
-        clinical.history(actor(req), uuid.parse((req.params as any).id)),
+      api.get(
+        '/records/:id/history',
+        async (req) => await clinical.history(actor(req), uuid.parse((req.params as any).id)),
       );
-      api.get('/patients/:id/changes', async (req) => {
-        const a = actor(req),
-          patientId = uuid.parse((req.params as any).id);
-        runtime.get('access').check(a, patientId);
-        const after = z.coerce
-          .number()
-          .int()
-          .nonnegative()
-          .max(Number.MAX_SAFE_INTEGER)
-          .parse((req.query as any).after ?? 0);
-        const rows = store.changes(a.tenant, patientId, after);
-        const entries = rows.filter(({ record }) => visibleRecord(a, record));
-        return { entries, nextCursor: rows.length ? Number(rows.at(-1)!.cursor) : after };
-      });
+      api.get('/patients/:id/changes', async (req) =>
+        store.transaction(async () => {
+          const a = actor(req),
+            patientId = uuid.parse((req.params as any).id);
+          await runtime.get('access').check(a, patientId);
+          const after = z.coerce
+            .number()
+            .int()
+            .nonnegative()
+            .max(Number.MAX_SAFE_INTEGER)
+            .parse((req.query as any).after ?? 0);
+          const rows = await store.changes(a.tenant, patientId, after);
+          const entries = rows.filter(({ record }) => visibleRecord(a, record));
+          return { entries, nextCursor: rows.length ? Number(rows.at(-1)!.cursor) : after };
+        }),
+      );
       api.get('/patients/:id/export/fhir', async (req, reply) => {
         reply.type('application/fhir+json');
-        return runtime.get('fhir').bundle(actor(req), uuid.parse((req.params as any).id));
+        return await runtime.get('fhir').bundle(actor(req), uuid.parse((req.params as any).id));
       });
       api.post('/patients/:id/ai', async (req) => {
         const body = z.object({ encounterId: uuid }).strict().parse(req.body);
-        return runtime
+        return await runtime
           .get('aiReview')
           .propose(actor(req), uuid.parse((req.params as any).id), body.encounterId);
       });
@@ -314,7 +327,7 @@ export async function createApp(
           })
           .strict()
           .parse(req.body);
-        return runtime
+        return await runtime
           .get('aiReview')
           .review(
             actor(req),
@@ -334,7 +347,7 @@ export async function createApp(
           })
           .strict()
           .parse(req.body);
-        runtime
+        await runtime
           .get('access')
           .grant(
             actor(req),
@@ -348,7 +361,7 @@ export async function createApp(
       });
       api.post('/patients/:id/restriction', async (req) => {
         const { blocked } = z.object({ blocked: z.boolean() }).strict().parse(req.body);
-        runtime.get('access').block(actor(req), uuid.parse((req.params as any).id), blocked);
+        await runtime.get('access').block(actor(req), uuid.parse((req.params as any).id), blocked);
         return { ok: true };
       });
       api.get('/audit', async (req) => {
@@ -359,10 +372,10 @@ export async function createApp(
           403,
           'Auditor or patient role required',
         );
-        store.audit(a, 'audit.read', a.patientId);
+        await store.audit(a, 'audit.read', a.patientId);
         return {
-          verification: store.verifyAudit(),
-          entries: store.auditEntries(
+          verification: await store.verifyAudit(),
+          entries: await store.auditEntries(
             a.tenant,
             a.role === 'patient' ? (a.patientId ?? '') : undefined,
           ),

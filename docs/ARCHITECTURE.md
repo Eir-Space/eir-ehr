@@ -43,7 +43,7 @@ Draft notes can be revised with an expected version. Signing persists actor and 
 
 No deletion endpoint exists. Erasure, identity merge/unmerge, legal retention, legal hold and migration require designed workflows rather than bypassing the audit trail. The version log also supplies a cursor-based change feed. Consumers must deduplicate by entity ID plus version, store cursors, and re-authorize each poll.
 
-The v1 storage contract uses synchronous transactions suited to SQLite and single-process deployments. It is not a PostgreSQL abstraction already implemented. Before a multi-process service, introduce an async unit-of-work API and its compatibility adapter, then run the same contract tests against PostgreSQL with row-level security. This is a planned versioned contract change, not a silent drop-in promise.
+Runtime API v2 uses asynchronous unit-of-work contracts across storage and stateful services. SQLite serializes awaited work on its local connection; PostgreSQL uses independent clients, serializable transactions, role-bound RLS and a separately operated migration ledger. Both providers preserve version and audit atomicity. This is an explicit breaking plugin contract change, not a silent drop-in adapter. See [PERSISTENCE.md](PERSISTENCE.md) for boundaries, staging and recovery.
 
 ## AI Native Workflow
 

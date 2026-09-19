@@ -6,6 +6,20 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: eir_test
+          POSTGRES_PASSWORD: eir_disposable_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d eir_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      EIR_TEST_POSTGRES_URL: postgresql://postgres:eir_disposable_ci_only@127.0.0.1:5432/eir_test
+      PG_BIN: /tmp/eir-pg-bin
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -13,6 +27,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: node --import tsx scripts/prepare-postgres-test-clients.ts --container '${{ job.services.postgres.id }}' --output "$PG_BIN"
       - run: npm run terminology:import
       - run: npm run check
       - run: npm run format:check

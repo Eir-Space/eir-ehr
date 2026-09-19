@@ -20,7 +20,7 @@ const activeBooking = (r: Entity) => ['booked', 'arrived', 'in-progress'].includ
 export default {
   id: 'eir.care-team',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['careTeam'],
   requires: ['store', 'access'],
   setup(ctx, config) {
@@ -41,9 +41,9 @@ export default {
     );
     const clinician = (actor: Actor) =>
       assert(actor.role === 'clinician', 403, 'Clinician role required');
-    const members = (actor: Actor) => {
+    const members = async (actor: Actor) => {
       clinician(actor);
-      if (access.members) return access.members(actor);
+      if (access.members) return await access.members(actor);
       const rows = settings.members.filter((m) => m.tenant === actor.tenant);
       return rows.some((m) => m.id === actor.id)
         ? rows
@@ -52,36 +52,40 @@ export default {
             ...rows,
           ];
     };
-    const assignee = (
+    const assignee = async (
       actor: Actor,
       patientId: string,
       id: string,
       permission: Permission = 'task.write',
     ) => {
       assert(
-        members(actor).some((m) => m.id === id),
+        (await members(actor)).some((m) => m.id === id),
         422,
         'Unknown team member',
       );
       assert(
         access.eligible
-          ? access.eligible(actor, id, patientId, permission)
-          : access.allowed({ ...actor, id }, patientId, true),
+          ? await access.eligible(actor, id, patientId, permission)
+          : await access.allowed({ ...actor, id }, patientId, true),
         403,
         'The selected team member has no active care relationship',
       );
     };
-    const current = (actor: Actor, id: string, kind: string, version: number) => {
+    const current = async (actor: Actor, id: string, kind: string, version: number) => {
       clinician(actor);
-      const row = store.get(actor.tenant, id);
+      const row = await store.get(actor.tenant, id);
       assert(row?.kind === kind, 404, 'Record not found');
-      access.permit(actor, kind === 'appointment' ? 'schedule.write' : 'task.write', row.patientId);
+      await access.permit(
+        actor,
+        kind === 'appointment' ? 'schedule.write' : 'task.write',
+        row.patientId,
+      );
       assert(row.version === version, 409, 'Record changed. Reload before saving.');
       return row;
     };
-    const slot = (actor: Actor, patientId: string, input: unknown, except?: string) => {
+    const slot = async (actor: Actor, patientId: string, input: unknown, except?: string) => {
       const parsed = bookingInput.parse(input);
-      assignee(actor, patientId, parsed.practitionerId, 'record.write');
+      await assignee(actor, patientId, parsed.practitionerId, 'record.write');
       let startsAt: string, endsAt: string;
       try {
         const start = Temporal.PlainDateTime.from(parsed.localStart).toZonedDateTime(
@@ -94,16 +98,14 @@ export default {
         throw new Fault(422, 'Invalid or ambiguous clinic time. Choose another time.');
       }
       assert(
-        !store
-          .list(actor.tenant, undefined, 'appointment')
-          .some(
-            (r) =>
-              r.id !== except &&
-              activeBooking(r) &&
-              (r.patientId === patientId || r.data.practitionerId === parsed.practitionerId) &&
-              Date.parse(r.data.startsAt) < Date.parse(endsAt) &&
-              Date.parse(r.data.endsAt) > Date.parse(startsAt),
-          ),
+        !(await store.list(actor.tenant, undefined, 'appointment')).some(
+          (r) =>
+            r.id !== except &&
+            activeBooking(r) &&
+            (r.patientId === patientId || r.data.practitionerId === parsed.practitionerId) &&
+            Date.parse(r.data.startsAt) < Date.parse(endsAt) &&
+            Date.parse(r.data.endsAt) > Date.parse(startsAt),
+        ),
         409,
         'The patient or clinician already has an overlapping appointment',
       );
@@ -112,53 +114,53 @@ export default {
     const service: CareTeam = {
       timeZone: settings.timeZone,
       members,
-      workspace(actor, day) {
+      async workspace(actor, day) {
         clinician(actor);
         z.iso.date().parse(day);
         const start = Temporal.PlainDate.from(day).toZonedDateTime(settings.timeZone);
         const end = start.add({ days: 1 });
-        const visible = new Set(
-          store
-            .list(actor.tenant, undefined, 'patient')
-            .filter((p) => access.allowed(actor, p.id))
-            .map((p) => p.id),
-        );
-        const appointments = store
-          .list(actor.tenant, undefined, 'appointment')
-          .filter(
-            (r) =>
-              visible.has(r.patientId) &&
-              Date.parse(r.data.startsAt) < end.epochMilliseconds &&
-              Date.parse(r.data.endsAt) > start.epochMilliseconds,
-          )
-          .sort((a, b) => a.data.startsAt.localeCompare(b.data.startsAt));
-        const tasks = store
-          .list(actor.tenant, undefined, 'task')
-          .filter((r) => visible.has(r.patientId))
-          .sort((a, b) => a.data.due.localeCompare(b.data.due) || a.id.localeCompare(b.id));
-        for (const id of new Set([...appointments, ...tasks].map((r) => r.patientId)))
-          access.check(actor, id);
-        store.audit(actor, 'care-team.workspace');
-        return { appointments, tasks };
+        return await store.transaction(async () => {
+          const visible = new Set<string>();
+          for (const patient of await store.list(actor.tenant, undefined, 'patient')) {
+            if (await access.allowed(actor, patient.id)) visible.add(patient.id);
+          }
+          const appointments = (await store.list(actor.tenant, undefined, 'appointment'))
+            .filter(
+              (r) =>
+                visible.has(r.patientId) &&
+                Date.parse(r.data.startsAt) < end.epochMilliseconds &&
+                Date.parse(r.data.endsAt) > start.epochMilliseconds,
+            )
+            .sort((a, b) => a.data.startsAt.localeCompare(b.data.startsAt));
+          const tasks = (await store.list(actor.tenant, undefined, 'task'))
+            .filter((r) => visible.has(r.patientId))
+            .sort((a, b) => a.data.due.localeCompare(b.data.due) || a.id.localeCompare(b.id));
+          for (const id of new Set([...appointments, ...tasks].map((r) => r.patientId)))
+            await access.check(actor, id);
+          await store.audit(actor, 'care-team.workspace');
+          return { appointments, tasks };
+        });
       },
-      book(actor, patientId, input) {
+      async book(actor, patientId, input) {
         clinician(actor);
-        access.permit(actor, 'schedule.write', patientId);
-        return store.transaction(() =>
-          store.insert(actor, 'appointment', patientId, {
-            ...slot(actor, patientId, input),
+        await access.permit(actor, 'schedule.write', patientId);
+        return await store.transaction(async () => {
+          await access.permit(actor, 'schedule.write', patientId);
+          return await store.insert(actor, 'appointment', patientId, {
+            ...(await slot(actor, patientId, input)),
             status: 'booked',
             author: actor.id,
-          }),
-        );
+          });
+        });
       },
-      appointment(actor, id, action, version, input) {
-        const row = current(actor, id, 'appointment', version);
-        return store.transaction(() => {
+      async appointment(actor, id, action, version, input) {
+        await current(actor, id, 'appointment', version);
+        return await store.transaction(async () => {
+          const row = await current(actor, id, 'appointment', version);
           let data = { ...row.data };
           if (action === 'reschedule') {
             assert(data.status === 'booked', 409, 'Only a booked appointment can be rescheduled');
-            data = { ...data, ...slot(actor, row.patientId, input, id) };
+            data = { ...data, ...(await slot(actor, row.patientId, input, id)) };
           } else if (action === 'cancel' || action === 'no-show') {
             const parsed = reason.parse(input);
             assert(
@@ -183,7 +185,7 @@ export default {
             assert(data.status === 'booked', 409, 'Appointment is not booked');
             data = { ...data, status: 'arrived', arrivedAt: new Date().toISOString() };
           } else if (action === 'start') {
-            access.permit(actor, 'record.write', row.patientId);
+            await access.permit(actor, 'record.write', row.patientId);
             empty.parse(input);
             assert(
               ['booked', 'arrived'].includes(data.status),
@@ -195,20 +197,18 @@ export default {
               403,
               'Only the booked clinician can start this appointment',
             );
-            let encounter = store
-              .list(actor.tenant, row.patientId, 'encounter')
-              .find((r) => r.data.status === 'in-progress');
+            let encounter = (await store.list(actor.tenant, row.patientId, 'encounter')).find(
+              (r) => r.data.status === 'in-progress',
+            );
             assert(
               !encounter ||
-                !store
-                  .list(actor.tenant, row.patientId, 'appointment')
-                  .some(
-                    (r) => r.data.status === 'in-progress' && r.data.encounterId === encounter!.id,
-                  ),
+                !(await store.list(actor.tenant, row.patientId, 'appointment')).some(
+                  (r) => r.data.status === 'in-progress' && r.data.encounterId === encounter!.id,
+                ),
               409,
               'The current encounter is already linked to another appointment',
             );
-            encounter ??= store.insert(actor, 'encounter', row.patientId, {
+            encounter ??= await store.insert(actor, 'encounter', row.patientId, {
               reason: data.reason,
               status: 'in-progress',
               author: actor.id,
@@ -220,20 +220,20 @@ export default {
               startedAt: new Date().toISOString(),
             };
           } else throw new Fault(422, 'Unsupported appointment action');
-          return store.revise(actor, row, version, data, `appointment.${action}`);
+          return await store.revise(actor, row, version, data, `appointment.${action}`);
         });
       },
-      encounterClosed(actor, encounterId) {
-        const encounter = store.get(actor.tenant, encounterId);
+      async encounterClosed(actor, encounterId) {
+        const encounter = await store.get(actor.tenant, encounterId);
         assert(
           encounter?.kind === 'encounter' && encounter.data.status === 'finished',
           409,
           'Encounter is not finished',
         );
-        access.permit(actor, 'record.write', encounter.patientId);
-        for (const row of store.list(actor.tenant, encounter.patientId, 'appointment')) {
+        await access.permit(actor, 'record.write', encounter.patientId);
+        for (const row of await store.list(actor.tenant, encounter.patientId, 'appointment')) {
           if (row.data.encounterId === encounterId && row.data.status === 'in-progress') {
-            store.revise(
+            await store.revise(
               actor,
               row,
               row.version,
@@ -243,41 +243,42 @@ export default {
           }
         }
       },
-      createTask(actor, patientId, input) {
+      async createTask(actor, patientId, input) {
         clinician(actor);
-        access.permit(actor, 'task.write', patientId);
+        await access.permit(actor, 'task.write', patientId);
         const parsed = taskInput.parse(input);
         const assigneeId = parsed.assigneeId ?? actor.id;
-        assignee(actor, patientId, assigneeId);
-        return store.transaction(() =>
-          store.insert(actor, 'task', patientId, {
+        return await store.transaction(async () => {
+          await access.permit(actor, 'task.write', patientId);
+          await assignee(actor, patientId, assigneeId);
+          return await store.insert(actor, 'task', patientId, {
             ...parsed,
             assigneeId,
             status: 'requested',
             author: actor.id,
-          }),
-        );
+          });
+        });
       },
-      createLinkedTask(actor, patientId, input, orderId) {
+      async createLinkedTask(actor, patientId, input, orderId) {
         clinician(actor);
-        access.permit(actor, 'lab.order', patientId);
+        await access.permit(actor, 'lab.order', patientId);
         const parsed = taskInput.parse(input);
         const assigneeId = parsed.assigneeId ?? actor.id;
-        assignee(actor, patientId, assigneeId, 'lab.review');
-        const order = store.get(actor.tenant, orderId);
+        await assignee(actor, patientId, assigneeId, 'lab.review');
+        const order = await store.get(actor.tenant, orderId);
         assert(
           order?.kind === 'labOrder' && order.patientId === patientId,
           409,
           'Invalid linked order',
         );
         assert(
-          !store
-            .list(actor.tenant, patientId, 'task')
-            .some((r) => r.data.linkedOrderId === orderId),
+          !(await store.list(actor.tenant, patientId, 'task')).some(
+            (r) => r.data.linkedOrderId === orderId,
+          ),
           409,
           'Order already has follow-up',
         );
-        return store.insert(actor, 'task', patientId, {
+        return await store.insert(actor, 'task', patientId, {
           ...parsed,
           assigneeId,
           linkedOrderId: orderId,
@@ -285,18 +286,18 @@ export default {
           author: actor.id,
         });
       },
-      syncLinkedTask(actor, order, event, resolution) {
+      async syncLinkedTask(actor, order, event, resolution) {
         clinician(actor);
-        access.permit(
+        await access.permit(
           actor,
           event === 'result' ? 'lab.receive' : event === 'review' ? 'lab.review' : 'lab.order',
           order.patientId,
         );
-        const saved = store.get(actor.tenant, order.id);
+        const saved = await store.get(actor.tenant, order.id);
         assert(saved?.kind === 'labOrder' && saved.version === order.version, 409, 'Order changed');
-        const row = store
-          .list(actor.tenant, order.patientId, 'task')
-          .find((r) => r.data.linkedOrderId === order.id);
+        const row = (await store.list(actor.tenant, order.patientId, 'task')).find(
+          (r) => r.data.linkedOrderId === order.id,
+        );
         assert(row, 409, 'Order follow-up is missing');
         let data = { ...row.data };
         if (event === 'result') {
@@ -336,22 +337,23 @@ export default {
             completedBy: actor.id,
           };
         }
-        return store.revise(actor, row, row.version, data, `task.lab-${event}`);
+        return await store.revise(actor, row, row.version, data, `task.lab-${event}`);
       },
-      task(actor, id, action, version, input) {
-        const row = current(actor, id, 'task', version);
-        assert(
-          !row.data.linkedOrderId || ['assign', 'start'].includes(action),
-          409,
-          'Linked lab follow-up must be resolved through the lab order and current report',
-        );
-        return store.transaction(() => {
+      async task(actor, id, action, version, input) {
+        await current(actor, id, 'task', version);
+        return await store.transaction(async () => {
+          const row = await current(actor, id, 'task', version);
+          assert(
+            !row.data.linkedOrderId || ['assign', 'start'].includes(action),
+            409,
+            'Linked lab follow-up must be resolved through the lab order and current report',
+          );
           let data = { ...row.data };
           const owner = data.assigneeId ?? data.author;
           if (action === 'assign') {
             const parsed = z.object({ assigneeId: short, reason: short }).strict().parse(input);
             assert(['requested', 'in-progress'].includes(data.status), 409, 'Task is closed');
-            assignee(
+            await assignee(
               actor,
               row.patientId,
               parsed.assigneeId,
@@ -370,7 +372,7 @@ export default {
           } else if (action === 'reopen') {
             const parsed = reason.parse(input);
             assert(['completed', 'cancelled'].includes(data.status), 409, 'Task is already open');
-            assignee(actor, row.patientId, owner);
+            await assignee(actor, row.patientId, owner);
             data = { ...data, status: 'requested', reopenedReason: parsed.reason };
             delete data.completedAt;
             delete data.completedBy;
@@ -402,7 +404,7 @@ export default {
               };
             } else throw new Fault(422, 'Unsupported task action');
           }
-          return store.revise(actor, row, version, data, `task.${action}`);
+          return await store.revise(actor, row, version, data, `task.${action}`);
         });
       },
     };

@@ -4,7 +4,7 @@ import { staffSessions } from '../packages/staff-sessions.ts';
 export default {
   id: 'eir.identity.staff-local',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['identity'],
   requires: ['store', 'workforce'],
   setup(ctx, config) {
@@ -13,23 +13,26 @@ export default {
       .strict()
       .parse(config);
     void settings;
-    const workforce = ctx.get('workforce');
-    const sessions = staffSessions(ctx.get('store'), workforce, {
+    const workforce = ctx.get('workforce'),
+      store = ctx.get('store');
+    const sessions = staffSessions(store, workforce, {
       idleMinutes: 15,
       absoluteHours: 8,
     });
     ctx.provide('identity', {
       ...sessions,
-      issue(actor) {
-        const assignment = workforce.current(actor);
-        return sessions.issue!(
-          workforce.actor(assignment, {
-            method: 'local',
-            issuer: assignment.data.issuer,
-            subject: assignment.data.subject,
-            authenticatedAt: Math.floor(Date.now() / 1000),
-          }),
-        );
+      async issue(actor) {
+        return store.transaction(async () => {
+          const assignment = await workforce.current(actor);
+          return sessions.issue!(
+            workforce.actor(assignment, {
+              method: 'local',
+              issuer: assignment.data.issuer,
+              subject: assignment.data.subject,
+              authenticatedAt: Math.floor(Date.now() / 1000),
+            }),
+          );
+        });
       },
     });
   },

@@ -27,22 +27,22 @@ export async function staffFixture(
   const runtime = loaded.runtime,
     workforce = runtime.get('workforce'),
     store = runtime.get('store') as SqliteStore;
-  const find = (subject: string, role = 'clinician', unit = 'demo-primary-care') =>
+  const find = async (subject: string, role = 'clinician', unit = 'demo-primary-care') =>
     workforce.actor(
-      workforce
-        .forIdentity('https://local.eir.invalid', subject)
-        .find((r) => r.data.role === role && r.data.unitId === unit)!,
+      (await workforce.forIdentity('https://local.eir.invalid', subject)).find(
+        (r) => r.data.role === role && r.data.unitId === unit,
+      )!,
     );
-  const doctor = find('emma'),
-    admin = find('emma', 'administrator'),
-    reviewer = find('reviewer', 'auditor'),
-    nurse = find('david');
-  const patient = runtime.get('clinical').register(doctor, {
+  const doctor = await find('emma'),
+    admin = await find('emma', 'administrator'),
+    reviewer = await find('reviewer', 'auditor'),
+    nurse = await find('david');
+  const patient = await runtime.get('clinical').register(doctor, {
     name: 'Anna Lindberg',
     birthDate: '1980-01-01',
     identifier: { type: 'local', value: 'STAFF-TEST-01' },
   });
-  const encounter = runtime
+  const encounter = await runtime
     .get('clinical')
     .create(doctor, patient.id, 'encounter', { reason: 'Uppföljning' });
   return { runtime, workforce, store, doctor, admin, reviewer, nurse, patient, encounter, find };

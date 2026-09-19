@@ -7,7 +7,7 @@ const Personnummer = createRequire(import.meta.url)(
 export default {
   id: 'eir.country.se',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   requires: [],
   provides: ['country'],
   setup(ctx) {

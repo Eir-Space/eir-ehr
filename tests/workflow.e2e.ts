@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 import { fixture, doctor, root } from './helpers.ts';
 import { createApp } from '../apps/app.ts';
-
-test('clinician workflow, plugin renderers, responsive layout and persisted source review', async (t) => {
+await test('clinician workflow, plugin renderers, responsive layout and persisted source review', async (t) => {
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   t.after(() => browser?.close());
   const f = await fixture();
@@ -12,7 +11,7 @@ test('clinician workflow, plugin renderers, responsive layout and persisted sour
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
   t.after(async () => {
     await app.close();
-    f.runtime.stop();
+    await f.runtime.stop();
   });
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
@@ -20,7 +19,7 @@ test('clinician workflow, plugin renderers, responsive layout and persisted sour
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(address);
-  await page.getByLabel('Sessionsnyckel').fill(f.runtime.get('identity').issue!(doctor));
+  await page.getByLabel('Sessionsnyckel').fill(await f.runtime.get('identity').issue!(doctor));
   await page.getByRole('button', { name: 'Öppna arbetsyta' }).click();
   await page.getByRole('heading', { name: 'Syntetisk Patient' }).waitFor();
   await page.getByRole('button', { name: 'Anteckningar', exact: true }).click();
@@ -35,7 +34,7 @@ test('clinician workflow, plugin renderers, responsive layout and persisted sour
   await page.getByRole('button', { name: 'Skapa journalförslag' }).click();
   await page.getByRole('button', { name: 'Spara granskat utkast' }).click();
   await page.getByText('accepted', { exact: true }).waitFor();
-  assert.equal(f.store.list(doctor.tenant, f.patient.id, 'note').length, 2);
+  assert.equal((await f.store.list(doctor.tenant, f.patient.id, 'note')).length, 2);
   await page.getByRole('button', { name: 'Journal', exact: true }).click();
   await page.getByLabel('Visning').selectOption('table');
   await page.locator('table').waitFor();

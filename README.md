@@ -22,6 +22,8 @@ Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.
 
 ## Working Modules
 
+The [persistent backend release](docs/PERSISTENCE.md) adds an asynchronous transaction contract, a replaceable PostgreSQL provider, database role-bound provider isolation, guarded migrations, encrypted logical backup/recovery tooling and a separate persistent synthetic staging profile. SQLite and the disposable public demo remain supported. See the [project overview and LinkedIn draft](docs/PROJECT-STATUS.md) for a shareable account of what works and what remains.
+
 The [staff identity and access release](docs/IDENTITY-AND-ACCESS.md) adds OIDC login, unit/assignment/action-level authorization, staff revocation, protected-record exclusion, audit review and temporary read access. The demo uses local identities; real SITHS/HSA connectivity still needs onboarding. The legacy `eir.config.json` remains development-only; consult the clinic profile and migration notes before changing a persistent installation.
 
 The [care-team release](docs/CARE-TEAM.md) adds daily booking/check-in, a shared assigned inbox with explicit handover, encounter-linked appointment completion and server-autosaved drafts with conflict recovery. It keeps the public workspace disposable; persistent draft recovery is available in the local persistent installation.
@@ -63,6 +65,10 @@ npm run backup -- .data/ehr.sqlite /secure/path/ehr-backup.sqlite
 - [Diagnosis catalogue, import and data rights](docs/TERMINOLOGY.md)
 - [Sweden, Estonia, Denmark and EU evidence](docs/SOURCES.md)
 - [Operations and security boundaries](docs/OPERATIONS.md)
+- [Persistent storage and staging](docs/PERSISTENCE.md)
+- [Encrypted backup and recovery](docs/RECOVERY.md)
+- [Project overview and contribution invitation](docs/PROJECT-STATUS.md)
+- [Swedish integration stakeholders and onboarding](docs/SWEDISH-INTEGRATIONS.md)
 - [Public demo hosting, cost controls and DNS](docs/HOSTING.md)
 - [Social preview and regeneration](docs/SHARING.md)
 

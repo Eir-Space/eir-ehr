@@ -1,0 +1,28 @@
+{
+  "profile": "persistent-synthetic-staging",
+  "plugins": [
+    {
+      "module": "./plugins/storage-postgres.ts",
+      "config": {
+        "tenant": "eir-synthetic-staging",
+        "connectionStringEnv": "EIR_STAGING_DATABASE_URL",
+        "localDevelopmentOnly": true
+      }
+    },
+    { "module": "./plugins/country-se.ts" },
+    { "module": "./plugins/terminology-icd-se.ts" },
+    { "module": "./plugins/workforce.ts" },
+    { "module": "./plugins/identity-staff-local.ts", "config": { "localDevelopmentOnly": true } },
+    { "module": "./plugins/access-clinic.ts" },
+    { "module": "./plugins/access-review.ts" },
+    { "module": "./plugins/care-team.ts" },
+    { "module": "./plugins/clinical.ts" },
+    { "module": "./plugins/medications.ts" },
+    { "module": "./plugins/laboratories.ts" },
+    { "module": "./plugins/ai-extractive.ts" },
+    { "module": "./plugins/ai-review.ts" },
+    { "module": "./plugins/fhir-r4.ts" }
+  ],
+  "chartRenderers": ["timeline", "table"],
+  "defaultRenderer": "timeline"
+}

@@ -2,7 +2,7 @@ import { Fault, type Plugin } from '../packages/contracts.ts';
 export default {
   id: 'eir.country.eu-local',
   version: '1.0.0',
-  apiVersion: 1,
+  apiVersion: 2,
   provides: ['country'],
   requires: [],
   setup(ctx, config) {
