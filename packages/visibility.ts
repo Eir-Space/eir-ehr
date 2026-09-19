@@ -4,6 +4,12 @@ import type { Actor, Entity } from './contracts.ts';
 export function visibleRecord(actor: Actor, record: Entity) {
   if (
     [
+      'moduleSetting',
+      'deteriorationMonitor',
+      'deteriorationAssessment',
+      'deteriorationAlert',
+      'deteriorationEvent',
+      'deteriorationWorker',
       'emergencyAccess',
       'protectionChange',
       'careRelationship',

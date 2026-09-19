@@ -18,6 +18,8 @@ export function openApi(
   secureCookie = false,
   integrations = false,
   followUp = false,
+  modules = false,
+  deterioration = false,
 ) {
   const paths: Record<string, any> = {};
   function route(
@@ -51,6 +53,66 @@ export function openApi(
     };
   }
   const schema = (value: z.ZodType) => z.toJSONSchema(value);
+  if (modules) {
+    route('/modules', 'get', 'Installed optional modules and unit-scoped activation state');
+    route(
+      '/modules/{moduleId}',
+      'post',
+      'Audited unit-level activation; modules.manage required',
+      schema(
+        z
+          .object({
+            version: z.number().int().nonnegative(),
+            enabled: z.boolean(),
+            reason: z.string().min(5).max(500),
+          })
+          .strict(),
+      ),
+    );
+  }
+  if (deterioration) {
+    const reason = z.string().min(5).max(2000),
+      version = z.number().int().positive();
+    route('/deterioration', 'get', 'Authorized encounter monitoring and unresolved alerts');
+    paths['/deterioration'].get.parameters = [
+      { in: 'query', name: 'after', schema: { type: 'string', maxLength: 1000 } },
+    ];
+    route(
+      '/patients/{id}/monitoring',
+      'post',
+      'Enroll an adult open encounter under the authenticated clinician',
+      schema(z.object({ encounterId: z.uuid(), reason }).strict()),
+      '201',
+    );
+    route(
+      '/monitoring/{id}/stop',
+      'post',
+      'Stop future evaluations without closing unresolved alerts',
+      schema(z.object({ version, reason }).strict()),
+    );
+    route(
+      '/monitoring/{id}/evaluate',
+      'post',
+      'Evaluate current evidence when the module is enabled',
+      schema(z.object({}).strict()),
+    );
+    route(
+      '/deterioration-alerts/{id}/respond',
+      'post',
+      'Owner acknowledgement, reassessment or resolution against current evidence',
+      schema(
+        z
+          .object({
+            version,
+            assessmentId: z.uuid(),
+            action: z.enum(['acknowledge', 'reassess', 'resolve']),
+            note: reason,
+            plan: reason.optional(),
+          })
+          .strict(),
+      ),
+    );
+  }
   if (followUp) {
     const version = z.number().int().positive(),
       reason = z.string().min(5).max(2000);

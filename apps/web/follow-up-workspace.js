@@ -57,7 +57,10 @@ export async function renderFollowUp(target, options, after, status) {
     <div class="follow-up-table"><table><thead><tr><th>Patient / uppgift</th><th>Status</th><th>Senast</th><th>Ansvarig</th><th>Avisering</th><th>Åtgärder</th></tr></thead><tbody>${data.items
       .map((item) => {
         const { task, state, notification } = item;
-        const canAct = task.data.assigneeId === actorId && state?.stage === 'action-required';
+        const canAct =
+          !task.data.deteriorationAlertId &&
+          task.data.assigneeId === actorId &&
+          state?.stage === 'action-required';
         return `<tr data-follow-up-row="${e(task.id)}"><td><strong>${e(item.patientName)}</strong><span>${e(task.data.title)}</span></td><td><span class="badge ${state?.critical ? 'critical' : item.overdue ? 'draft' : ''}">${state?.critical ? 'Kritiskt · ' : ''}${e(stages[state?.stage] ?? 'Policy saknas')}</span>${item.overdue ? '<small>Försenad</small>' : ''}${task.data.followUp?.blocker ? `<small class="follow-up-warning">${e(blockers[task.data.followUp.blocker] ?? task.data.followUp.blocker)}</small>` : ''}</td><td>${state ? date(state.deadlineAt) : e(task.data.due)}</td><td>${e(memberName(task.data.assigneeId))}</td><td>${e(deliveries[notification?.state] ?? 'Ej aviserad')}${notification ? `<small>${notification.attempts} försök</small>` : ''}</td><td><div class="actions">${tool('chart', 'Öppna journal', 'folder-open', task.id)}${tool('history', 'Uppföljningshistorik', 'history', task.id)}${tool('assign', 'Överlämna ansvar', 'user-round-cog', task.id)}${canAct ? tool('act', 'Dokumentera uppföljning', 'notebook-pen', task.id) : ''}${notification?.state === 'failed' && task.data.assigneeId === actorId ? tool('replay', 'Försök avisera igen', 'rotate-cw', task.id) : ''}</div></td></tr>`;
       })
       .join(
@@ -105,7 +108,12 @@ export async function renderFollowUp(target, options, after, status) {
     const row = target.querySelector(`[data-follow-up-row="${item.task.id}"]`),
       task = item.task;
     row.querySelector('[data-chart]').onclick = () =>
-      perform(() => openChart(task.patientId, item.orderId ? 'labs' : 'tasks'));
+      perform(() =>
+        openChart(
+          task.patientId,
+          task.data.deteriorationAlertId ? 'monitoring' : item.orderId ? 'labs' : 'tasks',
+        ),
+      );
     row.querySelector('[data-assign]').hidden = !['requested', 'in-progress'].includes(
       task.data.status,
     );

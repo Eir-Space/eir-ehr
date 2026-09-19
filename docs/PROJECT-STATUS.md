@@ -17,6 +17,7 @@ An Apache-2.0 electronic health record for Swedish primary care, designed for la
 | Results                 | Local lab orders, manually entered source-labelled results, corrections, assigned review and explicit critical-result acknowledgement                                                                     |
 | Lab integration runtime | Atomic outbox, durable authenticated inbox, bounded leased workers, exact matching, correction sequencing and audited operator retry; real local HTTP adapter tests, no contracted Swedish lab connection |
 | Clinical follow-up      | Separate review/action completion; deadline oversight, temporary cover, audited escalation, contact history and durable gateway delivery with retries                                                     |
+| Optional monitoring     | Unit-level module activation, vital/trend warnings, owned alerts and documented reassessment; replaceable local rules or external HTTP engine, not a validated mortality predictor                        |
 | Identity and access     | Tested OIDC adapter; staff assignments; care-unit, patient and action permissions; revocation; protected-record exclusion; manual access-log review                                                       |
 | AI                      | Replaceable extractive and local-model providers; evidence-linked proposals, clinician review and draft-only acceptance; changed-source detection                                                         |
 | Interoperability        | Authenticated JSON APIs, record history/change feed and FHIR R4 projections; not a complete FHIR server or national implementation-guide certification                                                    |
@@ -27,6 +28,8 @@ The public website remains a separate disposable synthetic demo. Persistent stag
 The follow-up milestone builds on the laboratory integration runtime. See [FOLLOW-UP.md](FOLLOW-UP.md) for clinical state transitions and operating requirements, [FHIR.md](FHIR.md) for exact interoperability coverage, and [REGULATORY-ALIGNMENT.md](REGULATORY-ALIGNMENT.md) for a stakeholder evidence map and outstanding release gates. Repository capabilities and the deployed public revision may differ until a reviewed release is deployed.
 
 Backend and browser tests exercise real PostgreSQL transactions, independent concurrent editors, access boundaries and restoration of application records. This is engineering verification, not clinical validation, service approval or an independent security certification.
+
+The optional [deterioration module](DETERIORATION.md) is off by default, with clinical activation blocked in the clinic example. It applies the CHARTwatch-inspired pattern of monitoring plus a clinician-response workflow, without claiming to reproduce that model or its study results. A continuously supervised worker, a validated predictor and an approved local care pathway remain prerequisites for clinical use.
 
 ## Not Yet Connected
 

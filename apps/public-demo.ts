@@ -78,6 +78,7 @@ export async function createPublicDemo(root: string, limits: DemoLimits = {}) {
         };
         const loaded = await fromConfig(resolve(root, 'eir.demo.config.json'), {
           'eir.follow-up': { worker: false, routes: [] },
+          'eir.deterioration': { worker: true },
           'eir.workforce': demoWorkforce(actor.tenant),
           'eir.care-team': {
             members: [

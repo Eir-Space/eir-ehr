@@ -33,6 +33,8 @@ Superseded lab reports are retained in Eir history but omitted from the current 
 
 The lab connector introduced in the prior milestone uses `eir.lab.v1`, a documented Eir JSON protocol. The notification module uses `eir.notification.v1`. Neither is a FHIR integration.
 
+Optional deterioration monitoring uses the `eir.risk.v1` model input contract, not CDS Hooks or a FHIR prediction API. Monitoring settings, assessments and response events remain private application records. Linked tasks use the existing Task projection; FHIR RiskAssessment is not implemented. See [DETERIORATION.md](DETERIORATION.md).
+
 ## Next Interoperability Milestone
 
 Choose one real receiving system and pin its FHIR version, implementation-guide package, terminology releases and supported interactions. Add the official HL7 validator to CI with reproducible offline package inputs, representative exports and negative cases. Resolve diagnostics and validate reference resolution before claiming that profile. Then implement the required resource endpoints and accurate CapabilityStatement behind existing authorization, audit and optimistic concurrency controls. Evaluate SMART only when the intended client workflow requires it.

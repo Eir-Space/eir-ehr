@@ -542,6 +542,11 @@ export default {
         return store.transaction(async () => {
           const task = await readTask(actor, id, version);
           assert(
+            !task.data.deteriorationAlertId,
+            409,
+            'Review this alert in the deterioration workspace',
+          );
+          assert(
             openTask(task) && (task.data.assigneeId ?? task.data.author) === actor.id,
             403,
             'Only the current owner can record follow-up',

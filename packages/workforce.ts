@@ -1,5 +1,6 @@
 import { z } from 'zod';
 export const permissions = [
+  'modules.manage',
   'chart.read',
   'chart.export',
   'patient.register',
@@ -40,7 +41,7 @@ export const assignmentInput = z
       ctx.addIssue({ code: 'custom', message: 'Invalid assignment validity' });
     const allowed =
       data.role === 'administrator'
-        ? ['workforce.manage', 'integration.manage']
+        ? ['workforce.manage', 'integration.manage', 'modules.manage']
         : data.role === 'auditor'
           ? ['audit.review']
           : permissions.filter(

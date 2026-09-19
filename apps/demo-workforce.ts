@@ -31,7 +31,13 @@ export function demoWorkforce(tenant: string) {
         role: 'clinician',
         permissions: clinical.filter(
           (p) =>
-            !['access.manage', 'access.emergency', 'patient.protected', 'lab.order'].includes(p),
+            ![
+              'access.manage',
+              'access.emergency',
+              'patient.protected',
+              'lab.order',
+              'modules.manage',
+            ].includes(p),
         ),
       },
       {
@@ -56,7 +62,7 @@ export function demoWorkforce(tenant: string) {
         subject: 'emma',
         name: 'Emma Sjöberg',
         role: 'administrator',
-        permissions: ['workforce.manage', 'integration.manage'],
+        permissions: ['workforce.manage', 'integration.manage', 'modules.manage'],
       },
     ],
   };

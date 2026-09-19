@@ -6,6 +6,8 @@ import { renderMedications, renderLabs, workflowAction } from './clinical-workfl
 import { roleLabel, gateActions, renderAccessReview, renderWorkforce } from './access-workspace.js';
 import { renderIntegrations } from './integration-workspace.js';
 import { renderFollowUp } from './follow-up-workspace.js';
+import { renderModules } from './module-workspace.js';
+import { renderDeterioration } from './deterioration-workspace.js';
 const $ = (s) => document.querySelector(s);
 const state = {
   token: '',
@@ -149,15 +151,20 @@ async function login(token) {
       .querySelectorAll('[data-view]')
       .forEach((b) => {
         b.hidden =
-          b.dataset.view === 'audit'
-            ? !permitted('audit.review') || !state.session.authorization
-            : b.dataset.view === 'follow-up'
-              ? !permitted('task.write') || !state.session.followUp
-              : b.dataset.view === 'integrations'
-                ? !permitted('integration.manage') || !state.session.integrations
-                : b.dataset.view === 'workforce'
-                  ? !permitted('workforce.manage') || !state.session.authorization
-                  : !canWrite();
+          b.dataset.view === 'modules'
+            ? !state.session.modules ||
+              !['clinician', 'administrator'].includes(state.session.actor.role)
+            : b.dataset.view === 'monitoring'
+              ? !state.session.deterioration || !permitted('task.write')
+              : b.dataset.view === 'audit'
+                ? !permitted('audit.review') || !state.session.authorization
+                : b.dataset.view === 'follow-up'
+                  ? !permitted('task.write') || !state.session.followUp
+                  : b.dataset.view === 'integrations'
+                    ? !permitted('integration.manage') || !state.session.integrations
+                    : b.dataset.view === 'workforce'
+                      ? !permitted('workforce.manage') || !state.session.authorization
+                      : !canWrite();
       });
     $('#register').hidden = !permitted('patient.register');
     const clinicalWorkspace = !state.session.authorization || canWrite();
@@ -251,6 +258,16 @@ async function deployment() {
   }
 }
 void deployment();
+setInterval(() => {
+  if (
+    state.session &&
+    state.view === 'monitoring' &&
+    !busy &&
+    !$('#dialog').open &&
+    !document.hidden
+  )
+    void perform(render);
+}, 15000);
 $('#logout').onclick = () =>
   perform(async () => {
     await api('/logout', {});
@@ -513,6 +530,11 @@ function bookingDialog(record) {
 async function careAction(name, id) {
   const appointment = state.team.appointments.find((r) => r.id === id);
   const task = state.team.tasks.find((r) => r.id === id);
+  if (name === 'risk-task') {
+    state.view = 'monitoring';
+    await refreshChart();
+    return;
+  }
   if (name === 'lab-task') {
     state.patient = state.patients.find((p) => p.id === task.patientId);
     state.view = 'chart';
@@ -653,6 +675,30 @@ async function render() {
     });
   $('#patient-header').hidden = state.view !== 'chart';
   $('#tabs').hidden = state.view !== 'chart';
+  if (state.view === 'modules') {
+    await renderModules($('#content'), { api, modal, perform });
+    icons();
+    return;
+  }
+  if (state.view === 'monitoring') {
+    await renderDeterioration($('#content'), {
+      api,
+      modal,
+      perform,
+      patientSelect,
+      vitals: state.session.vitals,
+      actorId: state.session.actor.id,
+      scope: state.session.actor.assignmentId,
+      openChart: async (patientId) => {
+        state.patient = state.patients.find((p) => p.id === patientId);
+        state.tab = 'overview';
+        state.view = 'chart';
+        await refreshChart();
+      },
+    });
+    icons();
+    return;
+  }
   if (state.view === 'follow-up') {
     await renderFollowUp($('#content'), {
       api,
@@ -665,7 +711,7 @@ async function render() {
       openChart: async (patientId, tab) => {
         state.patient = state.patients.find((p) => p.id === patientId);
         state.tab = tab;
-        state.view = 'chart';
+        state.view = tab === 'monitoring' ? 'monitoring' : 'chart';
         await refreshChart();
       },
     });
@@ -720,7 +766,7 @@ async function render() {
       : []),
     ['tasks', 'Uppgifter'],
     ['ai', 'AI-granskning'],
-    ['plugins', 'Moduler'],
+    ...(!state.session.modules ? [['plugins', 'Moduler']] : []),
   ];
   $('#tabs').innerHTML = tabs
     .map(
@@ -846,7 +892,7 @@ function renderTasks(target) {
     kinds('task')
       .map(
         (r) =>
-          `<div class="row"><div><strong>${e(r.data.title)}</strong><small>Senast ${e(r.data.due)} · ${e(memberName(r.data.assigneeId ?? r.data.author))}</small></div><div class="actions"><span class="badge">${statusLabel[r.data.status]}</span>${r.data.linkedOrderId ? button('open-labs', 'Provsvar', 'flask-conical') : canWrite() && taskOpen(r) && (r.data.assigneeId ?? r.data.author) === state.session.actor.id ? button('complete', 'Markera klar', 'check', `data-id="${r.id}"`) : ''}</div></div>`,
+          `<div class="row"><div><strong>${e(r.data.title)}</strong><small>Senast ${e(r.data.due)} · ${e(memberName(r.data.assigneeId ?? r.data.author))}</small></div><div class="actions"><span class="badge">${statusLabel[r.data.status]}</span>${r.data.linkedOrderId ? button('open-labs', 'Provsvar', 'flask-conical') : canWrite() && taskOpen(r) && (r.data.assigneeId ?? r.data.author) === state.session.actor.id ? button('complete', r.data.deteriorationAlertId ? 'Bedöm larm' : 'Markera klar', r.data.deteriorationAlertId ? 'activity' : 'check', `data-id="${r.id}"`) : ''}</div></div>`,
       )
       .join('') || '<p class="empty">Inga uppgifter.</p>'
   }`;
@@ -872,6 +918,10 @@ function bindActions() {
 async function action(name, id) {
   const r = state.chart.find((r) => r.id === id);
   const current = encounter();
+  if (r?.data.deteriorationAlertId && name === 'complete') {
+    state.view = 'monitoring';
+    return refreshChart();
+  }
   if (name === 'grant-access')
     return modal(
       'Tilldela patientåtkomst',
@@ -967,7 +1017,9 @@ async function action(name, id) {
   if (name === 'observation') {
     modal(
       'Registrera mätvärde',
-      `<label>Mätning<select name="code" id="vital-code">${Object.entries(state.session.vitals)
+      `<label>Mätning<select name="code" id="vital-code" aria-label="Mätning">${Object.entries(
+        state.session.vitals,
+      )
         .map(([code, v]) => `<option value="${code}">${e(v.label)} (${e(v.unit)})</option>`)
         .join('')}</select></label>` + field('value', 'Värde', 'number', '', 'step="any"'),
       (values) =>

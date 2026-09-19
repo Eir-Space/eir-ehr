@@ -14,6 +14,7 @@ export type Actor = {
   };
 };
 export type Permission =
+  | 'modules.manage'
   | 'chart.read'
   | 'chart.export'
   | 'patient.register'
@@ -273,6 +274,9 @@ export interface AccessReview {
   protect(actor: Actor, patientId: string, version: number, input: unknown): Promise<Entity>;
 }
 export interface Services {
+  modules: import('./modules.ts').Modules;
+  riskEngine: import('./deterioration.ts').RiskEngine;
+  deterioration: import('./deterioration.ts').Deterioration;
   followUp: import('./follow-up.ts').FollowUp;
   followUpPolicy: import('./follow-up.ts').FollowUpPolicy;
   notificationTransport: import('./follow-up.ts').NotificationTransport;

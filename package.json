@@ -12,6 +12,7 @@
     "staging": "tsx apps/staging-server.ts",
     "worker:integrations": "tsx apps/integration-worker.ts",
     "worker:follow-up": "tsx apps/follow-up-worker.ts",
+    "worker:deterioration": "tsx apps/deterioration-worker.ts",
     "demo:integrations": "tsx scripts/integration-sandbox.ts",
     "demo:follow-up": "tsx scripts/follow-up-sandbox.ts",
     "db:migrate": "tsx scripts/migrate-postgres.ts",
