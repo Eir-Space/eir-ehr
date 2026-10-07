@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="ai.kicker"></div>
+      <h2 data-line="0" data-t="ai.title"></h2>
+      <div class="diagram" style="height: 260px; margin-top: 56px">
+        <svg class="edges" width="1620" height="260">
+          <path
+            class="edge"
+            data-line="0"
+            data-anim="draw"
+            data-delay="0.9"
+            data-flow="1"
+            data-period="2.2"
+            d="M298 130 H356"
+          />
+          <path
+            class="edge gold"
+            data-line="1"
+            data-anim="draw"
+            data-flow="1"
+            data-period="2.2"
+            d="M654 130 H712"
+          />
+          <path
+            class="edge"
+            data-line="1"
+            data-anim="draw"
+            data-delay="0.5"
+            data-flow="1"
+            data-period="2.2"
+            d="M1010 130 H1068"
+          />
+          <path
+            class="edge"
+            data-line="1"
+            data-anim="draw"
+            data-delay="0.9"
+            data-flow="1"
+            data-period="2.2"
+            d="M1306 130 H1362"
+          />
+        </svg>
+        <div
+          class="node"
+          data-line="0"
+          data-anim="left"
+          data-delay="0.3"
+          style="
+            left: 0;
+            top: 30px;
+            width: 296px;
+            height: 200px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            text-align: center;
+          "
+        >
+          <div class="t" style="font-size: 36px" data-t="ai.n1"></div>
+          <div class="s" style="font-size: 26px" data-t="ai.s1"></div>
+        </div>
+        <div
+          class="node gold"
+          data-line="0"
+          data-anim="scale"
+          data-delay="0.7"
+          style="
+            left: 358px;
+            top: 30px;
+            width: 294px;
+            height: 200px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            text-align: center;
+          "
+          data-pulse="0"
+        >
+          <div class="t gold" style="font-size: 36px" data-t="ai.n2"></div>
+          <div class="s" style="font-size: 26px" data-t="ai.s2"></div>
+        </div>
+        <div
+          class="node gold"
+          data-line="1"
+          data-anim="scale"
+          data-delay="0.2"
+          style="
+            left: 714px;
+            top: 30px;
+            width: 294px;
+            height: 200px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            text-align: center;
+          "
+        >
+          <div class="t" style="font-size: 36px" data-t="ai.n3"></div>
+          <div class="s" style="font-size: 26px" data-t="ai.s3"></div>
+        </div>
+        <div
+          class="node okc"
+          data-line="1"
+          data-anim="scale"
+          data-delay="0.7"
+          style="
+            left: 1070px;
+            top: 30px;
+            width: 234px;
+            height: 200px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            text-align: center;
+          "
+        >
+          <div class="t" style="font-size: 36px" data-t="ai.n4"></div>
+          <div class="s" style="font-size: 26px" data-t="ai.s4"></div>
+        </div>
+        <div
+          class="node okc"
+          data-line="1"
+          data-anim="scale"
+          data-delay="1.1"
+          style="
+            left: 1364px;
+            top: 30px;
+            width: 256px;
+            height: 200px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            text-align: center;
+          "
+        >
+          <div class="t" style="font-size: 36px" data-t="ai.n5"></div>
+          <div class="s" style="font-size: 26px" data-t="ai.s5"></div>
+        </div>
+      </div>
+      <div
+        class="card ai"
+        data-line="2"
+        data-anim="up"
+        style="margin-top: 60px; display: flex; gap: 24px; align-items: center; max-width: 1400px"
+      >
+        <div class="badge gold"><i data-icon="badge-check"></i></div>
+        <p style="font-size: 34px; color: var(--sand-100)" data-t="ai.gate"></p>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

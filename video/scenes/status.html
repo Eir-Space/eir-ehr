@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="status.kicker"></div>
+      <h2 data-at="0.35" data-t="status.title"></h2>
+      <div class="row" style="margin-top: 40px; gap: 30px">
+        <div class="card okc col" data-line="0" data-anim="left" style="flex: 1; gap: 16px">
+          <h3 class="ok" data-t="status.ok"></h3>
+          <div data-line="0" data-stagger="0.35" data-delay="0.5" class="col" style="gap: 14px">
+            <p style="font-size: 34px">
+              <i data-icon="circle-check" class="ok"></i>&nbsp; <span data-t="status.ok1"></span>
+            </p>
+            <p style="font-size: 34px">
+              <i data-icon="circle-check" class="ok"></i>&nbsp; <span data-t="status.ok2"></span>
+            </p>
+            <p style="font-size: 34px">
+              <i data-icon="circle-check" class="ok"></i>&nbsp; <span data-t="status.ok3"></span>
+            </p>
+          </div>
+        </div>
+        <div
+          class="card col"
+          data-line="0"
+          data-delay="0.5"
+          data-anim="right"
+          style="flex: 1; gap: 16px; border-left: 4px solid var(--warn)"
+        >
+          <h3 class="warn" data-t="status.todo"></h3>
+          <div data-line="0" data-stagger="0.35" data-delay="1.0" class="col" style="gap: 14px">
+            <p style="font-size: 34px">
+              <i data-icon="circle-dashed" class="warn"></i>&nbsp; <span data-t="status.t1"></span>
+            </p>
+            <p style="font-size: 34px">
+              <i data-icon="circle-dashed" class="warn"></i>&nbsp; <span data-t="status.t2"></span>
+            </p>
+            <p style="font-size: 34px">
+              <i data-icon="circle-dashed" class="warn"></i>&nbsp; <span data-t="status.t3"></span>
+            </p>
+            <p style="font-size: 34px">
+              <i data-icon="circle-dashed" class="warn"></i>&nbsp; <span data-t="status.t4"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+      <h2
+        class="grad"
+        data-line="1"
+        data-anim="up"
+        data-t="status.quote"
+        style="margin-top: 56px; font-size: 60px; text-align: center"
+      ></h2>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

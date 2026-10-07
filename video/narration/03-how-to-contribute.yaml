@@ -1,0 +1,60 @@
+# Video 3: how to contribute (about 2.5 minutes). English.
+id: 03-how-to-contribute
+title: Eir – how to contribute
+language: en
+scenes:
+  - id: intro
+    title: Everyone can help
+    html: intro.html
+    lines:
+      - text: You don't need to write code to help.
+      - text: Doctors and nurses can review workflows and point out what doesn't match reality.
+      - text: Anyone can try the demo and tell us on GitHub what's missing.
+  - id: start
+    title: Get started
+    html: start.html
+    lines:
+      - text: Want to code? Start by getting the source and installing the dependencies.
+      - text: Then start the local demo. It listens only on your own computer and uses synthetic data only.
+  - id: plugin
+    title: Build a plugin
+    html: plugin.html
+    lines:
+      - text: Most of what you build in Eir is a plugin, a small module with a manifest.
+      - text: To add a new database, a new country or a new model, you write a plugin that follows the same interface.
+      - text: Then you run the shared test suite. If your plugin passes, it behaves like all the others.
+  - id: check
+    title: Before you submit
+    html: check.html
+    lines:
+      - text: 'Before you submit, run the checks: type checking, formatting, and the tests.'
+      - text: The tests use only synthetic data. Never add real patient information.
+  - id: pr
+    title: Submit
+    html: pr.html
+    lines:
+      - text: Open a pull request against the main branch.
+      - text: Sign your commits with git commit dash s, so the license is clear.
+        say: Sign your commits with git commit dash s, so the license is clear.
+      - text: Explain what you changed, how you tested it, what's uncertain, and any clinical or security risks.
+  - id: rules
+    title: Firm rules
+    html: rules.html
+    lines:
+      - text: A few rules are firm.
+      - text: Never pretend a national connection works before it has been tested against an authorized test environment.
+      - text: Report security issues privately, following the security policy in the repository.
+  - id: help
+    title: Where help is needed
+    html: help.html
+    lines:
+      - text: Here is where help is needed most right now.
+      - text: Country packs for more countries, such as Denmark and Estonia.
+      - text: Terminology like SNOMED CT, and clinical templates for openEHR.
+      - text: Isolated plugins for safety, and sign-in with European digital identity.
+      - text: Review of clinical workflows, accessibility and translation.
+  - id: closing
+    title: Welcome
+    html: closing-welcome.html
+    lines:
+      - text: This only gets good when many people contribute. Welcome.

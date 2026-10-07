@@ -1,0 +1,60 @@
+# Eir – så bidrar du (svenska). Samma scener som den engelska versionen; bara berättarröst och skärmtext skiljer.
+id: 03-sa-bidrar-du
+title: Eir – så bidrar du
+language: sv
+scenes:
+  - id: intro
+    title: Alla kan hjälpa till
+    html: intro.html
+    lines:
+      - text: Du behöver inte kunna programmera för att hjälpa till.
+      - text: Läkare och sjuksköterskor kan granska arbetsflöden och peka ut det som inte stämmer med verkligheten.
+      - text: Alla kan prova demon och berätta på GitHub vad som saknas.
+  - id: start
+    title: Kom igång
+    html: start.html
+    lines:
+      - text: Vill du programmera? Börja med att hämta koden och installera beroendena.
+      - text: Starta sedan den lokala demon. Den lyssnar bara på din egen dator och använder enbart syntetisk data.
+  - id: plugin
+    title: Bygg ett tillägg
+    html: plugin.html
+    lines:
+      - text: Det mesta man bygger i Eir är ett tillägg, en liten modul med ett manifest.
+      - text: Vill du lägga till en ny databas, ett nytt land eller en ny modell, skriver du ett tillägg som följer samma gränssnitt.
+      - text: Sedan kör du den gemensamma testsviten. Klarar tillägget den, beter det sig som alla andra.
+  - id: check
+    title: Innan du skickar in
+    html: check.html
+    lines:
+      - text: 'Innan du skickar in kör du kontrollerna: typkontroll, formatering och testerna.'
+      - text: Testerna använder bara syntetisk data. Lägg aldrig in riktiga patientuppgifter.
+  - id: pr
+    title: Skicka in
+    html: pr.html
+    lines:
+      - text: Skicka in en pull request mot huvudgrenen.
+      - text: Signera dina commits med git commit -s, så att licensen är tydlig.
+        say: Signera dina commits med git commit minus s, så att licensen är tydlig.
+      - text: Förklara vad du ändrade, hur du testade, vad som är osäkert, och eventuella kliniska eller säkerhetsmässiga risker.
+  - id: rules
+    title: Hårda regler
+    html: rules.html
+    lines:
+      - text: Några regler är hårda.
+      - text: Låtsas aldrig att en nationell anslutning fungerar innan den har testats mot en godkänd testmiljö.
+      - text: Säkerhetsfel rapporterar du privat, enligt säkerhetspolicyn i repot.
+  - id: help
+    title: Mest hjälp behövs
+    html: help.html
+    lines:
+      - text: Det här behövs det mest hjälp med just nu.
+      - text: Landspaket för fler länder, till exempel Danmark och Estland.
+      - text: Terminologi, som SNOMED CT, och kliniska mallar för openEHR.
+      - text: Säkra tillägg som körs isolerade, och inloggning med europeiska e-legitimationer.
+      - text: Granskning av kliniska arbetsflöden, tillgänglighet och översättning.
+  - id: closing
+    title: Välkommen
+    html: closing-welcome.html
+    lines:
+      - text: Det här blir bra först när många bidrar. Välkommen.

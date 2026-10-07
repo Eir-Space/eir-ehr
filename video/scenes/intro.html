@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="intro.kicker"></div>
+      <h2 data-line="0" data-t="intro.title"></h2>
+      <div class="row" style="gap: 30px; margin-top: 50px">
+        <div
+          class="card teal col"
+          data-line="1"
+          data-anim="up"
+          style="flex: 1; min-height: 430px; gap: 14px"
+        >
+          <div class="badge"><i data-icon="stethoscope"></i></div>
+          <h3 data-t="intro.a"></h3>
+          <p class="muted" style="font-size: 34px" data-t="intro.a2"></p>
+        </div>
+        <div
+          class="card teal col"
+          data-line="2"
+          data-anim="up"
+          style="flex: 1; min-height: 430px; gap: 14px"
+        >
+          <div class="badge"><i data-icon="users"></i></div>
+          <h3 data-t="intro.b"></h3>
+          <p class="muted" style="font-size: 34px" data-t="intro.b2"></p>
+        </div>
+        <div
+          class="card ai col"
+          data-line="2"
+          data-delay="0.6"
+          data-anim="up"
+          style="flex: 1; min-height: 430px; gap: 14px"
+        >
+          <div class="badge gold"><i data-icon="languages"></i></div>
+          <h3 data-t="intro.c"></h3>
+          <p class="muted" style="font-size: 34px" data-t="intro.c2"></p>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

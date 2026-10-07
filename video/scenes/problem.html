@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="problem.kicker"></div>
+      <h2 data-at="0.35" data-t="problem.title" style="max-width: 1500px"></h2>
+      <div class="diagram" style="height: 190px; margin-top: 96px">
+        <div
+          class="node"
+          data-line="0"
+          data-anim="up"
+          style="left: 0; top: 20px; width: 340px; height: 150px"
+        >
+          <div class="badge"><i data-icon="file-text"></i></div>
+          <div>
+            <div class="t" data-t="problem.n1"></div>
+            <div class="s" data-t="problem.v1"></div>
+          </div>
+        </div>
+        <div
+          class="node"
+          data-line="0"
+          data-anim="up"
+          data-delay="0.18"
+          style="left: 427px; top: 20px; width: 340px; height: 150px"
+        >
+          <div class="badge"><i data-icon="flask-conical"></i></div>
+          <div>
+            <div class="t" data-t="problem.n2"></div>
+            <div class="s" data-t="problem.v2"></div>
+          </div>
+        </div>
+        <div
+          class="node"
+          data-line="0"
+          data-anim="up"
+          data-delay="0.36"
+          style="left: 853px; top: 20px; width: 340px; height: 150px"
+        >
+          <div class="badge"><i data-icon="clipboard-list"></i></div>
+          <div>
+            <div class="t" data-t="problem.n3"></div>
+            <div class="s" data-t="problem.v3"></div>
+          </div>
+        </div>
+        <div
+          class="node"
+          data-line="0"
+          data-anim="up"
+          data-delay="0.54"
+          style="left: 1280px; top: 20px; width: 340px; height: 150px"
+        >
+          <div class="badge"><i data-icon="hospital"></i></div>
+          <div>
+            <div class="t" data-t="problem.n4"></div>
+            <div class="s" data-t="problem.v4"></div>
+          </div>
+        </div>
+        <svg class="edges" width="1620" height="190">
+          <g data-line="0" data-delay="1.0" data-anim="fade">
+            <path class="edge danger" d="M348 95 H419" />
+            <path class="edge danger" d="M775 95 H845" />
+            <path class="edge danger" d="M1201 95 H1272" />
+            <path
+              d="M371 75 L395 115 M395 75 L371 115"
+              stroke="#F87171"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+            <path
+              d="M798 75 L822 115 M822 75 L798 115"
+              stroke="#F87171"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+            <path
+              d="M1224 75 L1248 115 M1248 75 L1224 115"
+              stroke="#F87171"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+          </g>
+        </svg>
+      </div>
+      <div
+        class="card dangerc"
+        data-line="1"
+        data-anim="up"
+        style="margin-top: 96px; display: flex; gap: 30px; align-items: center; max-width: 1300px"
+      >
+        <div class="badge danger"><i data-icon="unlink"></i></div>
+        <div>
+          <h3 data-t="problem.lock"></h3>
+          <p class="muted small" data-t="problem.lock2" style="margin-top: 6px"></p>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

@@ -1,0 +1,54 @@
+# Video 2: how Eir works technically (about 3 minutes). English.
+id: 02-how-it-works
+title: Eir – how it works
+language: en
+scenes:
+  - id: overview
+    title: Overview
+    html: overview.html
+    lines:
+      - text: Here is how Eir works technically, from clinician to open standards.
+      - text: Everything that's written is saved first in the record, an ordinary database that is the legal source of truth.
+      - text: Every change gets a version, and every action is written to an audit log that can't be altered afterwards.
+      - text: A separate projection then copies the record into open standards, openEHR and FHIR.
+      - text: If one of those systems is down, care isn't affected.
+  - id: profile
+    title: Profiles and plugins
+    html: profile.html
+    lines:
+      - text: The whole system is assembled from a profile, a small text file in YAML.
+      - text: You add, remove or swap plugins with a few lines, without touching the core.
+      - text: Each plugin has a manifest that says what it needs, which network it may use, and what data it sees.
+      - text: If the profile's policy doesn't allow it, the system refuses to start.
+  - id: tests
+    title: Shared tests
+    html: tests.html
+    lines:
+      - text: To swap a database, you need to trust that everything behaves the same.
+      - text: So there is one shared test suite, and JSON, openEHR and FHIR all pass the same ten tests.
+      - text: The tests check things like versions, that care providers stay separate, and that signed notes can never be changed.
+  - id: verified
+    title: Verified reads
+    html: verified.html
+    lines:
+      - text: When you read from openEHR or FHIR, Eir checks every row against the record.
+      - text: The answer also says how complete it is, so you always know if something is missing.
+  - id: ips
+    title: Patient summary
+    html: ips.html
+    lines:
+      - text: Eir can produce a European patient summary, IPS, the foundation of EHDS.
+      - text: We check it with the official HL7 validator, and in our tests it passes with zero errors.
+      - text: The absence of an allergy is never stated as a fact, only as unknown.
+  - id: ai
+    title: AI as a plugin
+    html: ai.html
+    lines:
+      - text: AI is just a plugin you can swap or switch off.
+      - text: A draft is always a suggestion with source references, and a clinician must review and sign it.
+      - text: A profile can also require that the model has passed our checks before it starts.
+  - id: closing
+    title: Next
+    html: closing-next.html
+    lines:
+      - text: This is just the beginning. In the next video, we show how you can contribute.

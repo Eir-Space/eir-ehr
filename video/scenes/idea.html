@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="idea.kicker"></div>
+      <h2 data-line="0" data-t="idea.title"></h2>
+      <div class="diagram" style="height: 600px; margin-top: 20px">
+        <svg class="edges" width="1620" height="600">
+          <path
+            class="edge"
+            data-line="1"
+            data-anim="draw"
+            data-dur="1.2"
+            data-delay="0.5"
+            data-flow="2"
+            d="M480 60 C 560 60 590 150 650 200"
+          />
+          <path
+            class="edge"
+            data-line="1"
+            data-anim="draw"
+            data-dur="1.2"
+            data-delay="0.7"
+            data-flow="2"
+            d="M810 120 L810 190"
+          />
+          <path
+            class="edge"
+            data-line="1"
+            data-anim="draw"
+            data-dur="1.2"
+            data-delay="0.9"
+            data-flow="2"
+            d="M1140 60 C 1060 60 1030 150 970 200"
+          />
+          <path
+            class="edge"
+            data-line="1"
+            data-anim="draw"
+            data-dur="1.2"
+            data-delay="1.1"
+            data-flow="2"
+            d="M480 380 C 560 380 590 330 650 295"
+          />
+          <path
+            class="edge"
+            data-line="1"
+            data-anim="draw"
+            data-dur="1.2"
+            data-delay="1.3"
+            data-flow="2"
+            d="M1140 380 C 1060 380 1030 330 970 295"
+          />
+        </svg>
+        <div
+          class="node teal"
+          data-line="1"
+          data-anim="left"
+          data-delay="0.2"
+          style="left: 0; top: 0; width: 480px; height: 120px"
+        >
+          <div class="badge"><i data-icon="database"></i></div>
+          <div>
+            <div class="t" data-t="idea.n1"></div>
+            <div class="s" data-t="idea.s1"></div>
+          </div>
+        </div>
+        <div
+          class="node teal"
+          data-line="1"
+          data-anim="down"
+          data-delay="0.4"
+          style="left: 570px; top: 0; width: 480px; height: 120px"
+        >
+          <div class="badge"><i data-icon="layers"></i></div>
+          <div>
+            <div class="t" data-t="idea.n2"></div>
+            <div class="s" data-t="idea.s2"></div>
+          </div>
+        </div>
+        <div
+          class="node teal"
+          data-line="1"
+          data-anim="right"
+          data-delay="0.6"
+          style="left: 1140px; top: 0; width: 480px; height: 120px"
+        >
+          <div class="badge"><i data-icon="globe"></i></div>
+          <div>
+            <div class="t" data-t="idea.n3"></div>
+            <div class="s" data-t="idea.s3"></div>
+          </div>
+        </div>
+        <div
+          class="node teal"
+          data-line="1"
+          data-anim="left"
+          data-delay="0.8"
+          style="left: 0; top: 320px; width: 480px; height: 120px"
+        >
+          <div class="badge"><i data-icon="fingerprint"></i></div>
+          <div>
+            <div class="t" data-t="idea.n4"></div>
+            <div class="s" data-t="idea.s4"></div>
+          </div>
+        </div>
+        <div
+          class="node gold"
+          data-line="1"
+          data-anim="right"
+          data-delay="1.0"
+          style="left: 1140px; top: 320px; width: 480px; height: 120px"
+        >
+          <div class="badge gold"><i data-icon="sparkles"></i></div>
+          <div>
+            <div class="t" data-t="idea.n5"></div>
+            <div class="s" data-t="idea.s5"></div>
+          </div>
+        </div>
+        <div
+          class="node"
+          data-line="1"
+          data-anim="scale"
+          style="
+            left: 600px;
+            top: 190px;
+            width: 420px;
+            height: 150px;
+            border-color: rgba(212, 167, 106, 0.6);
+            background: var(--aura-subtle), var(--surface);
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+            text-align: center;
+          "
+        >
+          <div class="t grad" style="font-size: 44px" data-t="idea.core"></div>
+          <div class="s" data-t="idea.core2"></div>
+        </div>
+        <div
+          class="card okc"
+          data-line="2"
+          data-anim="up"
+          style="
+            position: absolute;
+            left: 380px;
+            top: 490px;
+            width: 860px;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+          "
+        >
+          <div class="badge ok" style="width: 60px; height: 60px; font-size: 32px">
+            <i data-icon="badge-check"></i>
+          </div>
+          <h3 data-t="idea.tests" style="font-size: 36px"></h3>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

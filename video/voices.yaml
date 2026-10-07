@@ -1,0 +1,22 @@
+# Narration voices. The default is local and offline, so anyone can regenerate the videos with no account:
+# Kokoro for English, Supertonic for Swedish. ElevenLabs is optional (VIDEO_TTS=elevenlabs plus
+# ELEVENLABS_API_KEY). Override the voice with VIDEO_VOICE.
+elevenlabs:
+  model: eleven_v4 # Swedish is supported by eleven_v4, eleven_v3 and eleven_multilingual_v2
+  voice: matilda
+  seed: 7
+  settings: { stability: 0.5, similarity_boost: 0.8, style: 0.15, use_speaker_boost: true }
+  # Premade voices work on every plan. They speak Swedish through the multilingual model, with a
+  # slight foreign colouring. Native Swedish voices from the Voice Library sound better but the API
+  # only serves them on a paid plan: add one to your account, then put its id here.
+  voices:
+    matilda: XrExE9yKIg1WjnnlVkGX # knowledgeable, professional
+    alice: Xb7hH8MSUJpSbSDYk0k2 # clear, engaging educator
+    daniel: onwK4e9ZLuTAKqWW03F9 # steady broadcaster
+    george: JBFqnCBsd6RMkjVDRZzb # warm storyteller
+    sarah: EXAVITQu4vr4xnSDxMaL # mature, reassuring
+supertonic:
+  voice: F1 # F1..F5, M1..M5
+kokoro:
+  voice: af_heart # American English. Other Kokoro voices download on first use.
+  speed: 0.97
