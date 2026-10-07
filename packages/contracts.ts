@@ -217,8 +217,81 @@ export interface Clinical {
   ): Promise<Entity>;
   history(actor: Actor, id: string): Promise<Entity[]>;
 }
+export type ProjectionReport = {
+  tenant: string;
+  scanned: number;
+  projected: number;
+  upToDate: number;
+  unmapped: number;
+  failed: number;
+  deferred: number;
+};
+export type ReconcileReport = {
+  tenant: string;
+  entities: number;
+  counts: Record<string, number>;
+  // Entity ids only, never clinical data. At most 20 per category.
+  samples: Record<string, string[]>;
+};
+export interface Projection {
+  runOnce(): Promise<ProjectionReport[]>;
+  reconcile(): Promise<ReconcileReport[]>;
+}
+export type QueryCoverage = {
+  ledger: number; // records in the legal ledger that match the question
+  served: number; // of those, returned from the content store and verified against the ledger
+  notProjected: number;
+  unmapped: number;
+  stale: number;
+  diverged: number;
+  missing: number;
+};
+type Answered = {
+  source: string;
+  asOf: string;
+  coverage: QueryCoverage;
+  // True only when every matching ledger record was served and verified.
+  complete: boolean;
+  // Rows in the content store that are not linked to a ledger record (never served).
+  foreign: number;
+  truncated: boolean;
+};
+export type VitalsAnswer = Answered & {
+  code: string;
+  points: {
+    ref: string; // `${entityId}@${version}`, the same reference form AI evidence uses
+    entityId: string;
+    version: number;
+    value: number;
+    unit: string;
+    effectiveAt: string;
+  }[];
+};
+export type ProblemsAnswer = Answered & {
+  problems: {
+    ref: string;
+    entityId: string;
+    version: number;
+    system?: string;
+    code?: string;
+    display: string;
+    onset?: string;
+    status: string;
+  }[];
+};
+export interface ClinicalQuery {
+  vitals(
+    actor: Actor,
+    patientId: string,
+    query: { code: string; from?: string; to?: string; limit?: number },
+  ): Promise<VitalsAnswer>;
+  problems(actor: Actor, patientId: string, query?: { status?: string }): Promise<ProblemsAnswer>;
+}
+export type NetworkReach = 'none' | 'loopback' | 'allowlist' | 'any';
 export interface AIProvider {
   id: string;
+  // Declared reach of this provider. A router treats a provider without it as unrestricted.
+  meta?: { network: NetworkReach; usesLanguageModel: boolean };
   generate(evidence: Evidence[]): Promise<ProposalOutput>;
 }
 export interface AIReview {
@@ -230,6 +303,10 @@ export interface AIReview {
     decision: 'accept' | 'reject',
     text?: string,
   ): Promise<Entity>;
+}
+export interface FhirIps {
+  // An International Patient Summary document Bundle (HL7 FHIR IPS 2.0.0, R4).
+  document(actor: Actor, patientId: string): Promise<Record<string, any>>;
 }
 export interface Fhir {
   bundle(actor: Actor, patientId: string): Promise<Record<string, any>>;
@@ -305,6 +382,9 @@ export interface Services {
   access: Access;
   clinical: Clinical;
   aiProvider: AIProvider;
+  projection: Projection;
+  clinicalQuery: ClinicalQuery;
+  fhirIps: FhirIps;
   aiReview: AIReview;
   fhir: Fhir;
   identity: Identity;
@@ -388,17 +468,31 @@ export interface Terminology {
     items: import('./icd.ts').DiagnosisTerm[];
   };
 }
+// Many-provider seams: any number of plugins register a named value under one contribution.
+export interface Contributions {
+  aiModel: AIProvider;
+  contentStore: import('./content.ts').ContentStore;
+}
 export type ServiceName = keyof Services;
+export type ContributionName = keyof Contributions;
 export type Plugin = {
   id: string;
   version: string;
   apiVersion: 2;
   provides: ServiceName[];
   requires: ServiceName[];
+  // Used when some plugin in the profile provides them; they start first, and `ctx.has` says
+  // whether they are present. A plugin degrades without them instead of failing to start.
+  optionalRequires?: ServiceName[];
+  contributes?: ContributionName[];
   setup(
     ctx: {
       get<K extends ServiceName>(name: K): Services[K];
+      has(name: ServiceName): boolean;
       provide<K extends ServiceName>(name: K, value: Services[K]): void;
+      contribute<K extends ContributionName>(name: K, key: string, value: Contributions[K]): void;
+      // Live view: contributors may start after the reader, so read it at call time.
+      contributions<K extends ContributionName>(name: K): ReadonlyMap<string, Contributions[K]>;
       onDispose(dispose: () => void | Promise<void>): void;
     },
     config: Record<string, unknown>,

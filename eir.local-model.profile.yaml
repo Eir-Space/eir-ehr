@@ -1,0 +1,12 @@
+# Layered profile: start from the demo composition and swap the AI provider.
+# Print the result with: npm run plugins -- --dump
+profile: demo-local-model
+extends: [./eir.demo.config.json]
+policy:
+  maxNetwork: loopback
+  requireEvidenceForLanguageModels: false
+patches:
+  - replace: ai-extractive
+    with:
+      module: ./plugins/ai-ollama.ts
+      config: { model: your-installed-model }

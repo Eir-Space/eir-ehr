@@ -1,0 +1,11 @@
+id: eir.content.fhir
+version: 1.0.0
+apiVersion: 2
+title: FHIR R4 content store (HAPI tested)
+provides: []
+contributes: [contentStore]
+requires: []
+network: allowlist
+egressHosts: [127.0.0.1, localhost]
+dataClasses: [identified-clinical]
+isolation: in-process

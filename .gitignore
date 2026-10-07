@@ -9,3 +9,7 @@ playwright-report/
 .hosting/
 .firebase/
 firebase-debug.log
+.cache/
+video/out/
+video/assets/
+video/publish/

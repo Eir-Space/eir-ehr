@@ -387,6 +387,8 @@ export async function createApp(
           runtime.has('deterioration'),
           runtime.has('coordination'),
           { sip: runtime.has('sipPlans'), documents: runtime.has('coordinationDocuments') },
+          runtime.has('clinicalQuery'),
+          runtime.has('fhirIps'),
         ),
       );
       api.get('/terminology/diagnoses', async (req) => {
@@ -516,6 +518,38 @@ export async function createApp(
           return { entries, nextCursor: rows.length ? Number(rows.at(-1)!.cursor) : after };
         }),
       );
+      if (runtime.has('clinicalQuery')) {
+        // Typed reads from the content store, verified against the ledger. Answers carry
+        // coverage and per-row provenance refs.
+        api.get('/patients/:id/query/vitals', async (req) => {
+          const query = z
+            .object({
+              code: z.string(),
+              from: z.string().optional(),
+              to: z.string().optional(),
+              limit: z.coerce.number().int().optional(),
+            })
+            .strict()
+            .parse(req.query);
+          return await runtime
+            .get('clinicalQuery')
+            .vitals(actor(req), uuid.parse((req.params as any).id), query);
+        });
+        api.get('/patients/:id/query/problems', async (req) => {
+          const query = z.object({ status: z.string().optional() }).strict().parse(req.query);
+          return await runtime
+            .get('clinicalQuery')
+            .problems(actor(req), uuid.parse((req.params as any).id), query);
+        });
+      }
+      if (runtime.has('fhirIps')) {
+        api.get('/patients/:id/export/ips', async (req, reply) => {
+          reply.type('application/fhir+json');
+          return await runtime
+            .get('fhirIps')
+            .document(actor(req), uuid.parse((req.params as any).id));
+        });
+      }
       api.get('/patients/:id/export/fhir', async (req, reply) => {
         reply.type('application/fhir+json');
         return await runtime.get('fhir').bundle(actor(req), uuid.parse((req.params as any).id));

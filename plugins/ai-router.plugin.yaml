@@ -1,0 +1,9 @@
+id: eir.ai.router
+version: 1.0.0
+apiVersion: 2
+title: AI model router with ordered fallback
+provides: [aiProvider]
+requires: []
+network: none
+dataClasses: [identified-clinical]
+isolation: in-process

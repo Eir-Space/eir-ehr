@@ -19,6 +19,7 @@ export function visibleRecord(actor: Actor, record: Entity) {
       'workforceBootstrap',
       'accessReview',
       'integrationConnection',
+      'contentLink',
       'integrationOutbox',
       'integrationInbox',
       'followUpWorker',

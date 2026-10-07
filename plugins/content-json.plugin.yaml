@@ -1,0 +1,10 @@
+id: eir.content.json
+version: 1.0.0
+apiVersion: 2
+title: JSON entity content store (reference provider)
+provides: []
+contributes: [contentStore]
+requires: [store]
+network: none
+dataClasses: [identified-clinical]
+isolation: in-process

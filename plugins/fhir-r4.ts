@@ -1,4 +1,5 @@
 import type { Entity, Plugin } from '../packages/contracts.ts';
+import { toFhirSystem } from '../packages/code-systems.ts';
 
 const reference = (id: string) => ({ reference: `urn:uuid:${id}` });
 const concept = (code: string) => ({
@@ -164,7 +165,7 @@ export function project(e: Entity): Record<string, any> | null {
               },
             }
           : { clinicalStatus: concept(d.status) }),
-        code: { coding: [d.code] },
+        code: { coding: [{ ...d.code, system: toFhirSystem(d.code.system) }] },
         subject,
         ...(d.onset ? { onsetDateTime: d.onset } : {}),
       };

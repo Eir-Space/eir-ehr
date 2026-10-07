@@ -1,0 +1,16 @@
+id: trend-falling
+title: Pulse fell across encounters; the draft must not call it a rise
+encounters:
+  - reason: Tidigare besök
+    observations:
+      - { code: '8867-4', value: 90, daysAgo: 5 }
+      - { code: '8867-4', value: 84, daysAgo: 4 }
+      - { code: '8867-4', value: 78, daysAgo: 3 }
+  - reason: Kontroll
+    observations:
+      - { name: now, code: '8867-4', value: 70, daysAgo: 0 }
+    notes:
+      - { text: Kontroll av puls. Patienten mår bra och är utan besvär. }
+expect:
+  mustCite: [now]
+  trend: { code: '8867-4', direction: falling }

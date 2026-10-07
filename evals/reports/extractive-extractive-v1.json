@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "useCase": "draft-note",
+  "generatedAt": "2026-10-07T07:38:31.734Z",
+  "suiteHash": "b8ec5f3d64a96503221dd54802c8cf07560572c6f7039d3ce6e4a97d073177ca",
+  "subject": {
+    "family": "extractive",
+    "model": "extractive-v1"
+  },
+  "repeat": 1,
+  "passed": true,
+  "summary": {
+    "cases": 7,
+    "runs": 7,
+    "failedRuns": 0
+  },
+  "results": [
+    {
+      "caseId": "trend-rising",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "extractive-v1 (no language model)",
+      "mode": "extractive",
+      "historyItems": 3,
+      "draft": "Patienten känner sig trött och har haft hjärtklappning sedan i går.\n\nPuls: 96 /min (2026-10-07T07:38:31.675Z)\n\nKontaktorsak: Kontroll, känner sig trött\n\nPuls: 64 /min (2026-10-04T07:38:31.674Z)\n\nPuls: 61 /min (2026-10-03T07:38:31.674Z)\n\nPuls: 58 /min (2026-10-02T07:38:31.673Z)",
+      "ms": 328
+    },
+    {
+      "caseId": "trend-falling",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "extractive-v1 (no language model)",
+      "mode": "extractive",
+      "historyItems": 3,
+      "draft": "Kontaktorsak: Kontroll\n\nKontroll av puls. Patienten mår bra och är utan besvär.\n\nPuls: 70 /min (2026-10-07T07:38:31.691Z)\n\nPuls: 78 /min (2026-10-04T07:38:31.691Z)\n\nPuls: 84 /min (2026-10-03T07:38:31.691Z)\n\nPuls: 90 /min (2026-10-02T07:38:31.690Z)",
+      "ms": 11
+    },
+    {
+      "caseId": "trend-stable",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "extractive-v1 (no language model)",
+      "mode": "extractive",
+      "historyItems": 3,
+      "draft": "Rutinkontroll av puls. Inga besvär.\n\nKontaktorsak: Kontroll\n\nPuls: 71 /min (2026-10-07T07:38:31.702Z)\n\nPuls: 70 /min (2026-10-04T07:38:31.701Z)\n\nPuls: 71 /min (2026-10-03T07:38:31.701Z)\n\nPuls: 70 /min (2026-10-02T07:38:31.701Z)",
+      "ms": 8
+    },
+    {
+      "caseId": "no-history",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "extractive-v1 (no language model)",
+      "mode": "extractive",
+      "historyItems": 0,
+      "draft": "Puls: 88 /min (2026-10-07T07:38:31.710Z)\n\nPatienten söker för trötthet.\n\nKontaktorsak: Första besöket",
+      "ms": 7
+    },
+    {
+      "caseId": "history-unavailable",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "extractive-v1 (no language model)",
+      "mode": "extractive",
+      "historyItems": 0,
+      "draft": "Puls: 96 /min (2026-10-07T07:38:31.718Z)\n\nPatienten känner sig trött och har haft hjärtklappning sedan i går.\n\nKontaktorsak: Kontroll, känner sig trött",
+      "ms": 8
+    },
+    {
+      "caseId": "blood-pressure",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "extractive-v1 (no language model)",
+      "mode": "extractive",
+      "historyItems": 2,
+      "draft": "Systoliskt blodtryck: 152 mm[Hg] (2026-10-07T07:38:31.725Z)\n\nDiastoliskt blodtryck: 94 mm[Hg] (2026-10-07T07:38:31.725Z)\n\nPatienten kommer för kontroll av blodtryck.\n\nKontaktorsak: Kontroll av blodtryck\n\nSystoliskt blodtryck: 132 mm[Hg] (2026-10-04T07:38:31.724Z)\n\nSystoliskt blodtryck: 128 mm[Hg] (2026-10-01T07:38:31.724Z)",
+      "ms": 7
+    },
+    {
+      "caseId": "diagnosis-no-advice",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "extractive-v1 (no language model)",
+      "mode": "extractive",
+      "historyItems": 0,
+      "draft": "Patienten har haft magont och diarré i två dagar.\n\nKontaktorsak: Magbesvär\n\nGastroenterit och kolit av ospecificerad orsak (http://hl7.org/fhir/sid/icd-10-se|A09.9)",
+      "ms": 7
+    }
+  ]
+}

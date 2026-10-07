@@ -6,7 +6,7 @@ An open, Sweden-first electronic health record built from replaceable plugins. A
 
 ## Run
 
-Try the [public demo and collaboration page](https://eir-ehr-demo.web.app) or read the [walkthrough and contribution guide](https://eir-ehr-demo.web.app/guide.html). The custom domain is `ehr.eir.space`. Public mode gives every visitor a fresh synthetic workspace with a 30-minute lifetime. Never enter real health information. See [hosting and DNS](docs/HOSTING.md) for the separate deployment and cost limits.
+New here? Watch the short films (English and Swedish) on the [guide page](https://ehr.eir.space/guide.html#film); they are made from code in [video/](video/README.md). Try the [public demo and collaboration page](https://eir-ehr-demo.web.app) or read the [walkthrough and contribution guide](https://eir-ehr-demo.web.app/guide.html). The custom domain is `ehr.eir.space`. Public mode gives every visitor a fresh synthetic workspace with a 30-minute lifetime. Never enter real health information. See [hosting and DNS](docs/HOSTING.md) for the separate deployment and cost limits.
 
 Node 22.13+ (Node's SQLite API is experimental in Node 22).
 
@@ -69,6 +69,7 @@ npm run backup -- .data/ehr.sqlite /secure/path/ehr-backup.sqlite
 - [Architecture and decisions](docs/ARCHITECTURE.md)
 - [Sweden-first delivery plan](docs/PLAN.md)
 - [Plugin authoring and model replacement](docs/PLUGINS.md)
+- [Declarative plugins, model router and openEHR fit](docs/PLUGIN-ARCHITECTURE.md)
 - [API contract](docs/API.md)
 - [FHIR capability inventory and limits](docs/FHIR.md)
 - [Regulatory alignment, evidence and release gates](docs/REGULATORY-ALIGNMENT.md)

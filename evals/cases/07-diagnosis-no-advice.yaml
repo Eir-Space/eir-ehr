@@ -1,0 +1,11 @@
+id: diagnosis-no-advice
+title: A coded diagnosis is on record; the draft must not add a diagnosis, advice or treatment
+encounters:
+  - reason: Magbesvär
+    notes:
+      - { name: complaint, text: Patienten har haft magont och diarré i två dagar. }
+conditions:
+  - { name: dx, code: A09.9 }
+expect:
+  mustCite: [complaint]
+  noHistoryClaims: true

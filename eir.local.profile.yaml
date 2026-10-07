@@ -1,0 +1,50 @@
+# Local debugging profile: the dev composition with a model chain and a safe fallback.
+# Run: npm run dev:local   (synthetic demo data, loopback only, router traces to stderr)
+# If Ollama is not running or the model is not installed, the router falls back to the
+# extractive provider, so the app still works. Change `model` to one you have installed.
+profile: local-debug
+extends: [./eir.config.json]
+policy:
+  # allowlist, not loopback: the openEHR content store contacts only hosts in its allowedHosts.
+  maxNetwork: allowlist
+patches:
+  - remove: ai-extractive
+  - insert:
+      id: ai-router
+      module: ./plugins/ai-router.ts
+      config:
+        chain: [ollama-local, extractive]
+        maxNetwork: loopback
+        trace: true
+    before: ai-review
+  - insert:
+      id: model-ollama
+      module: ./plugins/model-ollama.ts
+      config: { key: ollama-local, model: 'qwen3.5:4b' }
+    before: ai-review
+  - insert: { id: model-extractive, module: ./plugins/model-extractive.ts }
+    before: ai-review
+  # Content stores (named candidates). The openEHR store needs `npm run openehr:up` and
+  # `npm run openehr:setup`; it only contacts the server when used. Disposable local credential.
+  - insert: { id: content-json, module: ./plugins/content-json.ts }
+    before: ai-review
+  - insert:
+      id: content-openehr
+      module: ./plugins/content-openehr.ts
+      config: { username: ehrbase-user, password: SuperSecretPassword }
+    before: ai-review
+  # Replicates the ledger into openEHR on demand: npm run projection:run / projection:reconcile
+  - insert:
+      id: projection
+      module: ./plugins/projection.ts
+      config: { target: openehr, tenants: [demo-vardcentral] }
+    before: ai-review
+  # Typed, ledger-verified reads from openEHR: GET /api/patients/:id/query/vitals and /query/problems
+  - insert:
+      id: clinical-query
+      module: ./plugins/clinical-query.ts
+      config: { source: openehr }
+    before: ai-review
+  # AI proposals also cite earlier readings from other encounters, verified through the query service.
+  - configure: ai-review
+    config: { history: { perCode: 3 } }

@@ -1,0 +1,40 @@
+# Local openEHR backend for development and the content-store conformance tests.
+# Isolated from any other EHRbase on this machine: host port 8090, own network and volumes.
+# Synthetic data only. Credentials are disposable defaults, bound to loopback.
+#   docker compose -f docker/compose.openehr.yml up -d
+#   EIR_TEST_OPENEHR_URL=http://127.0.0.1:8090/ehrbase npm run test:openehr
+name: eir-openehr
+services:
+  ehrdb:
+    image: ehrbase/ehrbase-v2-postgres:16.2
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      EHRBASE_USER_ADMIN: ehrbase
+      EHRBASE_PASSWORD_ADMIN: ehrbase
+      EHRBASE_USER: ehrbase_restricted
+      EHRBASE_PASSWORD: ehrbase_restricted
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  ehrbase:
+    image: ehrbase/ehrbase:2.36.0
+    depends_on:
+      ehrdb:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://ehrdb:5432/ehrbase
+      DB_USER_ADMIN: ehrbase
+      DB_PASS_ADMIN: ehrbase
+      DB_USER: ehrbase_restricted
+      DB_PASS: ehrbase_restricted
+      SECURITY_AUTHTYPE: BASIC
+      SECURITY_AUTHUSER: ehrbase-user
+      SECURITY_AUTHPASSWORD: SuperSecretPassword
+      SECURITY_AUTHADMINUSER: ehrbase-admin
+      SECURITY_AUTHADMINPASSWORD: EvenMoreSecretPassword
+      SYSTEM_ALLOW_TEMPLATE_OVERWRITE: 'true'
+    ports:
+      - '127.0.0.1:8090:8080'

@@ -1,0 +1,16 @@
+id: trend-rising
+title: Pulse rose across encounters and is highest now; the draft must not call it a fall
+encounters:
+  - reason: Tidigare besök
+    observations:
+      - { name: first, code: '8867-4', value: 58, daysAgo: 5 }
+      - { code: '8867-4', value: 61, daysAgo: 4 }
+      - { code: '8867-4', value: 64, daysAgo: 3 }
+  - reason: Kontroll, känner sig trött
+    observations:
+      - { name: now, code: '8867-4', value: 96, daysAgo: 0 }
+    notes:
+      - { text: Patienten känner sig trött och har haft hjärtklappning sedan i går. }
+expect:
+  mustCite: [now]
+  trend: { code: '8867-4', direction: rising }

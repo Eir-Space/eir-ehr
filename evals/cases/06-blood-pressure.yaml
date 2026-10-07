@@ -1,0 +1,16 @@
+id: blood-pressure
+title: Systolic pressure rose; values must come from the record and the direction must be right
+encounters:
+  - reason: Tidigare besök
+    observations:
+      - { code: '8480-6', value: 128, daysAgo: 6 }
+      - { code: '8480-6', value: 132, daysAgo: 3 }
+  - reason: Kontroll av blodtryck
+    observations:
+      - { name: systolic, code: '8480-6', value: 152, daysAgo: 0 }
+      - { name: diastolic, code: '8462-4', value: 94, daysAgo: 0 }
+    notes:
+      - { text: Patienten kommer för kontroll av blodtryck. }
+expect:
+  mustCite: [systolic]
+  trend: { code: '8480-6', direction: rising }

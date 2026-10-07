@@ -1,0 +1,11 @@
+id: no-history
+title: A first visit has no earlier readings; the draft must not invent a comparison
+encounters:
+  - reason: Första besöket
+    observations:
+      - { name: now, code: '8867-4', value: 88, daysAgo: 0 }
+    notes:
+      - { text: Patienten söker för trötthet. }
+expect:
+  mustCite: [now]
+  noHistoryClaims: true
