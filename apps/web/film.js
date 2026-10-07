@@ -28,7 +28,8 @@ if (player && captions && list) {
       return null;
     }
   })();
-  let lang = remembered in films ? remembered : navigator.language?.startsWith('sv') ? 'sv' : 'en';
+  const requested = new URLSearchParams(location.search).get('film');
+  let lang = requested in films ? requested : remembered in films ? remembered : 'en';
   let index = 0;
   const show = (play) => {
     const [id] = films[lang][index];

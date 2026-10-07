@@ -5,29 +5,67 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "predeploy": ["npm run hosting:prepare"],
     "rewrites": [
-      { "source": "/api/**", "run": { "serviceId": "eir-ehr-demo", "region": "europe-north1" } },
-      { "source": "/demo/**", "run": { "serviceId": "eir-ehr-demo", "region": "europe-north1" } },
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "eir-ehr-demo",
+          "region": "europe-north1"
+        }
+      },
+      {
+        "source": "/demo/**",
+        "run": {
+          "serviceId": "eir-ehr-demo",
+          "region": "europe-north1"
+        }
+      },
       {
         "source": "/deployment.json",
-        "run": { "serviceId": "eir-ehr-demo", "region": "europe-north1" }
+        "run": {
+          "serviceId": "eir-ehr-demo",
+          "region": "europe-north1"
+        }
       },
-      { "source": "/health", "run": { "serviceId": "eir-ehr-demo", "region": "europe-north1" } }
+      {
+        "source": "/health",
+        "run": {
+          "serviceId": "eir-ehr-demo",
+          "region": "europe-north1"
+        }
+      }
     ],
     "headers": [
       {
-        "source": "/video/**",
-        "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
-      },
-      {
         "source": "**",
         "headers": [
-          { "key": "Cache-Control", "value": "no-store" },
-          { "key": "X-Content-Type-Options", "value": "nosniff" },
-          { "key": "Referrer-Policy", "value": "no-referrer" },
-          { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+          {
+            "key": "Cache-Control",
+            "value": "no-store"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "no-referrer"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(), microphone=(), geolocation=()"
+          },
           {
             "key": "Content-Security-Policy",
             "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+          }
+        ]
+      },
+      {
+        "source": "/video/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
           }
         ]
       }
