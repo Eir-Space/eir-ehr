@@ -1,6 +1,6 @@
 # Delivery Plan: Sweden First
 
-Baseline 2026-09-18. This is a delivery proposal with acceptance gates, not a claim that the current code is ready for patient care. Dates depend on a partner clinic, staffing, national service onboarding and regulatory assessment.
+Baseline 2026-10-09. This is a delivery proposal with acceptance gates, not a claim that the current code is ready for patient care. Dates depend on a partner clinic, staffing, national service onboarding and regulatory assessment.
 
 ## Product Boundary
 
@@ -9,6 +9,15 @@ Start with one Swedish primary-care practice and its complete consultation loop.
 The current code is the executable foundation: registration, encounters, notes/sign/amend, selected vitals, problems/allergies, tasks, local identity/policy, audit, AI proposals, record export and plugin composition. The care-team release adds daily scheduling/check-in, assigned tasks with explicit handover and server-autosaved drafts with recovery/conflict handling (see CARE-TEAM.md). It does not yet include medication ordering, lab connectivity, referrals, attachments, automatic escalation or national services. Unfinished capabilities are tracked here rather than exposed as fake modules.
 
 The medication/results release now implements documented medication use, version-snapshotted medication/allergy reconciliation, local lab orders, source-labelled manual results, owned review and correction-triggered reopening (see MEDICATIONS-AND-RESULTS.md). It does not implement prescribing, dose checking, specimen collection or laboratory transmission. The next safety-critical targets are verified identity/access, persistent deployment isolation, and a real laboratory partner's transport plus critical-result escalation; those gates remain ahead of a care pilot.
+
+The template-first openEHR release makes the authority boundary executable for vital signs. In the
+opt-in profile, a pinned template drives capture, EHRbase stores the canonical composition, and SQL
+stores operational state and a recoverable link rather than a second clinical payload. Blood pressure
+is one grouped composition; unsupported measurements fail explicitly. FHIR export, AI evidence and
+clinical monitoring consume the authorized resolved chart. This does not migrate the remaining
+record kinds or approve the bundled templates for Swedish care. Each new kind requires clinical
+governance, deterministic mappings, migration and rollback rules, conformance tests and an explicit
+authority switch; see [ADR-002](ADR-002-TEMPLATE-FIRST-CLINICAL-RECORD.md).
 
 ## Milestones
 
