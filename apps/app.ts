@@ -23,6 +23,7 @@ export async function createApp(
   app.get('/ready', async (_req, reply) => {
     try {
       await store.health();
+      if (runtime.has('clinicalRepository')) await runtime.get('clinicalRepository').health();
       return { status: 'ready' };
     } catch {
       return reply.code(503).send({ status: 'unavailable' });
@@ -107,37 +108,49 @@ export async function createApp(
         if (a && error instanceof Fault && error.status === 403)
           await store.audit(a, 'request.denied', undefined, undefined, 'denied');
       });
-      api.get('/session', async (req) => ({
-        actor: actor(req),
-        country: runtime.get('country').code,
-        locale: runtime.get('country').locale,
-        vitals,
-        renderers: rendererIds,
-        defaultRenderer,
-        integrations: runtime.has('integrations'),
-        followUp: runtime.has('followUp'),
-        modules: runtime.has('modules'),
-        deterioration: runtime.has('deterioration'),
-        coordination: runtime.has('coordination'),
-        authorization: (await runtime.get('access').context?.(actor(req))) ?? null,
-        assignments: runtime.has('workforce')
-          ? (await runtime.get('workforce').assignments(actor(req))).map((row) => ({
-              id: row.id,
-              unitId: row.data.unitId,
-              role: row.data.role,
-              name:
-                runtime.get('workforce').units.find((u) => u.id === row.data.unitId)?.name ??
-                row.data.unitId,
-            }))
-          : [],
-        careTeam:
-          actor(req).role === 'clinician'
-            ? {
-                members: await runtime.get('careTeam').members(actor(req)),
-                timeZone: runtime.get('careTeam').timeZone,
-              }
-            : null,
-      }));
+      api.get('/session', async (req) => {
+        const vitalForms = runtime.has('clinicalModels')
+          ? runtime.get('clinicalModels').vitalForms()
+          : undefined;
+        const catalog = vitalForms
+          ? {
+              ...vitals,
+              '85354-9': { label: 'Blodtryck', unit: 'mm[Hg]', min: 20, max: 350 },
+            }
+          : vitals;
+        return {
+          actor: actor(req),
+          country: runtime.get('country').code,
+          locale: runtime.get('country').locale,
+          vitals: catalog,
+          ...(vitalForms ? { vitalForms } : {}),
+          renderers: rendererIds,
+          defaultRenderer,
+          integrations: runtime.has('integrations'),
+          followUp: runtime.has('followUp'),
+          modules: runtime.has('modules'),
+          deterioration: runtime.has('deterioration'),
+          coordination: runtime.has('coordination'),
+          authorization: (await runtime.get('access').context?.(actor(req))) ?? null,
+          assignments: runtime.has('workforce')
+            ? (await runtime.get('workforce').assignments(actor(req))).map((row) => ({
+                id: row.id,
+                unitId: row.data.unitId,
+                role: row.data.role,
+                name:
+                  runtime.get('workforce').units.find((u) => u.id === row.data.unitId)?.name ??
+                  row.data.unitId,
+              }))
+            : [],
+          careTeam:
+            actor(req).role === 'clinician'
+              ? {
+                  members: await runtime.get('careTeam').members(actor(req)),
+                  timeZone: runtime.get('careTeam').timeZone,
+                }
+              : null,
+        };
+      });
       api.get('/care-team', async (req) => {
         const query = z.object({ day: z.iso.date() }).strict().parse(req.query);
         return await runtime.get('careTeam').workspace(actor(req), query.day);

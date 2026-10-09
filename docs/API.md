@@ -80,14 +80,15 @@ Clinical create payloads (UUIDs are returned by previous operations):
 
 ```text
 encounter:   {reason}
-note:        {encounterId, text}
-observation: {encounterId, code, value, unit, effectiveAt}
+note:        {encounterId, text, clientId?}
+observation: {encounterId, code, value, unit, effectiveAt, clientId?}
+blood pressure: {encounterId, code: "85354-9", systolic, diastolic, unit: "mm[Hg]", effectiveAt, clientId?}
 condition:   {code: {system, version?, code, display}, onset?}
 allergy:     {substance, reaction, criticality: "low" | "high" | "unable-to-assess"}
 task:        {title, due: "YYYY-MM-DD"}
 ```
 
-Supported vital codes/units are returned by `/session`. The server enforces code/unit pairing and input bounds. These are input integrity checks, not diagnostic interpretation. Diagnosis writes use the configured terminology provider: canonical code, label and version replace client-supplied values. Unknown codes, unsupported systems and categories requiring a more specific code return 422; a supplied stale release version returns 409. Historical conditions are not recoded. See [terminology](TERMINOLOGY.md) for source rights and coding-rule limitations.
+Supported vital codes/units are returned by `/session`; a template-backed profile also returns `vitalForms`. The server enforces code/unit pairing and input bounds. In the openEHR profile, systolic and diastolic pressure must be submitted together, and canonical creates require a UUID `clientId` for idempotent recovery. These are input integrity checks, not diagnostic interpretation. Diagnosis writes use the configured terminology provider: canonical code, label and version replace client-supplied values. Unknown codes, unsupported systems and categories requiring a more specific code return 422; a supplied stale release version returns 409. Historical conditions are not recoded. See [terminology](TERMINOLOGY.md) for source rights and coding-rule limitations.
 
 Diagnosis search accepts `q` (up to 100 characters, empty for common codes) and `limit` (1-50, default 20). Response: `{source: {system, version, url, sha256, count, publisher}, total, items: [{system, version, code, display, parent, selectable, notPrincipal, manifestation}]}`. Searches run locally without a patient ID or external search service.
 

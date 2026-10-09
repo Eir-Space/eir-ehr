@@ -6,7 +6,7 @@ Decision baseline: 2026-09-18. Scope: Swedish ambulatory primary care first; cou
 
 Eir owns the local workflow, record integrity, and attribution. National exchange networks are external participants with their own identity, authorization, semantics and onboarding. A nationwide access portal does not replace a clinician's order, result, follow-up and correction workflows. Learn from Estonia's cross-provider access and Denmark's governed message contracts while building a complete practice system.
 
-The clinical record is canonical locally. FHIR is a versioned projection at the boundary. There is no dual-write openEHR/FHIR database: that would create two sources of truth without an established reconciliation protocol. Evaluate HAPI FHIR/Medplum for a full FHIR service and EHRbase for template-based longitudinal storage during the interoperability milestone. Adopt an existing implementation where its capabilities and license fit; do not implement AQL or a complete FHIR validator from scratch.
+Clinical authority is explicit per record kind. In the template-first profile, openEHR is canonical for vital signs and its active template drives capture; SQL remains authoritative for identity, access, workflow, audit and clinical kinds that have not migrated. FHIR is a versioned exchange projection from the authorized, resolved chart, not a second source of truth. Adopt existing implementations where their capabilities and licenses fit; do not implement AQL or a complete FHIR validator from scratch. See [ADR-002](ADR-002-TEMPLATE-FIRST-CLINICAL-RECORD.md).
 
 ```mermaid
 flowchart LR
@@ -16,9 +16,13 @@ flowchart LR
     API --> Clinical["Clinical service"]
     Clinical --> Access["Care relationship and restriction policy"]
     Clinical --> Country["Country identifiers and locale"]
-    Clinical --> Store["Transactional record store"]
+    Clinical --> Models["Template-backed clinical models"]
+    Clinical --> Repository["Canonical clinical repository"]
+    Clinical --> Store["Operational SQL store"]
+    Models --> Repository
+    Repository --> OpenEHR["EHRbase / openEHR"]
     Access --> Store
-    Store --> History["Record versions and audit"]
+    Store --> History["Workflow versions and audit"]
     API --> Review["AI proposal and review service"]
     Review --> Clinical
     Review --> Model["Extractive or local model provider"]
@@ -37,7 +41,9 @@ The shared interfaces in `packages/contracts.ts` are the contract. Domain plugin
 
 ## Record Model And Transactions
 
-Every entity has tenant, patient ID, kind, revision, timestamps and a validated payload. The API accepts clinical commands, not arbitrary JSON resource writes. Reference checks require an open encounter belonging to the same patient. Each patient has at most one open encounter in this release. The complete command and its version/audit inserts commit or roll back together. Reads append authorization decisions before returning data.
+Every entity has tenant, patient ID, kind, revision, timestamps and a validated payload. The API accepts clinical commands, not arbitrary JSON resource writes. Reference checks require an open encounter belonging to the same patient. Each patient has at most one open encounter in this release.
+
+For SQL-authoritative kinds, the complete command and its version/audit inserts commit or roll back together. For canonical openEHR observations, a recoverable write protocol validates against the active model, commits one idempotent composition, and then atomically records its SQL mirror, link, completed operation and audit event. SQL stores the request hash and identifiers but not a second operation payload. Reads fail closed when canonical content is unavailable rather than presenting a stale mirror as current.
 
 Draft notes can be revised with an expected version. Signing persists actor and time. Database triggers reject all subsequent updates to signed notes. An amendment is a new draft with a reference and reason; the original remains unchanged. A finished encounter rejects new ordinary notes; amendments remain possible. Corrections to observations, diagnoses and allergies retain previous versions as `entered-in-error`. Patient/proxy views omit proposals and unsigned note versions.
 

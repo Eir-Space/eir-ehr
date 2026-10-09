@@ -34,9 +34,9 @@ export default {
     ctx.provide('fhirIps', {
       async document(actor, patientId) {
         await access.permit(actor, 'chart.export', patientId);
+        const entities = await clinical.chart(actor, patientId);
         return await store.transaction(async () => {
           await access.permit(actor, 'chart.export', patientId);
-          const entities = await clinical.chart(actor, patientId);
           const patient = entities.find((e) => e.kind === 'patient');
           assert(patient, 404, 'Patient not found');
           await store.audit(actor, 'fhir.ips', patientId);

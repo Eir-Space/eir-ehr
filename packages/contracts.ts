@@ -238,8 +238,8 @@ export interface Projection {
   reconcile(): Promise<ReconcileReport[]>;
 }
 export type QueryCoverage = {
-  ledger: number; // records in the legal ledger that match the question
-  served: number; // of those, returned from the content store and verified against the ledger
+  ledger: number; // Eir-linked records that match the question; retained name for API compatibility
+  served: number; // projected rows verified against SQL, or canonical rows resolved from their source
   notProjected: number;
   unmapped: number;
   stale: number;
@@ -259,7 +259,7 @@ type Answered = {
 export type VitalsAnswer = Answered & {
   code: string;
   points: {
-    ref: string; // `${entityId}@${version}`, the same reference form AI evidence uses
+    ref: string; // Eir entity identity and mirror version; canonical version is carried by chart data
     entityId: string;
     version: number;
     value: number;
@@ -378,6 +378,8 @@ export interface Services {
   careTeam: CareTeam;
   terminology: Terminology;
   store: Store;
+  clinicalModels: import('./clinical-models.ts').ClinicalModelRegistry;
+  clinicalRepository: import('./clinical-repository.ts').ClinicalRepository;
   country: Country;
   access: Access;
   clinical: Clinical;

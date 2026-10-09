@@ -20,6 +20,23 @@ Open <http://127.0.0.1:4180>. Enter the temporary clinician session printed in t
 
 Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.data/ehr.sqlite`. The server binds only to loopback. `PORT=4181` selects another port. `EIR_CONFIG=/absolute/path/to/profile.json` selects a plugin composition. Local identity is a development plugin, not SITHS.
 
+### Template-first openEHR profile
+
+The optional profile makes openEHR authoritative for vital signs while SQL retains identity,
+authorization, workflow, audit and the remaining record kinds. Its active template drives the vital
+form; blood pressure is captured as one composition and unsupported measurements are rejected rather
+than converted lossily.
+
+```sh
+npm run openehr:up
+npm run openehr:setup
+npm run dev:openehr
+```
+
+See [ADR-002](docs/ADR-002-TEMPLATE-FIRST-CLINICAL-RECORD.md) for the write protocol, authority matrix,
+failure handling and exact migration boundary. The bundled OPTs are test inputs, not approved Swedish
+production models.
+
 ## Working Modules
 
 [Eir Samverkan](docs/SAMVERKAN.md) adds shared unit inboxes, consented cases, recipient acknowledgements, admission/discharge transitions, structured SIP, attachments/PDFs and configurable payment estimates. Directory, case workflow, SIP, documents, payment and notifications are separate providers. The demo offers hospital, municipality and primary-care assignments; this is not yet a federated regional service or a complete SAMSA replacement.
@@ -67,6 +84,7 @@ npm run backup -- .data/ehr.sqlite /secure/path/ehr-backup.sqlite
 ## Design And Delivery
 
 - [Architecture and decisions](docs/ARCHITECTURE.md)
+- [Template-first openEHR authority decision](docs/ADR-002-TEMPLATE-FIRST-CLINICAL-RECORD.md)
 - [Sweden-first delivery plan](docs/PLAN.md)
 - [Plugin authoring and model replacement](docs/PLUGINS.md)
 - [Declarative plugins, model router and openEHR fit](docs/PLUGIN-ARCHITECTURE.md)

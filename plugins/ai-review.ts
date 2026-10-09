@@ -28,8 +28,9 @@ export function evidenceFor(chart: Entity[], encounterId: string) {
     .map(evidenceItem);
 }
 export function evidenceItem(e: Entity) {
+  const canonicalVersion = e.data._canonical?.version;
   return {
-    ref: `${e.id}@${e.version}`,
+    ref: `${e.id}@${e.version}${Number.isInteger(canonicalVersion) ? `#canonical-${canonicalVersion}` : ''}`,
     text:
       e.kind === 'medication'
         ? `Dokumenterad läkemedelsanvändning: ${e.data.name}. Status: ${e.data.status}. Dosering: ${e.data.dosageText ?? 'okänd'}. Källa: ${e.data.source} (${e.data.sourceDetail}). Inte ett recept eller expedieringsbevis.`
@@ -40,7 +41,9 @@ export function evidenceItem(e: Entity) {
             : e.kind === 'note'
               ? String(e.data.text)
               : e.kind === 'observation'
-                ? `${e.data.display}: ${e.data.value} ${e.data.unit} (${e.data.effectiveAt})`
+                ? e.data.code === '85354-9'
+                  ? `${e.data.display}: ${e.data.components.map((item: any) => item.value).join('/')} ${e.data.unit} (${e.data.effectiveAt})`
+                  : `${e.data.display}: ${e.data.value} ${e.data.unit} (${e.data.effectiveAt})`
                 : e.kind === 'condition'
                   ? `${e.data.code.display} (${e.data.code.system}|${e.data.code.code})`
                   : e.kind === 'allergy'
@@ -60,10 +63,8 @@ const outputSchema = z
   })
   .strict();
 // Optional longitudinal context: earlier readings from other encounters, selected by the verified
-// clinical query service. Selection comes from the content store; the evidence text always comes
-// from the ledger record, and each item is pinned: it stays valid while its ledger record is
-// unchanged and not corrected. Nothing here is recomputed from the content store later, so
-// acceptance stays a ledger-only check.
+// clinical query service. Evidence comes from the authority-resolved chart and is re-resolved before
+// storage and acceptance. A canonical repository revision changes both the reference and evidence.
 const reviewOptions = z
   .object({
     history: z
@@ -125,13 +126,12 @@ export default {
       }
       return { candidates, summary };
     };
-    // Ledger-only: pinned items must still be the same, uncorrected records with the same text.
-    const historyCurrent = async (tenant: string, items: { ref: string; text: string }[]) => {
+    const historyCurrent = (chart: Entity[], items: { ref: string; text: string }[]) => {
       for (const item of items) {
-        const entity = await store.get(tenant, item.ref.split('@')[0]);
+        const entity = chart.find((row) => row.id === item.ref.split('@')[0]);
         if (
           !entity ||
-          `${entity.id}@${entity.version}` !== item.ref ||
+          evidenceItem(entity).ref !== item.ref ||
           entity.data.status === 'entered-in-error' ||
           evidenceItem(entity).text !== item.text
         )
@@ -147,6 +147,7 @@ export default {
       async propose(actor, patientId, encounterId) {
         await access.permit(actor, 'ai.use', patientId);
         const gathered = await gatherHistory(actor, patientId);
+        const initialChart = await clinical.chart(actor, patientId);
         const { evidence, historyRefs } = await store.transaction(async () => {
           await access.permit(actor, 'ai.use', patientId);
           const encounter = await store.get(actor.tenant, encounterId);
@@ -157,12 +158,12 @@ export default {
             409,
             'Open encounter required',
           );
-          const base = evidenceFor(await clinical.chart(actor, patientId), encounterId);
+          const base = evidenceFor(initialChart, encounterId);
           const seen = new Set(base.map((e) => e.ref));
           const perCode = new Map<string, number>();
           const pinned: { ref: string; text: string }[] = [];
           for (const c of gathered?.candidates ?? []) {
-            const entity = await store.get(actor.tenant, c.entityId);
+            const entity = initialChart.find((row) => row.id === c.entityId);
             if (
               !entity ||
               entity.kind !== 'observation' ||
@@ -197,6 +198,7 @@ export default {
           'AI returned an invalid source reference or quotation',
         );
         await access.permit(actor, 'ai.use', patientId);
+        const currentChart = await clinical.chart(actor, patientId);
         return await store.transaction(async () => {
           await access.permit(actor, 'ai.use', patientId);
           const encounter = await store.get(actor.tenant, encounterId);
@@ -207,11 +209,11 @@ export default {
             409,
             'Open encounter required',
           );
-          const current = evidenceFor(await clinical.chart(actor, patientId), encounterId);
+          const current = evidenceFor(currentChart, encounterId);
           const parts = split(evidence, historyRefs);
           assert(
             JSON.stringify(current) === JSON.stringify(parts.base) &&
-              (await historyCurrent(actor.tenant, parts.history)),
+              historyCurrent(currentChart, parts.history),
             409,
             'Clinical context changed; regenerate the proposal',
           );
@@ -242,6 +244,8 @@ export default {
         await access.permit(actor, 'ai.use', proposal.patientId);
         if (decision === 'accept') await access.permit(actor, 'record.write', proposal.patientId);
         assert(['accept', 'reject'].includes(decision), 422, 'Invalid review decision');
+        const currentChart =
+          decision === 'accept' ? await clinical.chart(actor, proposal.patientId) : undefined;
         return await store.transaction(async () => {
           const proposal = await store.get(actor.tenant, id);
           assert(proposal?.kind === 'proposal', 404, 'Proposal not found');
@@ -256,14 +260,11 @@ export default {
           if (decision === 'accept') {
             const encounter = await store.get(actor.tenant, proposal.data.encounterId);
             assert(encounter?.data.status === 'in-progress', 409, 'Encounter closed');
-            const current = evidenceFor(
-              await store.list(actor.tenant, proposal.patientId),
-              proposal.data.encounterId,
-            );
+            const current = evidenceFor(currentChart!, proposal.data.encounterId);
             const parts = split(proposal.data.evidence, proposal.data.historyRefs);
             assert(
               JSON.stringify(current) === JSON.stringify(parts.base) &&
-                (await historyCurrent(actor.tenant, parts.history)),
+                historyCurrent(currentChart!, parts.history),
               409,
               'Clinical context changed; regenerate the proposal',
             );

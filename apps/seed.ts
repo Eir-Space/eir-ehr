@@ -164,19 +164,46 @@ async function seedRecords(runtime: Runtime, actor: Actor) {
           ],
         });
     }
-    for (const [i, code] of ['8867-4', '8310-5', '8480-6', '8462-4', '29463-7'].entries()) {
-      // Earlier readings are entered retrospectively; audit timestamps remain real.
-      for (const [value, offset] of [
-        [scenario.previous[i], -28],
-        [scenario.current[i], 0],
-      ]) {
+    if (runtime.has('clinicalModels')) {
+      for (const [values, offset] of [
+        [scenario.previous, -28],
+        [scenario.current, 0],
+      ] as const) {
+        for (const [index, code] of ['8867-4', '8310-5'].entries())
+          await clinical.create(actor, patient.id, 'observation', {
+            encounterId: encounter.id,
+            code,
+            value: values[index],
+            unit: vitals[code].unit,
+            effectiveAt: days(offset),
+            clientId: randomUUID(),
+          });
         await clinical.create(actor, patient.id, 'observation', {
           encounterId: encounter.id,
-          code,
-          value,
-          unit: vitals[code].unit,
+          code: '85354-9',
+          systolic: values[2],
+          diastolic: values[3],
+          unit: 'mm[Hg]',
           effectiveAt: days(offset),
+          clientId: randomUUID(),
         });
+      }
+    } else {
+      for (const [i, code] of ['8867-4', '8310-5', '8480-6', '8462-4', '29463-7'].entries()) {
+        // Earlier readings are entered retrospectively; audit timestamps remain real.
+        for (const [value, offset] of [
+          [scenario.previous[i], -28],
+          [scenario.current[i], 0],
+        ]) {
+          await clinical.create(actor, patient.id, 'observation', {
+            encounterId: encounter.id,
+            code,
+            value,
+            unit: vitals[code].unit,
+            effectiveAt: days(offset),
+            clientId: randomUUID(),
+          });
+        }
       }
     }
     await clinical.create(actor, patient.id, 'note', {

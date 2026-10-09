@@ -1,6 +1,6 @@
 # Plugin Architecture: everything swappable
 
-Status: slices 1 to 7 implemented (declarative profiles, model router, content seam with an openEHR provider, ledger-to-content projection, verified read path, AI evidence from verified history, clinical evaluation with a model gate), later slices proposed. Reference: [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (seams, layered profiles, patch rows, `--dump-config`). Eir keeps its own small typed runtime; it does not adopt Cordis.
+Status: slices 1 to 7 plus the first template-first clinical authority slice are implemented (declarative profiles, model router, content seam, projection, verified reads, AI evidence, model gate and canonical openEHR vital signs). Later clinical kinds remain proposed. Reference: [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (seams, layered profiles, patch rows, `--dump-config`). Eir keeps its own small typed runtime; it does not adopt Cordis.
 
 ## Principle
 
@@ -73,10 +73,12 @@ npm run openehr:down
 
 `docker/compose.openehr.yml` uses disposable credentials, binds to loopback only, and publishes no database port. `npm run dev:local` registers both content stores.
 
-### Not done, and known limits
+### Current authority modes and known limits
 
-- **Not the system of record.** The app reads and writes through the SQL ledger. openEHR is fed by the projection below, so clinicians see no change and a content-store outage never blocks care. Reading clinical content _from_ openEHR in the app is not done.
-- **Unmappable data is refused, not stored lossily.** The vital signs template has no body weight, so weight observations fail with 422. Eir stores systolic and diastolic as separate records, while openEHR models one blood pressure observation, so the pairing is lost.
+- **Projection mode remains available.** `eir.local.profile.yaml` keeps SQL authoritative and feeds openEHR afterwards. It is useful for migration tests and for clinical kinds that have not moved.
+- **Template-first mode is implemented for vital signs.** `eir.openehr.profile.yaml` removes the projector for observations, loads the pinned model registry and routes observation commands directly to openEHR. Chart, history, typed query, deterioration, AI evidence and FHIR export resolve those records from the repository.
+- **Unmappable data is refused, not stored lossily.** The active vital-sign template has no body weight, so weight observations fail with 422. Systolic and diastolic pressure are captured together and stored in one composition.
+- **The migration is deliberately partial.** Notes, conditions, allergies, medications and encounter workflow are still SQL-authoritative. Their existing openEHR mappings prove adapter behavior; they are not yet model-led capture paths.
 - **Workflow state is not queryable.** Note and problem `status`, signing and encounter link live only in the envelope. Promoting them to archetyped paths needs a local template.
 - **Coded diagnosis is not template-enforced.** The template's problem name is plain text; EHRbase accepted and returned the coded value, but the template does not require a code.
 - **Lookup by id probes 64 version UIDs** because EHRbase AQL has no prefix match on `uid`. Results are cached per process; a record with more than 64 versions cannot be found cold.
@@ -85,15 +87,15 @@ npm run openehr:down
 - **Template licensing is unverified** (see `templates/openehr/README.md`).
 - `systemId` defaults to `local.ehrbase.org`; change it if the server is configured otherwise.
 
-### Decisions this evidence supports for ADR-001
+### Template-first authority
 
-openEHR works as a content provider behind a narrow seam, and AQL access to clinical content is real. The audit and transaction boundary is now resolved by the projection described next, so adoption no longer depends on changing the clinical write path.
+The implemented decision is [ADR-002](ADR-002-TEMPLATE-FIRST-CLINICAL-RECORD.md). SQL is not treated as a universal clinical source merely because it remains the operational database. Authority is selected per record kind, capture is derived from the active clinical model, and direct repository writes use an idempotent, recoverable operation protocol. Deterministic mappings are code; an LLM is never trusted to invent a conversion.
 
 ## Audit and transaction boundary: the projection (slice 4)
 
 **Problem.** `clinical` commits a record, its version snapshot and its hash-chained audit row in one SQL transaction, and transaction callbacks must be database-only and replayable. EHRbase cannot join that transaction, so routing a write to it directly would break atomic audit.
 
-**Decision.** The SQL store stays the legal ledger. The content store is a derived, queryable representation fed afterwards by `plugins/projection.ts` (logic in `packages/projection.ts`). There is one writer path and then replication, not a dual write. A content-store outage never blocks or rolls back a clinical write.
+**Decision for projection profiles.** The SQL store stays authoritative. The content store is a derived, queryable representation fed afterwards by `plugins/projection.ts` (logic in `packages/projection.ts`). There is one writer path and then replication, not a dual write. A content-store outage never blocks or rolls back a clinical write. This remains the legacy/migration mode and is not the observation authority model in `eir.openehr.profile.yaml`.
 
 **How it works.**
 
@@ -145,31 +147,31 @@ Verified end to end in `tests/projection-openehr.test.ts`: a real clinical workf
 
 - **Callers pick a query, never write one.** The openEHR provider builds AQL only from a fixed table of archetype paths (taken from the template's web-template metadata) and bound parameters. Input is validated first (LOINC-shaped code, ISO times, bounded limit).
 - **Authorization on the ledger, then audit.** Clinicians only. The care-relationship check runs in a ledger transaction before anything is read from the content store, and a refused caller causes no content-store read. A successful query is a hash-chained audit row (`query.vitals`, `query.problems`).
-- **Every row is verified against the legal record.** A row is served only if its link is current and its values agree with the ledger record. Records corrected as entered-in-error are not part of the question.
+- **Authority is respected.** A projected row is served only when its link, version and values agree with the SQL-authoritative record. A canonical row is first resolved from the repository; SQL contributes its Eir identity and workflow link, not a competing clinical value. Records corrected as entered-in-error are not part of the question.
 - **Every answer says how complete it is.** `coverage` counts ledger records as `served`, `notProjected`, `unmapped`, `stale` (copy behind the ledger), `diverged` (copy disagrees, or was changed outside Eir) or `missing`. `complete` is true only when every matching ledger record was served. `foreign` counts content-store rows no ledger record explains, which are never served. `truncated` flags the 500-row cap.
 - **Provenance per row.** `ref` is `entityId@version`, the same reference form AI evidence already uses, so a cited point can be traced to a ledger version.
 - **Unmappable is an answer, not an error.** Asking for body weight returns no points and `unmapped: 1`.
 
-Verified in `tests/clinical-query.test.ts` (memory target, including the real HTTP route) and `tests/clinical-query-openehr.test.ts` (EHRbase): series come back through AQL, an edit made directly in the openEHR system is withheld and counted as `diverged`, and reconcile reports it as `ahead`. Run against the local demo data, the pulse is served from openEHR with full coverage.
+Verified in `tests/clinical-query.test.ts` (memory target, including the real HTTP route), `tests/clinical-query-openehr.test.ts` (EHRbase) and `tests/template-first-clinical.test.ts`. In projection mode, an edit made behind SQL is withheld and counted as `diverged`. In canonical mode, the same repository-side revision is returned as current while the stale SQL mirror is ignored.
 
 **Limits.**
 
 - **AI evidence** uses this service for earlier vital readings only; see the next section.
-- **FHIR export still comes from the ledger.** Generating it from openEHR is not done.
+- **FHIR is still a projection.** The exporter consumes the authorized clinical chart. In canonical mode that chart has already resolved openEHR observations; FHIR is never a second clinical authority.
 - **Two query kinds only** (vital series, problems). Notes are not queryable, and `status` filtering uses the ledger because status is not an archetyped field.
 - **Clinicians only.** Patient and proxy access to queries needs a release policy.
 - **Fetch then filter.** The provider returns up to 500 rows per patient and code, and the service filters by time window. Population-scale queries need a different surface.
-- **Freshness is the projection interval.** Records not yet projected are counted as `notProjected`, so the answer is honest but may be partial.
+- **Freshness depends on authority mode.** Projection mode has interval lag and reports `notProjected`. Canonical mode reads the repository directly and fails closed if it is unavailable.
 - **A vacuous answer is `complete`.** A patient with no matching ledger record gets `complete: true` with zero points; read `coverage.ledger`.
 
 ## AI evidence from verified history (slice 6)
 
 `ai-review` can add earlier readings from other encounters to a proposal's evidence, so a draft can cite a trend instead of only today's values. It is off unless a profile sets `history` on the `ai-review` row (`config: { history: { perCode: 3 } }`, optional `codes` and `lookbackDays`), and it needs the `clinicalQuery` service.
 
-**Rules, chosen to fit the existing stale-context check.** That check recomputes evidence from the ledger at accept time inside a database-only transaction, so it cannot call the content store.
+**Rules, chosen to fit the stale-context check.** Canonical chart resolution happens before the SQL transaction. Permission, encounter and proposal mutations are then rechecked transactionally, and acceptance compares the proposal with a newly resolved chart.
 
-1. **Selection is verified, content is ledger.** The content store decides which earlier readings are eligible, through the query service, so only rows verified against the ledger qualify. The evidence text is then built from the ledger record in the same format as encounter evidence.
-2. **History items are pinned.** A pinned item stays valid while its ledger record is unchanged, uncorrected and gives the same text. Correcting an earlier reading after the proposal makes accept fail with 409. A reading made later in another encounter does not invalidate it.
+1. **Selection and content follow authority.** The content store decides which earlier readings are eligible through the query service. Projected records are verified against SQL; canonical records are resolved from the repository. Evidence text is built from the same authorized chart the clinician sees.
+2. **History items are pinned.** A pinned item stays valid while its Eir identity/version is unchanged, it is uncorrected and its resolved evidence text is identical. Correcting or revising canonical content after the proposal makes accept fail with 409. A reading made later in another encounter does not invalidate it.
 3. **Encounter evidence is unchanged.** Any change to the open encounter's evidence still invalidates the proposal exactly as before. Existing proposals and profiles behave identically.
 4. **Best effort.** History is gathered outside any transaction after authorization. A content-store outage never blocks a proposal; it is recorded.
 5. **The proposal says what it knew.** `historyRefs` lists the pinned items, and `historyContext` records, per vital code, whether the query worked and how many records were served against how many exist, plus `complete`. Counts only, no clinical text.
@@ -184,7 +186,7 @@ Verified in `tests/clinical-query.test.ts` (memory target, including the real HT
 **Limits.**
 
 - Vital signs only. Problems are already in the ledger evidence, and notes are not queryable.
-- Pinned items check the ledger, not the content store, at accept time. That is intended, but it means a content-store divergence that appears after proposal time is not noticed there.
+- Canonical history requires a second repository read at acceptance. An outage blocks acceptance rather than accepting evidence that cannot be revalidated.
 - The query service is clinician-only, so a non-clinician with `ai.use` gets no history (recorded as unavailable).
 - Each proposal makes one query per configured code, so latency grows with the number of codes.
 
@@ -264,35 +266,35 @@ With `requireEvidenceForLanguageModels: true` this profile is refused until `plu
 
 The aim is an open system that works in any health system, so no standard is the core. Each standard is a **provider of a seam**, and the core owns only the contracts and the safety logic around them.
 
-| Seam          | Contract owns                                               | Providers (examples)                                                                                   |
-| ------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Content store | Versioned clinical facts with identity, time, author, audit | Current JSON entity store; openEHR (for example EHRbase) behind an adapter; a FHIR-server-backed store |
-| Content model | Typed, coded definition of what a fact is                   | Zod schemas today; openEHR archetypes and templates; FHIR profiles                                     |
-| Query         | Bounded, authorized read of facts                           | Fixed REST endpoints today; AQL where the content store is openEHR                                     |
-| Terminology   | Code validation and lookup                                  | ICD-10-SE today; SNOMED CT, LOINC, ATC, ICD-11 servers                                                 |
-| Exchange      | Export and import at the boundary                           | FHIR R4 projection today; IPS and EHDS formats; openEHR export                                         |
-| Identity      | Who is acting and under what assurance                      | Local, OIDC, national eIDs                                                                             |
-| Country pack  | Identifiers, locale, legal defaults                         | Sweden, EU-local                                                                                       |
+| Seam          | Contract owns                                           | Providers (examples)                                                                                   |
+| ------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Content store | Versioned clinical facts with identity, time and author | Current JSON entity store; openEHR (for example EHRbase) behind an adapter; a FHIR-server-backed store |
+| Content model | Typed, coded definition of what a fact is               | Zod schemas today; openEHR archetypes and templates; FHIR profiles                                     |
+| Query         | Bounded, authorized read of facts                       | Fixed REST endpoints today; AQL where the content store is openEHR                                     |
+| Terminology   | Code validation and lookup                              | ICD-10-SE today; SNOMED CT, LOINC, ATC, ICD-11 servers                                                 |
+| Exchange      | Export and import at the boundary                       | FHIR R4 projection today; IPS and EHDS formats; openEHR export                                         |
+| Identity      | Who is acting and under what assurance                  | Local, OIDC, national eIDs                                                                             |
+| Country pack  | Identifiers, locale, legal defaults                     | Sweden, EU-local                                                                                       |
 
 How openEHR fits, concretely:
 
 - **One source of truth per data type.** A deployment picks one content store per data type. There is no dual write. Moving a data type between stores is a migration, not a sync.
-- **The content store contract is Eir's, not openEHR's.** It exposes commands (`create`, `transition`, `history`) and authorized reads, with record integrity and audit guaranteed by the core. An openEHR adapter maps these onto compositions and contributions; the JSON store maps them onto entities. Neither leaks its model through the contract.
+- **The repository contract is Eir's, not openEHR's.** The clinical service exposes commands and authorized views. Its repository seam exposes versioned create, revise, get, list and history operations; the core owns authorization, workflow and Eir audit. The openEHR adapter maps repository operations onto compositions and contributions without leaking AQL into command handlers.
 - **Content models are data, selected by profile.** A profile names the content model for each record kind. Using an openEHR template for vitals while problems stay on the JSON schema is a profile choice, so adoption can be gradual.
 - **Contract tests make "swappable" true.** Each seam ships a provider conformance suite (wrong-tenant denial, expired grants, revisions, rollback, teardown, round-trip of every supported kind). A provider is accepted by passing it, not by claiming compatibility. This is the part that lets other countries and vendors plug in without trusting each other.
 - **Open licensing and no required service.** Core and reference providers stay Apache-2.0 with no mandatory paid or hosted component. A national deployment can replace any provider without a fork.
 
 Open questions, not decided here:
 
-- Which record kinds should move first. Vitals, problems and notes are the likely pilot per ADR-001.
-- Whether the content store contract should expose a general query capability or stay command-and-view, with AQL reachable only through a provider-specific extension.
-- Whether the openEHR adapter should run in-process or as a separate service, which depends on the isolation work in slice 4.
-- EHRbase license, maturity and operational fit are unverified.
+- Which reviewed Swedish templates should govern conditions, allergies, medications and clinical notes, and how each existing record is migrated without losing context.
+- Whether the openEHR adapter should run in-process or as a separate service for production isolation.
+- EHRbase operational fit and the separate licenses and governance of the chosen clinical models still require due diligence.
 
 ## Slice 8: FHIR R4 and the International Patient Summary
 
 `fhir-r4` (`plugins/fhir-r4.ts`) exposes the record as FHIR R4. `fhir-ips` builds an IPS 2.0.0 document
-(`packages/ips.ts`) from verified clinical queries, so only rows that match the ledger are included. Empty
+(`packages/ips.ts`) from authority-aware clinical queries, so projected rows must match SQL and canonical rows
+must resolve from their repository. Empty
 sections are marked `unavailable` and never presented as "no known allergies". Diagnoses are mapped to
 ICD-10-SE through a reversible code-system map (`packages/code-systems.ts`), and the envelope extension is
 defined in `fhir/StructureDefinition-eir-envelope.json`. `content-fhir` stores records in a HAPI server

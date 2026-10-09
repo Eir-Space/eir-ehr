@@ -9,6 +9,7 @@ const actor: Actor = { id: 'doctor-a', tenant: 'clinic-a', role: 'clinician' };
 const when = '2026-10-06T09:55:00+02:00';
 const pulse = {
   code: '8867-4',
+  display: 'Puls',
   value: 72,
   unit: '/min',
   effectiveAt: when,
@@ -23,6 +24,12 @@ test('observations map to archetype paths with openEHR units and round-trip', ()
   assert.equal(flat[`${p}/heart_rate|magnitude`], 72);
   assert.equal(flat[`${p}/heart_rate|unit`], '/min');
   assert.equal(flat[`${p}/time`], when);
+  const envelope = JSON.parse(
+    String(flat['vital_signs_observations/_feeder_audit/original_content|value']),
+  );
+  assert.equal(envelope.eir, 2);
+  assert.equal(envelope.workflow.author, 'doctor-a');
+  assert.equal(JSON.stringify(envelope).includes('72'), false);
   assert.deepEqual(fromFlat('observation', flat), pulse);
   const temp = toFlat(
     'observation',
@@ -44,6 +51,26 @@ test('observations map to archetype paths with openEHR units and round-trip', ()
     spo2['vital_signs_observations/vital_signs/indirect_oximetry/spo2|denominator'],
     100,
   );
+});
+
+test('blood pressure remains one composition with two archetyped values', () => {
+  const pressure = {
+    code: '85354-9',
+    display: 'Blodtryck',
+    unit: 'mm[Hg]',
+    effectiveAt: when,
+    author: 'doctor-a',
+    status: 'final',
+    components: [
+      { code: '8480-6', value: 138, unit: 'mm[Hg]', display: 'Systoliskt blodtryck' },
+      { code: '8462-4', value: 84, unit: 'mm[Hg]', display: 'Diastoliskt blodtryck' },
+    ],
+  };
+  const flat = toFlat('observation', pressure, actor, when);
+  const root = 'vital_signs_observations/vital_signs/blood_pressure';
+  assert.equal(flat[`${root}/systolic|magnitude`], 138);
+  assert.equal(flat[`${root}/diastolic|magnitude`], 84);
+  assert.deepEqual(fromFlat('observation', flat), pressure);
 });
 
 test('anything the template cannot hold is refused, never stored lossily', () => {
@@ -92,10 +119,10 @@ test('archetyped paths are canonical: an edit made elsewhere wins over the envel
   assert.equal(read.value, 99);
   assert.equal(read.effectiveAt, '2026-10-06T08:00:00+00:00');
   assert.equal(read.author, 'doctor-a');
-  // The same instant in another notation keeps the notation Eir wrote.
+  // The openEHR value is canonical, including its timestamp representation.
   flat[`${p}/time`] = '2026-10-06T07:55:00Z';
   flat[`${p}/heart_rate|magnitude`] = 72;
-  assert.equal(fromFlat('observation', flat).effectiveAt, when);
+  assert.equal(fromFlat('observation', flat).effectiveAt, '2026-10-06T07:55:00Z');
 });
 
 test('a composition from another system, or with a damaged envelope, still reads', () => {

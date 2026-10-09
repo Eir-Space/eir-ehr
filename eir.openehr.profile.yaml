@@ -1,0 +1,15 @@
+profile: sweden-primary-care-openehr
+extends: [./eir.local.profile.yaml]
+patches:
+  # openEHR is authoritative for newly captured vital signs in this profile. The projector remains
+  # available for legacy imports, but must not write a canonical record type.
+  - remove: projection
+  - insert: { id: clinical-models, module: ./plugins/clinical-model-openehr.ts }
+    before: clinical
+  - insert:
+      id: clinical-repository
+      module: ./plugins/clinical-repository.ts
+      config: { source: openehr, kinds: [observation] }
+    before: clinical
+  - configure: clinical
+    config: { canonicalKinds: [observation] }

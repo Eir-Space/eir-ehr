@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Fault, type Actor, type Entity } from './contracts.ts';
 import type { ContentStore, ProblemRow, VitalPoint } from './content.ts';
+import { openEhrVitalBindings } from './clinical-models.ts';
 
 // openEHR content provider. Clinical facts live in archetyped compositions in an openEHR
 // server (tested against EHRbase). One EHR per (tenant, patient) via the EHR subject. Eir's
@@ -26,68 +27,36 @@ const kindOfTemplate = Object.fromEntries(
 const FLAT = 'application/openehr.wt.flat.schema+json';
 type Flat = Record<string, unknown>;
 
-// Eir vital-sign code (LOINC) -> where it lives in the vital signs template.
-// SpO2 is a proportion; the others are quantities. Body weight has no slot in this template.
-type Vital = { obs: string; field: string; eirUnit: string; unit: string; proportion?: true };
-export const vitalMap: Record<string, Vital> = {
-  '8867-4': { obs: 'pulse_heart_beat', field: 'heart_rate', eirUnit: '/min', unit: '/min' },
-  '9279-1': { obs: 'respirations', field: 'rate', eirUnit: '/min', unit: '/min' },
-  '8310-5': { obs: 'body_temperature', field: 'temperature', eirUnit: 'Cel', unit: '°C' },
-  '8480-6': { obs: 'blood_pressure', field: 'systolic', eirUnit: 'mm[Hg]', unit: 'mm[Hg]' },
-  '8462-4': { obs: 'blood_pressure', field: 'diastolic', eirUnit: 'mm[Hg]', unit: 'mm[Hg]' },
-  '59408-5': { obs: 'indirect_oximetry', field: 'spo2', eirUnit: '%', unit: '%', proportion: true },
+// The adapter and capture layer share one pinned binding table. The model registry verifies the
+// corresponding OPT digest before the application starts.
+type VitalBinding = {
+  label: string;
+  eirUnit: string;
+  unit: string;
+  min: number;
+  max: number;
+  obs: string;
+  field: string;
+  proportion?: true;
+  aql: {
+    archetype: string;
+    data: string;
+    events: string;
+    items: string;
+    item: string;
+    numerator?: true;
+  };
 };
+export const vitalMap: Record<string, VitalBinding> = openEhrVitalBindings;
 
 // Where each vital lives for AQL, taken from the template's web-template aqlPath metadata.
 // Queries are assembled only from this table and bound parameters, never from caller text.
-const vitalAql: Record<
+const vitalAql = Object.fromEntries(
+  Object.entries(openEhrVitalBindings).map(([code, binding]) => [code, binding.aql]),
+) as Record<
   string,
   { archetype: string; data: string; events: string; items: string; item: string; numerator?: true }
-> = {
-  '8867-4': {
-    archetype: 'pulse',
-    data: 'at0002',
-    events: 'at0003',
-    items: 'at0001',
-    item: 'at0004',
-  },
-  '9279-1': {
-    archetype: 'respiration',
-    data: 'at0001',
-    events: 'at0002',
-    items: 'at0003',
-    item: 'at0004',
-  },
-  '8310-5': {
-    archetype: 'body_temperature',
-    data: 'at0002',
-    events: 'at0003',
-    items: 'at0001',
-    item: 'at0004',
-  },
-  '8480-6': {
-    archetype: 'blood_pressure',
-    data: 'at0001',
-    events: 'at0006',
-    items: 'at0003',
-    item: 'at0004',
-  },
-  '8462-4': {
-    archetype: 'blood_pressure',
-    data: 'at0001',
-    events: 'at0006',
-    items: 'at0003',
-    item: 'at0005',
-  },
-  '59408-5': {
-    archetype: 'indirect_oximetry',
-    data: 'at0001',
-    events: 'at0002',
-    items: 'at0003',
-    item: 'at0006',
-    numerator: true,
-  },
-};
+>;
 
 export const openEhrOptions = z
   .object({
@@ -113,6 +82,24 @@ const sameInstant = (a: unknown, b: unknown) =>
   typeof a === 'string' && typeof b === 'string' && Date.parse(a) === Date.parse(b);
 const near = (a: unknown, b: unknown) =>
   typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) < 1e-9;
+const workflowEnvelope = (kind: Kind, data: Record<string, any>, origin?: string) => {
+  const workflow: Record<string, unknown> = {};
+  for (const key of [
+    'encounterId',
+    'status',
+    'author',
+    'clientId',
+    'signedBy',
+    'signedAt',
+    'signedUnder',
+    'amends',
+    'proposalId',
+    'correctionReason',
+  ])
+    if (data[key] !== undefined) workflow[key] = data[key];
+  if (kind === 'condition' && data.code?.version) workflow.terminologyVersion = data.code.version;
+  return { eir: 2, kind, workflow, ...(origin ? { origin } : {}) };
+};
 
 // ---- mapping (pure) --------------------------------------------------------------------------
 
@@ -144,35 +131,38 @@ export function toFlat(
     [`${root}/context/setting|terminology`]: 'openehr',
     [`${root}/_feeder_audit/originating_system_audit|system_id`]: 'eir-ehr',
     [`${root}/_feeder_audit/original_content|formalism`]: 'application/json',
-    [`${root}/_feeder_audit/original_content|value`]: JSON.stringify({
-      eir: 1,
-      kind,
-      data,
-      ...(origin ? { origin } : {}),
-    }),
+    // Clinical values live only on archetyped paths. This envelope carries the workflow and
+    // provenance fields that the imported templates do not model.
+    [`${root}/_feeder_audit/original_content|value`]: JSON.stringify(
+      workflowEnvelope(k, data, origin),
+    ),
   };
   if (k === 'observation') {
-    const def = vitalMap[String(data.code)];
-    if (!def)
-      throw fault(
-        422,
-        `Observation ${String(data.code)} has no mapping in ${templates.observation}`,
-      );
-    if (data.unit !== def.eirUnit || typeof data.value !== 'number')
-      throw fault(422, 'Invalid observation unit or value');
     if (Number.isNaN(Date.parse(String(data.effectiveAt))))
       throw fault(422, 'Invalid observation time');
-    const p = `${root}/vital_signs/${def.obs}`;
-    flat[`${p}/time`] = data.effectiveAt;
+    const write = (code: string, value: unknown, unit: unknown) => {
+      const def = vitalMap[code as keyof typeof vitalMap];
+      if (!def) throw fault(422, `Observation ${code} has no mapping in ${templates.observation}`);
+      if (unit !== def.eirUnit || typeof value !== 'number')
+        throw fault(422, 'Invalid observation unit or value');
+      const p = `${root}/vital_signs/${def.obs}`;
+      flat[`${p}/time`] = data.effectiveAt;
+      if ('proportion' in def && def.proportion) {
+        flat[`${p}/${def.field}|numerator`] = value;
+        flat[`${p}/${def.field}|denominator`] = 100;
+        flat[`${p}/${def.field}|type`] = 2;
+      } else {
+        flat[`${p}/${def.field}|magnitude`] = value;
+        flat[`${p}/${def.field}|unit`] = def.unit;
+      }
+    };
+    if (data.code === '85354-9') {
+      if (!Array.isArray(data.components) || data.components.length !== 2)
+        throw fault(422, 'Blood pressure requires systolic and diastolic components');
+      for (const component of data.components)
+        write(String(component.code), component.value, component.unit);
+    } else write(String(data.code), data.value, data.unit);
     flat[`${root}/context/start_time`] = data.effectiveAt;
-    if (def.proportion) {
-      flat[`${p}/${def.field}|numerator`] = data.value;
-      flat[`${p}/${def.field}|denominator`] = 100;
-      flat[`${p}/${def.field}|type`] = 2;
-    } else {
-      flat[`${p}/${def.field}|magnitude`] = data.value;
-      flat[`${p}/${def.field}|unit`] = def.unit;
-    }
   } else if (k === 'condition') {
     const c = data.code;
     if (
@@ -217,26 +207,60 @@ export function fromFlat(kind: Kind, flat: Flat): Record<string, any> {
   if (typeof raw === 'string') {
     try {
       const parsed = JSON.parse(raw);
-      if (parsed?.kind === kind && parsed.data && typeof parsed.data === 'object')
-        envelope = parsed.data;
+      if (parsed?.kind === kind) {
+        if (parsed.eir === 2 && parsed.workflow && typeof parsed.workflow === 'object')
+          envelope = parsed.workflow;
+        else if (parsed.data && typeof parsed.data === 'object') envelope = parsed.data;
+      }
     } catch {
       /* A foreign or damaged envelope is ignored; the archetyped paths still describe the fact. */
     }
   }
   const data: Record<string, any> = { ...envelope };
   if (kind === 'observation') {
+    const values = new Map<
+      string,
+      { code: string; value: number; unit: string; display: string; time?: string }
+    >();
     for (const [code, def] of Object.entries(vitalMap)) {
       const p = `${root}/vital_signs/${def.obs}/${def.field}`;
-      const value = def.proportion ? flat[`${p}|numerator`] : flat[`${p}|magnitude`];
+      const value =
+        'proportion' in def && def.proportion ? flat[`${p}|numerator`] : flat[`${p}|magnitude`];
       if (typeof value !== 'number') continue;
-      data.code = code;
-      data.unit = def.eirUnit;
-      if (!near(value, envelope.value)) data.value = value;
-      else data.value = envelope.value;
       const time = flat[`${root}/vital_signs/${def.obs}/time`];
-      if (typeof time === 'string' && !sameInstant(time, envelope.effectiveAt))
-        data.effectiveAt = time;
-      break;
+      values.set(code, {
+        code,
+        value,
+        unit: def.eirUnit,
+        display: def.label,
+        ...(typeof time === 'string' ? { time } : {}),
+      });
+    }
+    const systolic = values.get('8480-6');
+    const diastolic = values.get('8462-4');
+    if (systolic && diastolic) {
+      data.code = '85354-9';
+      data.display = 'Blodtryck';
+      data.unit = 'mm[Hg]';
+      data.components = [systolic, diastolic].map(({ code, value, unit, display }) => ({
+        code,
+        value,
+        unit,
+        display,
+      }));
+      delete data.value;
+      const time = systolic.time ?? diastolic.time;
+      if (time && !sameInstant(time, envelope.effectiveAt)) data.effectiveAt = time;
+    } else {
+      const point = values.values().next().value;
+      if (point) {
+        data.code = point.code;
+        data.unit = point.unit;
+        data.display = point.display;
+        data.value = near(point.value, envelope.value) ? envelope.value : point.value;
+        if (point.time && !sameInstant(point.time, envelope.effectiveAt))
+          data.effectiveAt = point.time;
+      }
     }
   } else if (kind === 'condition') {
     const p = `${root}/problems_and_issues/problem_diagnosis:0`;
@@ -249,6 +273,9 @@ export function fromFlat(kind: Kind, flat: Flat): Record<string, any> {
       if (typeof system === 'string') data.code.system = system;
       if (typeof code === 'string') data.code.code = code;
       data.code.display = display;
+      if (typeof envelope.terminologyVersion === 'string')
+        data.code.version = envelope.terminologyVersion;
+      delete data.terminologyVersion;
     }
     const onset = flat[`${p}/date_time_of_onset`];
     if (typeof onset === 'string') {

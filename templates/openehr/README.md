@@ -1,6 +1,6 @@
 # Bundled openEHR operational templates
 
-Used by the openEHR content provider (`plugins/content-openehr.ts`) and uploaded with `npm run openehr:setup`.
+Used by the openEHR content provider (`plugins/content-openehr.ts`) and uploaded with `npm run openehr:setup`. `eir.openehr.profile.yaml` currently activates the vital-sign template as the direct canonical model; the problem and note templates remain adapter/conformance inputs until those record kinds receive their own reviewed migrations.
 
 | File                                  | Used for                                                                  |
 | ------------------------------------- | ------------------------------------------------------------------------- |

@@ -1,0 +1,10 @@
+id: eir.clinical-repository
+version: 1.0.0
+apiVersion: 2
+title: Canonical clinical repository router
+provides: [clinicalRepository]
+requires: [clinicalModels]
+network: allowlist
+egressHosts: [127.0.0.1, localhost]
+dataClasses: [identified-clinical]
+isolation: in-process

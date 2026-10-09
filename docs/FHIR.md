@@ -10,7 +10,7 @@ Reviewed 2026-09-19 against `plugins/fhir-r4.ts` and the authenticated API. This
 | ----------------- | ------------------- | ------------------------------------------------------------------------ |
 | Patient           | Patient             | Name, date of birth and identifier; local IDs are tenant-scoped          |
 | Encounter         | Encounter           | Ambulatory encounter, subject, reason and period                         |
-| Vitals            | Observation         | Selected LOINC codes and quantity units represented with UCUM system     |
+| Vitals            | Observation         | Selected LOINC quantities; paired blood pressure uses two components     |
 | Diagnosis         | Condition           | ICD-10-SE coding and release metadata, clinical/error status             |
 | Allergy           | AllergyIntolerance  | Text substance/reaction, status and criticality                          |
 | Note              | DocumentReference   | Base64 UTF-8 text, author, encounter and amendment relationship          |
@@ -20,6 +20,8 @@ Reviewed 2026-09-19 against `plugins/fhir-r4.ts` and the authenticated API. This
 | Follow-up task    | Task                | Owner identifier, status, priority and date or exact deadline            |
 
 Superseded lab reports are retained in Eir history but omitted from the current export. Source-level flags and textual reference ranges are preserved; laboratory values currently use `valueString`, not a fully coded quantitative laboratory model. Visibility follows the authenticated actor: a clinician export may include draft notes and internal tasks permitted in their chart. A citizen/proxy export follows the more restrictive visibility path where that identity mode is configured. The clinic identity profile does not yet provide verified patient/proxy onboarding.
+
+FHIR remains an exchange projection, not clinical authority. With `eir.openehr.profile.yaml`, the exporter first resolves canonical vital signs from openEHR, so a repository-side correction is reflected in the Bundle even when the rebuildable SQL mirror is older.
 
 ## Not Implemented Or Not Proven
 

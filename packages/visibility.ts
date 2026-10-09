@@ -20,6 +20,7 @@ export function visibleRecord(actor: Actor, record: Entity) {
       'accessReview',
       'integrationConnection',
       'contentLink',
+      'clinicalWrite',
       'integrationOutbox',
       'integrationInbox',
       'followUpWorker',

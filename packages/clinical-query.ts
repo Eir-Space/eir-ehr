@@ -14,8 +14,8 @@ import { QUERY_CAP, type ContentStore, type ProblemRow, type VitalPoint } from '
 // analytics. What makes it safe to hand to an AI:
 // - Callers choose a query; they never send query text to the content store.
 // - Access is checked and audited on the ledger before anything is read.
-// - Every served row is joined to its ledger record and served only if the link is current and the
-//   values agree with the legal record. Anything else is counted, never silently dropped.
+// - Projected rows must agree with the local record. For canonical links, the content store is
+//   resolved first and the SQL row supplies workflow identity rather than clinical truth.
 // - Each answer reports its own coverage, so a consumer can tell a complete answer from a partial one.
 // - Each row carries a `ref` (`entityId@version`) that points at the ledger version it came from.
 export const clinicalQueryOptions = z
@@ -76,12 +76,55 @@ export function createClinicalQuery(deps: {
     };
   }
 
+  async function resolveCanonical(
+    tenant: string,
+    ledger: Entity[],
+    link: Awaited<ReturnType<typeof links>>,
+    source: ContentStore,
+  ) {
+    const unavailable = new Set<string>();
+    const entities = await Promise.all(
+      ledger.map(async (entity) => {
+        const target = link.byEntity.get(entity.id);
+        if (target?.authority !== 'canonical') return entity;
+        const current = await source.get(tenant, String(target.contentId));
+        if (
+          !current ||
+          current.tenant !== entity.tenant ||
+          current.patientId !== entity.patientId ||
+          current.kind !== entity.kind
+        ) {
+          unavailable.add(entity.id);
+          return entity;
+        }
+        return {
+          ...entity,
+          createdAt: current.createdAt,
+          updatedAt: current.updatedAt,
+          data: {
+            ...current.data,
+            ...(entity.data._canonical
+              ? {
+                  _canonical: {
+                    ...entity.data._canonical,
+                    version: current.version,
+                  },
+                }
+              : {}),
+          },
+        };
+      }),
+    );
+    return { entities, unavailable };
+  }
+
   // Shared join: classify each ledger record against the rows the content store returned.
   function join<R extends { id: string; version: number }>(
     ledger: Entity[],
     rows: R[],
     link: Awaited<ReturnType<typeof links>>,
     agrees: (entity: Entity, row: R) => boolean,
+    canonicalUnavailable = new Set<string>(),
   ) {
     const rowByContent = new Map(rows.map((r) => [r.id, r]));
     const coverage = empty();
@@ -93,7 +136,14 @@ export function createClinicalQuery(deps: {
       else if (l.status === 'unmapped') coverage.unmapped++;
       else {
         const row = rowByContent.get(String(l.contentId));
-        if (!row) coverage.missing++;
+        if (!row || canonicalUnavailable.has(entity.id)) coverage.missing++;
+        else if (l.authority === 'canonical') {
+          if (!agrees(entity, row)) coverage.diverged++;
+          else {
+            coverage.served++;
+            served.push({ entity, row });
+          }
+        }
         // Behind the ledger: not yet caught up. Ahead of it: changed outside Eir.
         else if (row.version > entity.version) coverage.diverged++;
         else if (l.syncedVersion !== entity.version || row.version !== entity.version)
@@ -134,9 +184,17 @@ export function createClinicalQuery(deps: {
         .vitalSeries(actor.tenant, patientId, q.code, QUERY_CAP)
         .catch((e) => (e instanceof Fault && e.status === 422 ? [] : Promise.reject(e)));
       const link = await links(actor.tenant, patientId);
-      const ledger = (await deps.store.list(actor.tenant, patientId, 'observation')).filter(
+      const resolved = await resolveCanonical(
+        actor.tenant,
+        await deps.store.list(actor.tenant, patientId, 'observation'),
+        link,
+        source,
+      );
+      const ledger = resolved.entities.filter(
         (e) =>
-          e.data.code === q.code &&
+          (e.data.code === q.code ||
+            (e.data.code === '85354-9' &&
+              e.data.components?.some((component: any) => component.code === q.code))) &&
           e.data.status !== 'entered-in-error' &&
           inWindow(e.data.effectiveAt),
       );
@@ -144,10 +202,19 @@ export function createClinicalQuery(deps: {
         ledger,
         rows,
         link,
-        (e, r) =>
-          Math.abs(e.data.value - r.value) < 1e-9 &&
-          e.data.unit === r.unit &&
-          sameInstant(e.data.effectiveAt, r.effectiveAt),
+        (e, r) => {
+          const value =
+            e.data.code === '85354-9'
+              ? e.data.components.find((component: any) => component.code === q.code)
+              : e.data;
+          return (
+            value &&
+            Math.abs(value.value - r.value) < 1e-9 &&
+            value.unit === r.unit &&
+            sameInstant(e.data.effectiveAt, r.effectiveAt)
+          );
+        },
+        resolved.unavailable,
       );
       const points = joined.served
         .map(({ entity, row }) => ({
@@ -175,7 +242,13 @@ export function createClinicalQuery(deps: {
       if (!source.problems) throw new Fault(501, 'The content store has no problem query');
       const rows: ProblemRow[] = await source.problems(actor.tenant, patientId, QUERY_CAP);
       const link = await links(actor.tenant, patientId);
-      const ledger = (await deps.store.list(actor.tenant, patientId, 'condition')).filter(
+      const resolved = await resolveCanonical(
+        actor.tenant,
+        await deps.store.list(actor.tenant, patientId, 'condition'),
+        link,
+        source,
+      );
+      const ledger = resolved.entities.filter(
         (e) => e.data.status !== 'entered-in-error' && (!status || e.data.status === status),
       );
       const joined = join(
@@ -186,6 +259,7 @@ export function createClinicalQuery(deps: {
           e.data.code?.code === r.code &&
           e.data.code?.display === r.display &&
           (e.data.onset === undefined ? r.onset === undefined : sameDay(e.data.onset, r.onset)),
+        resolved.unavailable,
       );
       const problems = joined.served
         .map(({ entity, row }) => ({
