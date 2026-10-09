@@ -863,8 +863,12 @@ function renderOverview(target) {
         v.data.code === r.data.code &&
         Date.parse(v.data.effectiveAt) < Date.parse(r.data.effectiveAt),
     );
+    const metric = (row) =>
+      row.data.code === '85354-9'
+        ? row.data.components.map((component) => component.value).join('/')
+        : row.data.value;
     return value
-      ? `<small>Tidigare ${e(value.data.value)} · ${date(value.data.effectiveAt)}</small>`
+      ? `<small>Tidigare ${e(metric(value))} · ${date(value.data.effectiveAt)}</small>`
       : '';
   };
   const codeLabel = (coding) =>
@@ -876,7 +880,7 @@ function renderOverview(target) {
       ${problems.map((r) => `<div class="row"><div><strong>${e(r.data.code.display)}</strong><small>${e(r.data.code.code)} · ${e(codeLabel(r.data.code))}</small></div>${correction(r)}</div>`).join('') || '<p class="empty">Inga diagnoser registrerade.</p>'}
     </section>
     <section class="band"><div class="section-title"><h2>Mätvärden</h2>${canWrite() && encounter() ? button('observation', 'Registrera', 'plus') : ''}</div>
-      ${observations.map((r) => `<div class="row vital-row"><div><strong>${e(r.data.display)}</strong><small>${date(r.data.effectiveAt)}</small>${previous(r)}</div><div class="metric"><strong>${e(r.data.value)}</strong><span>${e(r.data.unit)}</span></div>${correction(r)}</div>`).join('') || '<p class="empty">Inga mätvärden registrerade.</p>'}
+      ${observations.map((r) => `<div class="row vital-row"><div><strong>${e(r.data.display)}</strong><small>${date(r.data.effectiveAt)}</small>${previous(r)}</div><div class="metric"><strong>${e(r.data.code === '85354-9' ? r.data.components.map((component) => component.value).join('/') : r.data.value)}</strong><span>${e(r.data.unit)}</span></div>${correction(r)}</div>`).join('') || '<p class="empty">Inga mätvärden registrerade.</p>'}
     </section>
     <section class="band"><div class="section-title"><h2>Senaste anteckning</h2></div>${kinds('note')[0] ? `<p class="note-preview">${e(kinds('note')[0].data.text)}</p>` : '<p class="empty">Ingen anteckning ännu.</p>'}</section>
     </div><aside><section class="band"><div class="section-title"><h2>Överkänslighet</h2>${canWrite() ? button('allergy', '', 'plus', 'title="Registrera överkänslighet" aria-label="Registrera överkänslighet"') : ''}</div>
@@ -1030,6 +1034,59 @@ async function action(name, id) {
       (values) => create('allergy', values),
     );
   if (name === 'observation') {
+    const forms = state.session.vitalForms;
+    if (forms?.length) {
+      modal(
+        'Registrera mätvärde',
+        `<label>Mätning<select name="code" id="vital-code" aria-label="Mätning">${forms
+          .map((form) => `<option value="${form.id}">${e(form.label)} (${e(form.unit)})</option>`)
+          .join('')}</select></label>
+        <div id="vital-single">${field('value', 'Värde', 'number', '', 'step="any"')}</div>
+        <div id="vital-blood-pressure" hidden>
+          ${field('systolic', 'Systoliskt', 'number', '', 'step="1"')}
+          ${field('diastolic', 'Diastoliskt', 'number', '', 'step="1"')}
+        </div>`,
+        (values) => {
+          const form = forms.find((candidate) => candidate.id === values.code);
+          const common = {
+            encounterId: current.id,
+            code: values.code,
+            unit: form.unit,
+            effectiveAt: new Date().toISOString(),
+            clientId: crypto.randomUUID(),
+          };
+          return create(
+            'observation',
+            form.kind === 'blood-pressure'
+              ? {
+                  ...common,
+                  systolic: Number(values.systolic),
+                  diastolic: Number(values.diastolic),
+                }
+              : { ...common, value: Number(values.value) },
+          );
+        },
+      );
+      const select = $('#vital-code');
+      const update = () => {
+        const bloodPressure = select.value === '85354-9';
+        const single = $('#vital-single');
+        const pressure = $('#vital-blood-pressure');
+        single.hidden = bloodPressure;
+        pressure.hidden = !bloodPressure;
+        single.querySelectorAll('input').forEach((input) => {
+          input.disabled = bloodPressure;
+          input.required = !bloodPressure;
+        });
+        pressure.querySelectorAll('input').forEach((input) => {
+          input.disabled = !bloodPressure;
+          input.required = bloodPressure;
+        });
+      };
+      select.addEventListener('change', update);
+      update();
+      return;
+    }
     modal(
       'Registrera mätvärde',
       `<label>Mätning<select name="code" id="vital-code" aria-label="Mätning">${Object.entries(
@@ -1044,6 +1101,7 @@ async function action(name, id) {
           value: Number(values.value),
           unit: state.session.vitals[values.code].unit,
           effectiveAt: new Date().toISOString(),
+          clientId: crypto.randomUUID(),
         }),
     );
     return;

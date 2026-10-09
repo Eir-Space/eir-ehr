@@ -21,6 +21,8 @@ type Transaction = {
   auditQueue: Promise<void>;
 };
 const digest = (body: string) => createHash('sha256').update(body).digest('hex');
+const maxTransactionRetries = 7;
+const maxTransactionRetryDelayMs = 250;
 
 class RetryableTransactionConflict extends Fault {
   constructor() {
@@ -270,9 +272,13 @@ export class PostgresStore implements Store {
       try {
         return await this.executeTransaction(fn);
       } catch (error) {
-        if (!(error instanceof RetryableTransactionConflict) || attempt >= 3) throw error;
+        if (!(error instanceof RetryableTransactionConflict) || attempt >= maxTransactionRetries)
+          throw error;
         await new Promise((resolve) =>
-          setTimeout(resolve, (10 + Math.random() * 30) * 2 ** attempt),
+          setTimeout(
+            resolve,
+            Math.min(maxTransactionRetryDelayMs, (10 + Math.random() * 30) * 2 ** attempt),
+          ),
         );
       }
     }

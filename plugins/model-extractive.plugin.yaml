@@ -1,0 +1,15 @@
+id: eir.model.extractive
+version: 1.0.0
+apiVersion: 2
+title: Extractive summary (named candidate)
+provides: []
+contributes: [aiModel]
+requires: []
+network: none
+dataClasses: [identified-clinical]
+isolation: in-process
+intendedUse:
+  purpose: Deterministic extraction of source text for clinician review. No language model.
+  notFor: [clinical decision support, autonomous action]
+  evidence: []
+  usesLanguageModel: false

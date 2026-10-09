@@ -23,6 +23,24 @@
     "restore:postgres": "tsx scripts/postgres-restore.ts",
     "terminology:import": "tsx scripts/import-icd.ts",
     "start": "tsx apps/server.ts",
+    "dev:local": "EIR_DEMO=1 EIR_CONFIG=eir.local.profile.yaml tsx apps/server.ts",
+    "dev:openehr": "EIR_DEMO=1 EIR_CONFIG=eir.openehr.profile.yaml tsx apps/server.ts",
+    "plugins:dump": "tsx scripts/plugins.ts --dump",
+    "openehr:up": "docker compose -f docker/compose.openehr.yml up -d",
+    "openehr:down": "docker compose -f docker/compose.openehr.yml down",
+    "openehr:setup": "tsx scripts/openehr-setup.ts",
+    "test:openehr": "EIR_TEST_OPENEHR_URL=http://127.0.0.1:8090/ehrbase tsx --test tests/content-openehr.test.ts tests/template-first-openehr.test.ts",
+    "fhir:up": "docker compose -f docker/compose.fhir.yml up -d",
+    "fhir:down": "docker compose -f docker/compose.fhir.yml down",
+    "test:fhir": "EIR_TEST_FHIR_URL=http://127.0.0.1:8091/fhir tsx --test tests/content-fhir.test.ts",
+    "fhir:validate": "tsx scripts/fhir-validate.ts",
+    "video:build": "tsx video/build.ts",
+    "video:prepare": "tsx video/prepare.ts",
+    "video:still": "tsx video/build.ts",
+    "projection:run": "tsx scripts/projection.ts run",
+    "projection:reconcile": "tsx scripts/projection.ts reconcile",
+    "projection:loop": "tsx scripts/projection.ts loop",
+    "eval": "tsx scripts/eval.ts",
     "demo:public": "tsx apps/public-server.ts",
     "hosting:prepare": "tsx scripts/prepare-hosting.ts",
     "social:generate": "tsx scripts/generate-social.ts",
@@ -36,7 +54,9 @@
     "plugins": "tsx scripts/plugins.ts",
     "backup": "tsx scripts/backup.ts",
     "smoke:model": "tsx scripts/smoke-model.ts",
-    "smoke:public": "tsx scripts/smoke-public.ts"
+    "smoke:public": "tsx scripts/smoke-public.ts",
+    "video:remix": "tsx video/remix.ts",
+    "video:publish": "tsx video/publish.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
@@ -51,6 +71,7 @@
     "personnummer": "3.2.1",
     "pg": "^8.23.0",
     "tsx": "^4.23.13",
+    "yaml": "^2.9.1",
     "zod": "^4.1.0"
   },
   "devDependencies": {

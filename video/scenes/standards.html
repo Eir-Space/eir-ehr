@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="standards.kicker"></div>
+      <h2 data-line="0" data-t="standards.title" style="max-width: 1500px"></h2>
+      <div class="row" style="margin-top: 46px; gap: 30px">
+        <div
+          class="card teal col"
+          data-line="1"
+          data-anim="up"
+          style="flex: 1; min-height: 440px; gap: 16px"
+        >
+          <div class="badge"><i data-icon="layers"></i></div>
+          <h3 style="font-size: 54px; color: var(--eir-400)">openEHR</h3>
+          <p class="muted" data-t="standards.o1" style="font-size: 30px"></p>
+          <div style="margin-top: auto">
+            <span class="chip ok"
+              ><i data-icon="check"></i><span data-t="standards.o2"></span
+            ></span>
+          </div>
+        </div>
+        <div
+          class="card teal col"
+          data-line="1"
+          data-anim="up"
+          data-delay="0.4"
+          style="flex: 1; min-height: 440px; gap: 16px"
+        >
+          <div class="badge"><i data-icon="workflow"></i></div>
+          <h3 style="font-size: 54px; color: var(--eir-400)">FHIR</h3>
+          <p class="muted" data-t="standards.f1" style="font-size: 30px"></p>
+          <div style="margin-top: auto">
+            <span class="chip ok"
+              ><i data-icon="check"></i><span data-t="standards.f2"></span
+            ></span>
+          </div>
+        </div>
+        <div
+          class="card ai col"
+          data-line="2"
+          data-anim="up"
+          style="flex: 1; min-height: 440px; gap: 16px"
+        >
+          <div class="badge gold"><i data-icon="scale"></i></div>
+          <h3 style="font-size: 54px; color: var(--gold-400)">EHDS</h3>
+          <p class="muted" data-t="standards.e1" style="font-size: 30px"></p>
+          <div style="margin-top: auto">
+            <span class="chip" style="color: var(--warn); border-color: rgba(251, 191, 36, 0.35)"
+              ><i data-icon="circle-dashed"></i><span data-t="standards.e2"></span
+            ></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

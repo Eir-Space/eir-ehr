@@ -1,0 +1,15 @@
+id: eir.ai.ollama
+version: 1.0.0
+apiVersion: 2
+title: Local Ollama model provider
+provides: [aiProvider]
+requires: []
+network: loopback
+dataClasses: [identified-clinical]
+isolation: in-process
+evaluationFamily: ollama
+intendedUse:
+  purpose: Draft summaries from authorised encounter evidence on a local model, for clinician review.
+  notFor: [clinical decision support, autonomous action, prescribing]
+  evidence: []
+  usesLanguageModel: true

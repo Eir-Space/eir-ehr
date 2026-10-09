@@ -1,0 +1,54 @@
+# Eir – så fungerar det (svenska). Samma scener som den engelska versionen; bara berättarröst och skärmtext skiljer.
+id: 02-sa-fungerar-det
+title: Eir – så fungerar det
+language: sv
+scenes:
+  - id: overview
+    title: Översikt
+    html: overview.html
+    lines:
+      - text: Så här fungerar Eir tekniskt, från vårdpersonal till öppna standarder.
+      - text: Allt som skrivs sparas först i journalen, en vanlig databas som är den juridiska sanningen.
+      - text: Varje ändring får en version, och varje åtgärd skrivs i en spårbarhetslogg som inte går att ändra i efterhand.
+      - text: Sedan kopieras journalen av en separat projektion till öppna standarder, openEHR och FHIR.
+      - text: Ligger ett av systemen nere, påverkas inte vården.
+  - id: profile
+    title: Profiler och tillägg
+    html: profile.html
+    lines:
+      - text: Hela systemet sätts ihop av en profil, en liten textfil i YAML.
+      - text: Man lägger till, tar bort eller byter tillägg med några rader, utan att röra kärnan.
+      - text: Varje tillägg har ett manifest som säger vad det behöver, vilket nätverk det får använda och vilken data det ser.
+      - text: Tillåter profilens policy det inte, vägrar systemet att starta.
+  - id: tests
+    title: Gemensamma tester
+    html: tests.html
+    lines:
+      - text: För att kunna byta databas måste man kunna lita på att allt fungerar likadant.
+      - text: Därför finns en gemensam testsvit, och JSON, openEHR och FHIR klarar exakt samma tio tester.
+      - text: Testerna kontrollerar bland annat versioner, att vårdgivare hålls isär, och att signerade anteckningar aldrig kan ändras.
+  - id: verified
+    title: Verifierad läsning
+    html: verified.html
+    lines:
+      - text: När man läser från openEHR eller FHIR kontrollerar Eir varje rad mot journalen.
+      - text: Svaret berättar också hur komplett det är, så att man alltid vet om något saknas.
+  - id: ips
+    title: Patientsammanfattning
+    html: ips.html
+    lines:
+      - text: Eir kan skapa en europeisk patientsammanfattning, IPS, som är grunden i EHDS.
+      - text: Vi kontrollerar den med HL7:s officiella validator, och i våra tester får den noll fel.
+      - text: Frånvaro av allergi uppges aldrig som ett faktum, bara som okänd.
+  - id: ai
+    title: AI som tillägg
+    html: ai.html
+    lines:
+      - text: AI är bara ett tillägg som man kan byta eller stänga av.
+      - text: Ett utkast är alltid ett förslag med källhänvisningar, och en vårdpersonal måste granska och signera.
+      - text: En profil kan dessutom kräva att modellen har klarat våra kontroller innan den startar.
+  - id: closing
+    title: Nästa
+    html: closing-next.html
+    lines:
+      - text: Det här är bara början. I nästa film visar vi hur du själv kan bidra.

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="ips.kicker"></div>
+      <h2 data-line="0" data-t="ips.title"></h2>
+      <div
+        class="row"
+        style="margin-top: 34px; gap: 28px"
+        data-line="0"
+        data-delay="0.4"
+        data-stagger="0.25"
+      >
+        <div class="card teal col" style="flex: 1; gap: 12px; min-height: 230px">
+          <i data-icon="clipboard-list" data-size="52" class="teal"></i>
+          <h3 style="font-size: 40px" data-t="ips.s1"></h3>
+          <p class="muted" style="font-size: 30px" data-t="ips.s1b"></p>
+        </div>
+        <div class="card teal col" style="flex: 1; gap: 12px; min-height: 230px" data-pulse="2">
+          <i data-icon="triangle-alert" data-size="52" class="teal"></i>
+          <h3 style="font-size: 40px" data-t="ips.s2"></h3>
+          <p class="muted" style="font-size: 30px" data-t="ips.s2b"></p>
+        </div>
+        <div class="card teal col" style="flex: 1; gap: 12px; min-height: 230px">
+          <i data-icon="pill" data-size="52" class="teal"></i>
+          <h3 style="font-size: 40px" data-t="ips.s3"></h3>
+          <p class="muted" style="font-size: 30px" data-t="ips.s3b"></p>
+        </div>
+      </div>
+      <div class="row" style="margin-top: 34px; gap: 28px">
+        <div
+          class="card okc col"
+          data-line="1"
+          data-anim="left"
+          style="flex: 1.1; gap: 12px; min-height: 250px"
+        >
+          <div class="row" style="gap: 18px; align-items: center">
+            <div class="badge ok"><i data-icon="badge-check"></i></div>
+            <h3 class="ok" data-t="ips.v1"></h3>
+          </div>
+          <p style="font-size: 38px">
+            <span data-t="ips.v2"></span> ·
+            <span class="ok" style="font-weight: 600" data-t="ips.v3"></span>
+          </p>
+          <p class="muted" style="font-size: 27px" data-t="ips.v4"></p>
+        </div>
+        <div
+          class="card ai col"
+          data-line="2"
+          data-anim="right"
+          style="flex: 1; gap: 12px; min-height: 250px"
+        >
+          <h3 data-t="ips.a1"></h3>
+          <p class="muted" style="font-size: 30px" data-th="ips.a2"></p>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+id: eir.projection
+version: 1.0.0
+apiVersion: 2
+title: Ledger-to-content-store projection
+provides: [projection]
+requires: [store]
+network: none
+dataClasses: [identified-clinical]
+isolation: in-process

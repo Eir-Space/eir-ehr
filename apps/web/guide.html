@@ -66,9 +66,38 @@
         National services, prescribing and laboratory order delivery are not connected. This is not
         a certified or complete production EHR.
       </p>
+      <section id="film" class="film" aria-labelledby="film-title">
+        <h2 id="film-title">Watch: what Eir is and why we build it</h2>
+        <div class="film-lang" role="group" aria-label="Language">
+          <button type="button" data-lang="en" aria-pressed="true">English</button>
+          <button type="button" data-lang="sv" aria-pressed="false">Svenska</button>
+        </div>
+        <video
+          id="film-player"
+          controls
+          preload="metadata"
+          playsinline
+          poster="/video/01-what-and-why.jpg"
+          src="/video/01-what-and-why.mp4"
+        >
+          <track
+            id="film-captions"
+            kind="captions"
+            srclang="en"
+            label="English"
+            src="/video/01-what-and-why.en.vtt"
+          />
+        </video>
+        <ol id="film-list" class="film-list"></ol>
+        <p class="quiet">
+          Made with code from this repository. Narration is a local open voice model; the music is
+          generated. See <a href="https://github.com/Eir-Space/eir-ehr/tree/main/video">video/</a>.
+        </p>
+      </section>
       <nav class="guide-index" aria-label="On this page">
-        <a href="#walkthrough">Try the workflow</a><a href="#modules">How modules work</a
-        ><a href="#contribute">Contribute</a><a href="#privacy">Demo data</a>
+        <a href="#film">Watch the film</a><a href="#walkthrough">Try the workflow</a
+        ><a href="#modules">How modules work</a><a href="#contribute">Contribute</a
+        ><a href="#privacy">Demo data</a>
       </nav>
       <section id="walkthrough">
         <h2>Try the workflow</h2>
@@ -286,5 +315,6 @@ npm run check</pre>
         >
       </footer>
     </main>
+    <script type="module" src="/film.js"></script>
   </body>
 </html>

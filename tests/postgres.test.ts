@@ -317,7 +317,7 @@ test(
       }),
       conflict,
     );
-    assert.equal(attempts, 4, 'one initial attempt plus at most three retries');
+    assert.equal(attempts, 8, 'one initial attempt plus at most seven retries');
     assert.deepEqual(await a.list(f.actorA.tenant), []);
     assert.deepEqual(await a.verifyAudit(), { ok: true, count: 0 });
   },

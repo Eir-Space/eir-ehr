@@ -40,7 +40,7 @@ export function display(e) {
     (d.substance
       ? `${d.substance}: ${d.reaction}`
       : d.display
-        ? `${d.display}: ${d.value} ${d.unit}`
+        ? `${d.display}: ${d.code === '85354-9' ? d.components.map((component) => component.value).join('/') : d.value} ${d.unit}`
         : (d.name ?? ''))
   );
 }

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="plugin.kicker"></div>
+      <div class="row" style="gap: 30px; margin-top: 4px">
+        <div class="code" data-line="0" data-anim="left" style="flex: 1.25; font-size: 24px">
+          <span class="c">// plugins/content-example.ts</span>
+          <span class="k">export default</span> { id: <span class="s">'eir.content.example'</span>,
+          version: <span class="s">'1.0.0'</span>, apiVersion: 2, provides: [], requires: [],
+          contributes: [<span class="s">'contentStore'</span>], setup(ctx, config) {
+          ctx.contribute(<span class="s">'contentStore'</span>, <span class="s">'example'</span>,
+          myStore(config)); }, } <span class="k">satisfies</span> Plugin;
+        </div>
+        <div class="col" style="flex: 0.85; gap: 20px">
+          <div
+            class="code"
+            data-line="0"
+            data-delay="0.5"
+            data-anim="right"
+            style="font-size: 24px"
+          >
+            <span class="c"># content-example.plugin.yaml</span> <span class="k">id</span>:
+            eir.content.example <span class="k">version</span>: 1.0.0
+            <span class="k">apiVersion</span>: 2 <span class="k">contributes</span>: [contentStore]
+            <span class="k">network</span>: none <span class="k">dataClasses</span>: [synthetic]
+            <span class="k">isolation</span>: in-process
+          </div>
+          <div
+            class="card okc"
+            data-line="2"
+            data-anim="up"
+            style="display: flex; gap: 22px; align-items: center; padding: 20px 30px"
+          >
+            <div class="badge ok" style="width: 60px; height: 60px; font-size: 32px">
+              <i data-icon="badge-check"></i>
+            </div>
+            <p style="font-size: 32px; color: var(--sand-100)" data-t="plugin.ok"></p>
+          </div>
+        </div>
+      </div>
+      <div class="code" data-line="1" data-anim="up" style="margin-top: 16px; font-size: 24px">
+        <span class="c"
+          >// tests/content-example.test.ts : the same suite as every other provider</span
+        >
+        runContentContract(<span class="s">'example'</span>, <span class="k">async</span> () =&gt;
+        ({ store: myStore(), stop: <span class="k">async</span> () =&gt; {} }));
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

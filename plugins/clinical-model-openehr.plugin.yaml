@@ -1,0 +1,9 @@
+id: eir.clinical-model.openehr
+version: 1.0.0
+apiVersion: 2
+title: Pinned openEHR clinical model registry
+provides: [clinicalModels]
+requires: []
+network: none
+dataClasses: [none]
+isolation: in-process

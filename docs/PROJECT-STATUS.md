@@ -1,6 +1,6 @@
 # Eir EHR: Project Overview
 
-Updated 2026-09-19. Development software, not an approved clinical deployment.
+Updated 2026-10-09. Development software, not an approved clinical deployment.
 
 ## What We Are Building
 
@@ -20,10 +20,19 @@ An Apache-2.0 electronic health record for Swedish primary care, designed for la
 | Optional monitoring     | Unit-level module activation, vital/trend warnings, owned alerts and documented reassessment; replaceable local rules or external HTTP engine, not a validated mortality predictor                        |
 | Identity and access     | Tested OIDC adapter; staff assignments; care-unit, patient and action permissions; revocation; protected-record exclusion; manual access-log review                                                       |
 | AI                      | Replaceable extractive and local-model providers; evidence-linked proposals, clinician review and draft-only acceptance; changed-source detection                                                         |
-| Interoperability        | Authenticated JSON APIs, record history/change feed and FHIR R4 projections; not a complete FHIR server or national implementation-guide certification                                                    |
+| Clinical modelling      | Opt-in template-first openEHR profile for vital signs; model-driven capture, grouped blood pressure, canonical EHRbase compositions and recoverable SQL links                                             |
+| Interoperability        | Authenticated JSON APIs, record history/change feed and FHIR R4 projections derived from the authorized resolved chart; not a complete FHIR server or national implementation-guide certification         |
 | Persistence             | Replaceable SQLite/PostgreSQL storage, role-bound provider isolation, version-conflict checks, encrypted logical backups and a tested EHR restore                                                         |
 
 The public website remains a separate disposable synthetic demo. Persistent staging is a separate environment. Neither is permission to enter real patient data.
+
+The template-first profile addresses a specific architecture risk: detailed clinical trees are not
+captured in an unrelated SQL shape and converted later. For migrated vital signs, a pinned openEHR
+template controls capture and EHRbase is clinical authority; SQL keeps the operation, identity,
+workflow and audit link without becoming a competing source of clinical values. This is one working
+slice, not a claim that the whole record has moved to openEHR. Notes, conditions, allergies and
+medications remain SQL-authoritative until each receives its own governed model and migration.
+FHIR remains an exchange projection, never a second clinical source of truth.
 
 The follow-up milestone builds on the laboratory integration runtime. See [FOLLOW-UP.md](FOLLOW-UP.md) for clinical state transitions and operating requirements, [FHIR.md](FHIR.md) for exact interoperability coverage, and [REGULATORY-ALIGNMENT.md](REGULATORY-ALIGNMENT.md) for a stakeholder evidence map and outstanding release gates. Repository capabilities and the deployed public revision may differ until a reviewed release is deployed.
 
@@ -61,7 +70,11 @@ AI is part of the architecture, with a clear boundary: proposals cite their sour
 
 Modularity is central. Storage, identity, terminology, AI providers and the way the record is displayed can be replaced. The application is Apache-2.0 licensed, without a proprietary core.
 
-The latest work connects reliable laboratory processing to accountable follow-up: separate result review and action completion, named ownership, temporary cover, escalation and delivery-failure handling. PostgreSQL persistence, provider isolation and encrypted backup/restore provide the underlying storage foundation.
+The latest architecture work adds an opt-in template-first openEHR path for vital signs. The active
+template drives the form, paired blood pressure is stored as one composition, unsupported fields are
+rejected rather than silently flattened, and recoverable operation IDs prevent duplicate canonical
+writes. SQL continues to own identity, authorization, workflow and audit, while FHIR export is
+derived from the authorized resolved chart.
 
 This is a working development system, not yet ready for live patient care. National integrations and clinical validation are still ahead of us.
 

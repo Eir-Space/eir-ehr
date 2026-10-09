@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="rules.kicker"></div>
+      <h2 data-line="0" data-t="rules.title" style="margin-bottom: 34px"></h2>
+      <div class="col" style="gap: 22px">
+        <div
+          class="card okc"
+          data-line="0"
+          data-delay="0.5"
+          data-anim="left"
+          style="display: flex; gap: 26px; align-items: center"
+        >
+          <div class="badge ok"><i data-icon="check"></i></div>
+          <p style="font-size: 36px; color: var(--sand-100)" data-t="rules.r1"></p>
+        </div>
+        <div
+          class="card dangerc"
+          data-line="1"
+          data-anim="left"
+          style="display: flex; gap: 26px; align-items: center"
+        >
+          <div class="badge danger"><i data-icon="x"></i></div>
+          <p style="font-size: 36px; color: var(--sand-100)" data-t="rules.r2"></p>
+        </div>
+        <div
+          class="card ai"
+          data-line="2"
+          data-anim="left"
+          style="display: flex; gap: 26px; align-items: center"
+        >
+          <div class="badge gold"><i data-icon="lock-keyhole"></i></div>
+          <p style="font-size: 36px; color: var(--sand-100)" data-th="rules.r3"></p>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

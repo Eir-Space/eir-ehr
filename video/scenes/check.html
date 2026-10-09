@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="check.kicker"></div>
+      <h2 data-at="0.3" data-t="check.title" style="margin-bottom: 30px"></h2>
+      <div class="terminal" data-line="0" data-anim="up">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div data-line="0" data-delay="0.4" data-anim="fade" data-dur="0.1">
+          <span class="prompt">$ </span
+          ><span data-line="0" data-delay="0.5" data-anim="type" data-dur="1">npm run check</span>
+          <span class="c"># <span data-t="check.c1"></span></span>
+        </div>
+        <div data-line="0" data-delay="2.4" data-anim="fade" data-dur="0.1">
+          <span class="prompt">$ </span
+          ><span data-line="0" data-delay="2.5" data-anim="type" data-dur="1.4"
+            >npm run format:check</span
+          >
+          <span class="c"># <span data-t="check.c2"></span></span>
+        </div>
+        <div data-line="0" data-delay="4.6" data-anim="fade" data-dur="0.1">
+          <span class="prompt">$ </span
+          ><span data-line="0" data-delay="4.7" data-anim="type" data-dur="1.2"
+            >npm run test:e2e</span
+          >
+          <span class="c"># <span data-t="check.c3"></span></span>
+        </div>
+      </div>
+      <div
+        class="card dangerc"
+        data-line="1"
+        data-anim="up"
+        style="margin-top: 40px; display: flex; gap: 26px; align-items: center"
+      >
+        <div class="badge danger"><i data-icon="lock"></i></div>
+        <div>
+          <h3 class="danger" data-t="check.never"></h3>
+          <p class="muted small" data-t="check.never2" style="margin-top: 6px"></p>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

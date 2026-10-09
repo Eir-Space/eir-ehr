@@ -1,0 +1,45 @@
+# Video 1: what Eir is and why it exists (about 90 seconds). English.
+# `text` is the caption; the voice says it through pronunciation.yaml (or `say`, if set).
+id: 01-what-and-why
+title: Eir – what and why
+language: en
+scenes:
+  - id: title
+    title: Welcome
+    html: title.html
+    lines:
+      - text: This is Eir, an open health record system for Sweden and Europe.
+      - text: Built together, open to everyone, and free to use and improve.
+  - id: problem
+    title: The problem
+    html: problem.html
+    lines:
+      - text: Healthcare is full of systems that can't talk to each other.
+      - text: Too often, data gets locked in with a single vendor, and switching is hard.
+  - id: idea
+    title: The idea
+    html: idea.html
+    lines:
+      - text: 'Our idea is simple: everything should be replaceable.'
+      - text: The database, the standards, the country, even the AI model, are plugins you can swap.
+      - text: And every plugin has to pass the same tests, so you can trust it.
+  - id: standards
+    title: Open standards
+    html: standards.html
+    lines:
+      - text: We build on open standards.
+      - text: openEHR for clinical content, and FHIR for exchanging data.
+      - text: We aim to follow the EU rules for the European Health Data Space, EHDS.
+  - id: status
+    title: Honest status
+    html: status.html
+    lines:
+      - text: This is an early development version. It uses synthetic data only, and isn't ready for real patients.
+      - text: We say that openly, because trust in healthcare has to be earned.
+  - id: contribute
+    title: Contribute
+    html: contribute.html
+    lines:
+      - text: You can help, whether you're a doctor, a nurse, a developer, a designer or a patient.
+      - text: The code is open on GitHub, under the Apache license.
+      - text: Try the demo, tell us what's missing, and build with us.

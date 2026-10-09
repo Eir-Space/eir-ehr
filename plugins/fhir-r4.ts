@@ -1,4 +1,5 @@
 import type { Entity, Plugin } from '../packages/contracts.ts';
+import { toFhirSystem } from '../packages/code-systems.ts';
 
 const reference = (id: string) => ({ reference: `urn:uuid:${id}` });
 const concept = (code: string) => ({
@@ -6,9 +7,14 @@ const concept = (code: string) => ({
 });
 export function project(e: Entity): Record<string, any> | null {
   const d = e.data;
+  const canonicalVersion = d._canonical?.version;
   const common = {
     id: e.id,
-    meta: { versionId: String(e.version), lastUpdated: e.updatedAt, source: 'urn:eir:ehr' },
+    meta: {
+      versionId: String(Number.isInteger(canonicalVersion) ? canonicalVersion : e.version),
+      lastUpdated: e.updatedAt,
+      source: 'urn:eir:ehr',
+    },
   };
   const subject = reference(e.patientId);
   switch (e.kind) {
@@ -141,12 +147,34 @@ export function project(e: Entity): Record<string, any> | null {
         subject,
         encounter: reference(d.encounterId),
         effectiveDateTime: d.effectiveAt,
-        valueQuantity: {
-          value: d.value,
-          unit: d.unit,
-          system: 'http://unitsofmeasure.org',
-          code: d.unit,
-        },
+        ...(d.code === '85354-9'
+          ? {
+              component: d.components.map((item: any) => ({
+                code: {
+                  coding: [
+                    {
+                      system: 'http://loinc.org',
+                      code: item.code,
+                      display: item.display,
+                    },
+                  ],
+                },
+                valueQuantity: {
+                  value: item.value,
+                  unit: item.unit,
+                  system: 'http://unitsofmeasure.org',
+                  code: item.unit,
+                },
+              })),
+            }
+          : {
+              valueQuantity: {
+                value: d.value,
+                unit: d.unit,
+                system: 'http://unitsofmeasure.org',
+                code: d.unit,
+              },
+            }),
       };
     case 'condition':
       return {
@@ -164,7 +192,7 @@ export function project(e: Entity): Record<string, any> | null {
               },
             }
           : { clinicalStatus: concept(d.status) }),
-        code: { coding: [d.code] },
+        code: { coding: [{ ...d.code, system: toFhirSystem(d.code.system) }] },
         subject,
         ...(d.onset ? { onsetDateTime: d.onset } : {}),
       };
@@ -249,9 +277,9 @@ export default {
     ctx.provide('fhir', {
       async bundle(actor, patientId) {
         await ctx.get('access').permit(actor, 'chart.export', patientId);
+        const entities = await clinical.chart(actor, patientId);
         return await store.transaction(async () => {
           await ctx.get('access').permit(actor, 'chart.export', patientId);
-          const entities = await clinical.chart(actor, patientId);
           // Superseded reports stay in the clinical history, not alongside current reports in an export.
           const currentReports = new Set(
             entities.filter((r) => r.kind === 'labOrder').map((r) => r.data.reportId),

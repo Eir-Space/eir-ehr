@@ -6,7 +6,7 @@ An open, Sweden-first electronic health record built from replaceable plugins. A
 
 ## Run
 
-Try the [public demo and collaboration page](https://eir-ehr-demo.web.app) or read the [walkthrough and contribution guide](https://eir-ehr-demo.web.app/guide.html). The custom domain is `ehr.eir.space`. Public mode gives every visitor a fresh synthetic workspace with a 30-minute lifetime. Never enter real health information. See [hosting and DNS](docs/HOSTING.md) for the separate deployment and cost limits.
+New here? Watch the short films (English and Swedish) on the [guide page](https://ehr.eir.space/guide.html#film); they are made from code in [video/](video/README.md). Try the [public demo and collaboration page](https://eir-ehr-demo.web.app) or read the [walkthrough and contribution guide](https://eir-ehr-demo.web.app/guide.html). The custom domain is `ehr.eir.space`. Public mode gives every visitor a fresh synthetic workspace with a 30-minute lifetime. Never enter real health information. See [hosting and DNS](docs/HOSTING.md) for the separate deployment and cost limits.
 
 Node 22.13+ (Node's SQLite API is experimental in Node 22).
 
@@ -19,6 +19,23 @@ EIR_DEMO=1 npm start
 Open <http://127.0.0.1:4180>. Enter the temporary clinician session printed in the terminal. Sessions expire after eight hours. The token is stored hashed on the server and only in browser memory. No password, token, real patient or database ships in this repository.
 
 Without `EIR_DEMO=1`, startup does not seed patient records. Data persists in `.data/ehr.sqlite`. The server binds only to loopback. `PORT=4181` selects another port. `EIR_CONFIG=/absolute/path/to/profile.json` selects a plugin composition. Local identity is a development plugin, not SITHS.
+
+### Template-first openEHR profile
+
+The optional profile makes openEHR authoritative for vital signs while SQL retains identity,
+authorization, workflow, audit and the remaining record kinds. Its active template drives the vital
+form; blood pressure is captured as one composition and unsupported measurements are rejected rather
+than converted lossily.
+
+```sh
+npm run openehr:up
+npm run openehr:setup
+npm run dev:openehr
+```
+
+See [ADR-002](docs/ADR-002-TEMPLATE-FIRST-CLINICAL-RECORD.md) for the write protocol, authority matrix,
+failure handling and exact migration boundary. The bundled OPTs are test inputs, not approved Swedish
+production models.
 
 ## Working Modules
 
@@ -67,8 +84,10 @@ npm run backup -- .data/ehr.sqlite /secure/path/ehr-backup.sqlite
 ## Design And Delivery
 
 - [Architecture and decisions](docs/ARCHITECTURE.md)
+- [Template-first openEHR authority decision](docs/ADR-002-TEMPLATE-FIRST-CLINICAL-RECORD.md)
 - [Sweden-first delivery plan](docs/PLAN.md)
 - [Plugin authoring and model replacement](docs/PLUGINS.md)
+- [Declarative plugins, model router and openEHR fit](docs/PLUGIN-ARCHITECTURE.md)
 - [API contract](docs/API.md)
 - [FHIR capability inventory and limits](docs/FHIR.md)
 - [Regulatory alignment, evidence and release gates](docs/REGULATORY-ALIGNMENT.md)

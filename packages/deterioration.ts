@@ -99,16 +99,20 @@ export function riskInput(
   const labs: RiskLab[] = [];
   for (const row of records) {
     if (row.data.encounterId !== encounterId || row.data.status !== 'final') continue;
-    if (row.kind === 'observation')
-      readings.push({
-        ref: `${row.id}@${row.version}`,
-        kind: 'vital',
-        system: 'http://loinc.org',
-        code: row.data.code,
-        value: row.data.value,
-        unit: row.data.unit,
-        effectiveAt: row.data.effectiveAt,
-      });
+    if (row.kind === 'observation') {
+      const values = row.data.code === '85354-9' ? row.data.components : [row.data];
+      const sourceRef = `${row.id}@${row.version}${Number.isInteger(row.data._canonical?.version) ? `:canonical-${row.data._canonical.version}` : ''}`;
+      for (const value of values)
+        readings.push({
+          ref: `${sourceRef}${row.data.code === '85354-9' ? `#${value.code}` : ''}`,
+          kind: 'vital',
+          system: 'http://loinc.org',
+          code: value.code,
+          value: value.value,
+          unit: value.unit,
+          effectiveAt: row.data.effectiveAt,
+        });
+    }
   }
   // Only the current report on each order is projected; superseded results stay historical.
   for (const order of records.filter(

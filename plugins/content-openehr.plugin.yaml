@@ -1,0 +1,11 @@
+id: eir.content.openehr
+version: 1.0.0
+apiVersion: 2
+title: openEHR content store (EHRbase tested)
+provides: []
+contributes: [contentStore]
+requires: []
+network: allowlist
+egressHosts: [127.0.0.1, localhost]
+dataClasses: [identified-clinical]
+isolation: in-process

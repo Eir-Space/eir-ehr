@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="pr.kicker"></div>
+      <h2 data-at="0.3" data-t="pr.title" style="margin-bottom: 26px"></h2>
+      <div class="row" style="gap: 20px" data-line="0" data-stagger="0.3">
+        <div class="card teal col" style="flex: 1; gap: 4px; padding: 30px 26px; min-height: 200px">
+          <i data-icon="git-fork" data-size="36" class="teal"></i>
+          <h3 style="font-size: 38px" data-t="pr.s1"></h3>
+          <p class="muted" style="font-size: 27px" data-t="pr.s1b"></p>
+        </div>
+        <div class="card teal col" style="flex: 1; gap: 4px; padding: 30px 26px; min-height: 200px">
+          <i data-icon="git-branch" data-size="36" class="teal"></i>
+          <h3 style="font-size: 38px" data-t="pr.s2"></h3>
+          <p class="muted" style="font-size: 27px" data-t="pr.s2b"></p>
+        </div>
+        <div class="card teal col" style="flex: 1; gap: 4px; padding: 30px 26px; min-height: 200px">
+          <i data-icon="code" data-size="36" class="teal"></i>
+          <h3 style="font-size: 38px" data-t="pr.s3"></h3>
+          <p class="muted" style="font-size: 27px" data-t="pr.s3b"></p>
+        </div>
+        <div class="card ai col" style="flex: 1; gap: 4px; padding: 30px 26px; min-height: 200px">
+          <i data-icon="git-pull-request" data-size="36" class="gold"></i>
+          <h3 style="font-size: 38px" data-t="pr.s4"></h3>
+          <p class="muted" style="font-size: 27px" data-t="pr.s4b"></p>
+        </div>
+        <div class="card okc col" style="flex: 1; gap: 4px; padding: 30px 26px; min-height: 200px">
+          <i data-icon="user-check" data-size="36" class="ok"></i>
+          <h3 style="font-size: 38px" data-t="pr.s5"></h3>
+          <p class="muted" style="font-size: 27px" data-t="pr.s5b"></p>
+        </div>
+      </div>
+      <div class="code" data-line="1" data-anim="up" style="margin-top: 36px; font-size: 30px">
+        <span class="prompt">$ </span>git commit <span class="k">-s</span> -m
+        <span class="s">"<span data-t="pr.msg"></span>"</span> <span class="c" data-t="pr.c"></span>
+      </div>
+      <div class="card" data-line="2" data-anim="up" style="margin-top: 22px; padding: 22px 30px">
+        <p style="font-size: 30px; color: var(--sand-200)" data-t="pr.desc"></p>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

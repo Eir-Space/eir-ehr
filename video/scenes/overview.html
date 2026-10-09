@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="overview.kicker"></div>
+      <h2 data-line="0" data-t="overview.title"></h2>
+      <div class="diagram" style="height: 610px; margin-top: 10px">
+        <svg class="edges" width="1620" height="590">
+          <path
+            class="edge"
+            data-line="1"
+            data-anim="draw"
+            data-delay="0.5"
+            data-dur="0.9"
+            data-flow="1"
+            data-period="2"
+            d="M232 270 H298"
+          />
+          <path
+            class="edge gold"
+            data-line="3"
+            data-anim="draw"
+            data-dur="0.9"
+            data-flow="2"
+            d="M642 270 H708"
+          />
+          <path
+            class="edge"
+            data-line="3"
+            data-anim="draw"
+            data-delay="0.5"
+            data-dur="1"
+            data-flow="2"
+            d="M942 270 C 985 270 975 140 1012 140"
+          />
+          <path
+            class="edge"
+            data-line="3"
+            data-anim="draw"
+            data-delay="0.6"
+            data-dur="1"
+            data-flow="2"
+            d="M942 270 C 985 270 975 400 1012 400"
+          />
+          <path
+            class="edge"
+            data-line="3"
+            data-anim="draw"
+            data-delay="1.0"
+            data-dur="1"
+            data-flow="2"
+            d="M1272 140 C 1305 140 1295 235 1332 235"
+          />
+          <path
+            class="edge"
+            data-line="3"
+            data-anim="draw"
+            data-delay="1.1"
+            data-dur="1"
+            data-flow="2"
+            d="M1272 400 C 1305 400 1295 305 1332 305"
+          />
+        </svg>
+        <div
+          class="node"
+          data-line="1"
+          data-anim="left"
+          style="
+            left: 0;
+            top: 210px;
+            width: 230px;
+            height: 120px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+          "
+        >
+          <i data-icon="stethoscope" data-size="40" class="teal"></i>
+          <div class="t" data-t="overview.n1"></div>
+        </div>
+        <div
+          class="node gold"
+          data-line="1"
+          data-anim="scale"
+          data-delay="0.3"
+          style="
+            left: 300px;
+            top: 130px;
+            width: 340px;
+            height: 280px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 10px;
+            text-align: center;
+            background: var(--aura-subtle), var(--surface);
+          "
+        >
+          <div class="badge gold"><i data-icon="database"></i></div>
+          <div class="t grad" style="font-size: 44px" data-t="overview.n2"></div>
+          <div class="s" data-t="overview.s2"></div>
+          <div class="s" data-t="overview.s2b" style="color: var(--sand-200)"></div>
+        </div>
+        <div
+          class="card ai"
+          data-line="2"
+          data-anim="up"
+          style="
+            position: absolute;
+            left: 200px;
+            top: 430px;
+            width: 480px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+          "
+        >
+          <i data-icon="shield-check" data-size="40" class="gold"></i>
+          <div
+            style="font-size: 26px; line-height: 1.2; white-space: nowrap"
+            data-t="overview.audit"
+          ></div>
+        </div>
+        <div
+          class="node teal"
+          data-line="3"
+          data-anim="scale"
+          data-delay="0.2"
+          style="
+            left: 710px;
+            top: 210px;
+            width: 230px;
+            height: 120px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            text-align: center;
+          "
+        >
+          <i data-icon="repeat" data-size="40" class="teal"></i>
+          <div class="t" data-t="overview.n3"></div>
+        </div>
+        <div
+          class="node teal"
+          data-line="3"
+          data-anim="right"
+          data-delay="0.7"
+          style="left: 1012px; top: 90px; width: 260px; height: 100px"
+        >
+          <div>
+            <div class="t">openEHR</div>
+            <div class="s" data-t="overview.s4"></div>
+          </div>
+        </div>
+        <div
+          class="node teal"
+          data-line="3"
+          data-anim="right"
+          data-delay="0.8"
+          style="left: 1012px; top: 350px; width: 260px; height: 100px"
+        >
+          <div>
+            <div class="t">FHIR</div>
+            <div class="s" data-t="overview.s5"></div>
+          </div>
+        </div>
+        <div
+          class="node okc"
+          data-line="3"
+          data-anim="right"
+          data-delay="1.3"
+          style="
+            left: 1332px;
+            top: 185px;
+            width: 288px;
+            height: 170px;
+            flex-direction: column;
+            justify-content: center;
+            gap: 6px;
+            text-align: left;
+            align-items: flex-start;
+          "
+        >
+          <div class="t" data-t="overview.n6a"></div>
+          <div class="t" data-t="overview.n6b"></div>
+          <div class="t" data-t="overview.n6c"></div>
+        </div>
+        <div
+          class="card okc"
+          data-line="4"
+          data-anim="up"
+          style="
+            position: absolute;
+            left: 330px;
+            top: 535px;
+            width: 960px;
+            padding: 16px 30px;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+          "
+        >
+          <i data-icon="circle-check" data-size="42" class="ok"></i>
+          <h3 style="font-size: 34px" data-t="overview.up"></h3>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

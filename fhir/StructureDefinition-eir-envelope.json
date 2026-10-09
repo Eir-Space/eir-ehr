@@ -1,0 +1,42 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "eir-envelope",
+  "url": "https://eir.space/fhir/StructureDefinition/envelope",
+  "version": "0.1.0",
+  "name": "EirEnvelope",
+  "title": "Eir envelope",
+  "status": "draft",
+  "description": "Eir's workflow fields for a record, as JSON: the Eir record kind, the data Eir wrote (author, status, encounter link and similar), the time Eir first created the record, a revision counter and an optional idempotency key. The native FHIR elements of the resource are canonical for clinical content; this extension preserves the exact representation Eir wrote and the workflow fields FHIR has no element for. Readers that do not know Eir can ignore it.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    { "type": "element", "expression": "Observation" },
+    { "type": "element", "expression": "Condition" },
+    { "type": "element", "expression": "DocumentReference" }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Eir workflow envelope",
+        "definition": "JSON document with the fields eir (format version), kind, data, createdAt, rev and optionally origin."
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://eir.space/fhir/StructureDefinition/envelope"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "type": [{ "code": "string" }]
+      }
+    ]
+  }
+}

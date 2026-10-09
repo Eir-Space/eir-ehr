@@ -1,0 +1,44 @@
+# Eir – vad och varför (svenska). Samma scener som den engelska versionen; bara berättarröst och skärmtext skiljer.
+id: 01-vad-och-varfor
+title: Eir – vad och varför
+language: sv
+scenes:
+  - id: title
+    title: Välkommen
+    html: title.html
+    lines:
+      - text: Det här är Eir, ett öppet journalsystem för Sverige och Europa.
+      - text: Byggt tillsammans, öppet för alla, och fritt att använda och förbättra.
+  - id: problem
+    title: Problemet
+    html: problem.html
+    lines:
+      - text: Vården är full av system som inte pratar med varandra.
+      - text: Alltför ofta sitter data fast hos en enda leverantör, och det är svårt att byta.
+  - id: idea
+    title: Idén
+    html: idea.html
+    lines:
+      - text: 'Vår idé är enkel: allt ska kunna bytas ut.'
+      - text: Databasen, standarderna, landet och till och med AI-modellen är tillägg som man kan byta.
+      - text: Och varje tillägg måste klara samma tester, så att det går att lita på.
+  - id: standards
+    title: Öppna standarder
+    html: standards.html
+    lines:
+      - text: Vi bygger på öppna standarder.
+      - text: openEHR för det kliniska innehållet, och FHIR för att utbyta data.
+      - text: Vi siktar på att följa EU:s regler för det europeiska hälsodataområdet, EHDS.
+  - id: status
+    title: Ärlig status
+    html: status.html
+    lines:
+      - text: Det här är en tidig utvecklingsversion. Den använder bara syntetisk data och är inte redo för riktiga patienter.
+      - text: Vi säger det öppet, eftersom förtroende i vården måste förtjänas.
+  - id: contribute
+    title: Bidra
+    html: contribute.html
+    lines:
+      - text: Du kan hjälpa till, oavsett om du är läkare, sjuksköterska, utvecklare, designer eller patient.
+      - text: Koden finns öppet på GitHub, under Apache-licensen.
+      - text: Prova demon, berätta vad som saknas, och bygg tillsammans med oss.

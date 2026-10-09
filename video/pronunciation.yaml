@@ -1,0 +1,28 @@
+# How each voice should say names and acronyms, per provider and language ("<provider>-<language>").
+# Captions and the screen always show the real spelling; only the text sent to the voice is rewritten.
+# Entries should be checked by listening. For Swedish, `npm run video:build -- <id> --check` transcribes
+# the audio back with a Swedish recogniser, a proxy for a listener but not a replacement.
+# Matching is whole-word and case-sensitive. Longer keys win.
+supertonic-sv:
+  Eir: Ayr
+  openEHR: open E H R
+  FHIR: fajr
+  EHDS: E H D S
+  IPS: I P S
+supertonic-en: {}
+elevenlabs-sv: {}
+elevenlabs-en:
+  Eir: Air
+  openEHR: open E H R
+  FHIR: fire
+  EHDS: E H D S
+  IPS: I P S
+  AQL: A Q L
+  YAML: yammel
+kokoro-en:
+  Eir: Air
+  openEHR: open E H R
+  FHIR: fire
+  EHDS: E H D S
+  IPS: I P S
+  AQL: A Q L

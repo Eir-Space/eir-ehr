@@ -30,6 +30,8 @@ export function openApi(
   deterioration = false,
   coordination = false,
   coordinationFeatures = { sip: false, documents: false },
+  clinicalQuery = false,
+  fhirIps = false,
 ) {
   const paths: Record<string, any> = {};
   function route(
@@ -208,6 +210,44 @@ export function openApi(
           })
           .strict(),
       ),
+    );
+  }
+  if (fhirIps) {
+    route(
+      '/patients/{id}/export/ips',
+      'get',
+      'International Patient Summary (FHIR IPS 2.0.0 document Bundle)',
+    );
+    paths['/patients/{id}/export/ips'].get.responses['200'].content = {
+      'application/fhir+json': { schema: { type: 'object' } },
+    };
+  }
+  if (clinicalQuery) {
+    const queryParam = (name: string, description: string, required = false) => ({
+      in: 'query',
+      name,
+      required,
+      description,
+      schema: { type: 'string' },
+    });
+    route(
+      '/patients/{id}/query/vitals',
+      'get',
+      'Vital sign series from the content store, verified against the ledger, with coverage',
+    );
+    paths['/patients/{id}/query/vitals'].get.parameters.push(
+      queryParam('code', 'LOINC code of the vital sign', true),
+      queryParam('from', 'ISO 8601 start, inclusive'),
+      queryParam('to', 'ISO 8601 end, inclusive'),
+      queryParam('limit', 'Maximum points, 1 to 200 (default 50)'),
+    );
+    route(
+      '/patients/{id}/query/problems',
+      'get',
+      'Problem list from the content store, verified against the ledger, with coverage',
+    );
+    paths['/patients/{id}/query/problems'].get.parameters.push(
+      queryParam('status', 'Ledger status filter, for example active'),
     );
   }
   if (followUp) {

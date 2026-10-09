@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      .tbl {
+        margin-top: 26px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--surface);
+        overflow: hidden;
+      }
+      .thead,
+      .trow {
+        display: grid;
+        grid-template-columns: 1fr 190px 190px 190px;
+        align-items: center;
+        padding: 0 28px;
+      }
+      .thead {
+        height: 54px;
+        border-bottom: 1px solid var(--border-active);
+        font: 500 22px var(--mono);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--sand-400);
+      }
+      .thead span:not(:first-child) {
+        text-align: center;
+      }
+      .trow {
+        height: 51px;
+        border-bottom: 1px solid var(--border);
+        font-size: 27px;
+        color: var(--sand-100);
+      }
+      .trow:last-child {
+        border-bottom: 0;
+      }
+      .cell {
+        text-align: center;
+      }
+      .trow .name {
+        padding-right: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="tests.kicker"></div>
+      <h2 data-line="0" data-t="tests.title"></h2>
+      <div class="tbl" style="margin-top: 18px" data-line="0" data-delay="0.4" data-anim="up">
+        <div class="thead">
+          <span data-t="tests.head"></span><span>JSON</span
+          ><span style="color: var(--eir-400)">openEHR</span
+          ><span style="color: var(--eir-400)">FHIR</span>
+        </div>
+        <div class="trow">
+          <div class="name" data-t="tests.r1"></div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.00">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.25">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.50">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="name" data-t="tests.r2"></div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.12">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.37">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.62">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+        <div class="trow" data-pulse="2">
+          <div class="name" data-t="tests.r3"></div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.24">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.49">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.74">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="name" data-t="tests.r4"></div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.36">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.61">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.86">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+        <div class="trow" data-pulse="2">
+          <div class="name" data-t="tests.r5"></div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.48">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.73">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.98">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="name" data-t="tests.r6"></div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.60">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.85">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="1.10">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+        <div class="trow" data-pulse="2">
+          <div class="name" data-t="tests.r7"></div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.72">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.97">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="1.22">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="name" data-t="tests.r8"></div>
+          <div class="cell" data-line="1" data-anim="fade" data-delay="0.84">
+            <span class="tag" data-t="tests.opt"></span>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="1.09">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="1.34">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="name" data-t="tests.r9"></div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="0.96">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="1.21">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="1.46">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="name" data-t="tests.r10"></div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="1.08">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="1.33">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+          <div class="cell" data-line="1" data-anim="scale" data-delay="1.58">
+            <i data-icon="check" data-size="34" class="ok"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

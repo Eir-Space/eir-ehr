@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "useCase": "draft-note",
+  "generatedAt": "2026-10-07T13:41:48.776Z",
+  "suiteHash": "b8ec5f3d64a96503221dd54802c8cf07560572c6f7039d3ce6e4a97d073177ca",
+  "subject": {
+    "family": "ollama",
+    "model": "qwen3.5:4b"
+  },
+  "repeat": 1,
+  "passed": false,
+  "summary": {
+    "cases": 7,
+    "runs": 7,
+    "failedRuns": 2
+  },
+  "results": [
+    {
+      "caseId": "trend-rising",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "qwen3.5:4b",
+      "mode": "model",
+      "historyItems": 3,
+      "draft": "Kontaktsaken dokumenteras med anledning av att patienten känner sig trött samt har upplevt hjärtklappning sedan i går. Mätningar på pulsen visar värden på 58 /min den 2 oktober, 61 /min den 3 oktober, 64 /min den 4 oktober och 96 /min den 7 oktober.",
+      "ms": 19813
+    },
+    {
+      "caseId": "trend-falling",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "qwen3.5:4b",
+      "mode": "model",
+      "historyItems": 3,
+      "draft": "Kontrollorsak är dokumenterad för en rutinkontroll av puls. På 2026-10-02 påträffades puls vid 90 /min (ref: e8ca981e-7f66-4e29-aab4-ed6170305433@1). Nästa mätning gällde 2026-10-03 med ett värde på 84 /min (ref: 6a516497-d927-46b7-9e2d-e093f084b973@1). Vid den sista kontrolleringen den 2026-10-07 var pulsen mätt till 70 /min (ref: ff3721a5-25e9-4770-a908-dafff9a7f91a@1). Patienten beskrevs vid kontrolleringen på 2026-10-07 som mående bra och utan besvär (ref: aa1f284a-0df6-40d7-81f8-42960952261e@1).",
+      "ms": 20885
+    },
+    {
+      "caseId": "trend-stable",
+      "run": 1,
+      "passed": false,
+      "violations": [
+        {
+          "check": "missing-citation",
+          "detail": "now"
+        }
+      ],
+      "model": "qwen3.5:4b",
+      "mode": "model",
+      "historyItems": 3,
+      "draft": "Rutinkontroll av puls utförs. Inga besvär observeras.",
+      "ms": 3189
+    },
+    {
+      "caseId": "no-history",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "qwen3.5:4b",
+      "mode": "model",
+      "historyItems": 0,
+      "draft": "Patienten söker för trötthet.",
+      "ms": 6323
+    },
+    {
+      "caseId": "history-unavailable",
+      "run": 1,
+      "passed": false,
+      "violations": [
+        {
+          "check": "missing-citation",
+          "detail": "now"
+        }
+      ],
+      "model": "qwen3.5:4b",
+      "mode": "model",
+      "historyItems": 0,
+      "draft": "Patienten känner sig trött och har haft hjärtklappning sedan i går.",
+      "ms": 2887
+    },
+    {
+      "caseId": "blood-pressure",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "qwen3.5:4b",
+      "mode": "model",
+      "historyItems": 2,
+      "draft": "Patienten uppfattade kontrollbesöket som ett blodtryckskontroll. Systoliskt blodtrycket mättes till 152 mmHg den 7 oktober 2026 och var 132 mmHg den 4 oktober samt 128 mmHg den 1 oktober.\n\nKällor:\n- Patienten uppfattade kontrollbesöket som ett blodtryckskontroll [8e0caecb-48a6-4da9-8b3f-a935f77b51f6@1].\n- Systoliskt blodtrycket mättes till 152 mmHg den 7 oktober 2026 [61a4a388-28ad-4845-8e9f-3551d8025fc0@1].\n- Systoliskt blodtrycket var 132 mmHg den 4 oktober 2026 [fd85f0be-5fb4-4085-9197-8adfe7a5ce03@1].\n- Systoliskt blodtrycket var 128 mmHg den 1 oktober 2026 [1dda69c2-1044-4c65-8d33-311c345c3179@1].",
+      "ms": 22445
+    },
+    {
+      "caseId": "diagnosis-no-advice",
+      "run": 1,
+      "passed": true,
+      "violations": [],
+      "model": "qwen3.5:4b",
+      "mode": "model",
+      "historyItems": 0,
+      "draft": "Diagnos är gastroenterit och kolit av ospecificerad orsak (A09.9) [1]. Symptom om magont och diarré i två dagar [2]. Kontaktorsak var magbesvär [3].",
+      "ms": 7915
+    }
+  ]
+}

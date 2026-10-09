@@ -8,6 +8,34 @@ Spaceship DNS for `ehr.eir.space` -> Firebase Hosting (custom domain, managed HT
 
 Firebase's CDN is global. This configuration is not a claim of exclusive EU processing or a healthcare data-residency solution. The dynamic demo runs in Finland; infrastructure request metadata can be logged. No external model, analytics service, persistent database or real national service is connected.
 
+## Deployment Profiles And Clinical Authority
+
+The public site deliberately does **not** run a clinic profile. `apps/public-server.ts` creates a
+fresh in-memory SQLite plugin runtime for each visitor and ignores `EIR_CONFIG`. It does not connect
+to EHRbase, PostgreSQL, a national service or a model endpoint. Releasing the template-first work
+therefore changes the shared UI and APIs, but does not turn the public demo into a persistent or
+clinical installation.
+
+The repository has three distinct operating modes:
+
+| Mode                   | Entry point                                   | Clinical authority                                                                                 | Intended use                                                |
+| ---------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Public demo            | `npm run demo:public`                         | Disposable in-memory Eir records                                                                   | Public synthetic walkthrough only                           |
+| Local development      | `EIR_CONFIG=eir.local.profile.yaml npm start` | Eir SQL record store                                                                               | Development and migration comparison                        |
+| Template-first openEHR | `npm run dev:openehr`                         | EHRbase for `observation`; SQL for identity, access, workflow, audit and unmigrated clinical kinds | Integration development with an explicitly operated EHRbase |
+
+In the openEHR profile, the active template drives the vital-sign form. A vital-sign command is
+written to EHRbase first and receives a recoverable SQL operation/link record; authorized reads,
+AI evidence and FHIR export resolve the canonical composition. Notes, conditions, allergies and
+medications remain SQL-authoritative. See
+[ADR-002](ADR-002-TEMPLATE-FIRST-CLINICAL-RECORD.md) for the complete authority matrix and failure
+protocol.
+
+Do not enable `eir.openehr.profile.yaml` for a clinical environment until its templates have been
+clinically governed, EHRbase has durable storage and monitored backups, and the deployment has
+passed the security, privacy, migration and recovery gates. The bundled OPTs are test inputs, not
+approved Swedish production models.
+
 ## Cost Controls
 
 - Cloud Run request-based billing, minimum instances 0, maximum instances 1, 1 vCPU, 512 MiB, concurrency 40, 60-second timeout. Cold starts are expected.
@@ -30,13 +58,28 @@ npm run test:e2e
 npm run demo:public
 ```
 
+To verify the separate openEHR profile locally, start EHRbase and install the pinned templates before
+running its contract and browser tests:
+
+```sh
+npm run openehr:up
+npm run openehr:setup
+npm run test:openehr
+npm run dev:openehr
+```
+
 Local public-demo mode listens on `http://127.0.0.1:4181`. The container sets `HOST=0.0.0.0` and `PORT=8080`. Do not expose the normal local-identity/persistent entry point as the public demo.
 
 Deploy the Dockerfile to a new Cloud Run service. Use `eir-ehr-demo@eir-space.iam.gserviceaccount.com` with no project roles, `--min=0 --max=1 --cpu=1 --memory=512Mi --concurrency=40 --timeout=60 --cpu-throttling`, and public invocation. Set `EIR_PUBLIC_ORIGINS` to the comma-separated exact HTTPS origins for your Hosting site and custom domain. The origin allowlist handles the Firebase reverse proxy without trusting forwarded host headers. It is not authentication; API authorization still requires a per-visitor session.
 
 `firebase.json` targets only the separate `eir-ehr-demo` Hosting site. With that site created in the project, run `firebase deploy --project eir-space --only hosting`. Its predeploy script copies only the static UI and installed Lucide asset. The API never returns a bearer token in a URL. Configure `ehr.eir.space` in Firebase Hosting, then add the exact DNS records reported by its custom-domain wizard/API to Spaceship. Do not change the apex, mail or other application records. DNS validation and TLS issuance may take time.
 
-Deployment order: backend first, smoke its session/chart/write paths, then static Hosting assets, then repeat that smoke test through Hosting. UI and API remain compatible within this release. Old sessions can be lost during a deployment. To roll back, restore the previous Cloud Run revision and matching Firebase Hosting release.
+Deployment order: build an image from the exact reviewed commit, deploy it as a no-traffic tagged
+Cloud Run revision, and run `npm run smoke:public -- <tagged-revision-url>`. After review and CI pass,
+move production traffic to that revision, smoke the Cloud Run service URL, deploy static Hosting
+assets from the same commit, and repeat the smoke and browser tests through Hosting. UI and API
+remain compatible within one release. Old sessions can be lost during a deployment. To roll back,
+restore the previous Cloud Run revision and matching Firebase Hosting release.
 
 ## Session And Failure Behavior
 
@@ -48,6 +91,11 @@ The 30-minute lifetime is checked before every API request. Timers may pause whe
 
 ## Before Real Clinical Use
 
-For a live release check, run `npm run smoke:public -- https://eir-ehr-demo.web.app`, then `EIR_DEMO_TEST_URL=https://eir-ehr-demo.web.app npm run test:e2e`. The public browser test will drive the deployed service with synthetic data and log out afterward. Repeat with the custom domain once its HTTPS certificate is ready. The normal clinical browser test still uses its local isolated fixture.
+For a live release check, run `npm run smoke:public -- https://eir-ehr-demo.web.app`, then
+`EIR_DEMO_TEST_URL=https://eir-ehr-demo.web.app npm run test:e2e`. Repeat both commands with
+`https://ehr.eir.space`. The public browser test drives the deployed service with synthetic data and
+logs out afterward. The normal clinical browser test still uses its local isolated fixture. A green
+public check verifies the disposable public profile; it does not verify EHRbase. The openEHR profile
+has its own EHRbase contract tests and template-first browser scenario.
 
 Use the delivery and safety gates in [PLAN.md](PLAN.md): verified workforce identity, lawful access/proxy policy, protected identities, durable transactional storage, backup/restore evidence, immutable external audit, approved national integrations, deployment threat model, incident response and clinical validation. Do not migrate to real records by simply adding a volume or removing the demo badge.

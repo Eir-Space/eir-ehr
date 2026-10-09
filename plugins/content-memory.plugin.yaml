@@ -1,0 +1,10 @@
+id: eir.content.memory
+version: 1.0.0
+apiVersion: 2
+title: In-memory content store (development and evaluation only)
+provides: []
+contributes: [contentStore]
+requires: []
+network: none
+dataClasses: [synthetic]
+isolation: in-process

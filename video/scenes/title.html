@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="orb"></div>
+    <div
+      class="stage"
+      style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding-top: 150px;
+      "
+    >
+      <div class="tile" data-at="0.15" data-anim="scale" data-dur="1.2">
+        <img src="../assets/rune.png" alt="" />
+      </div>
+      <h1 class="grad" data-at="0.55" style="margin-top: 38px; font-size: 168px">Eir</h1>
+      <h2
+        data-line="0"
+        data-t="title.sub"
+        style="
+          margin-top: 6px;
+          max-width: 1500px;
+          font-weight: 500;
+          color: var(--sand-200);
+          font-size: 62px;
+        "
+      ></h2>
+      <div data-line="1" data-stagger="0.18" style="margin-top: 44px">
+        <span class="chip"><i data-icon="users"></i><span data-t="title.c1"></span></span>
+        <span class="chip"><i data-icon="globe"></i><span data-t="title.c2"></span></span>
+        <span class="chip"><i data-icon="git-branch"></i><span data-t="title.c3"></span></span>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="profile.kicker"></div>
+      <div class="row" style="gap: 36px; margin-top: 6px">
+        <div class="col" style="flex: 1.2; gap: 24px">
+          <div class="code" data-line="0" data-anim="left">
+            <span class="c"># eir.local.profile.yaml</span> <span class="k">profile</span>: local
+            <span class="k">extends</span>: [./eir.config.json] <span class="k">policy</span>:
+            <span class="k">maxNetwork</span>: <span class="s">loopback</span>
+          </div>
+          <div class="code" data-line="1" data-anim="up">
+            <span class="k">patches</span>: - <span class="k">remove</span>: ai-extractive -
+            <span class="k">insert</span>: <span class="k">id</span>: model-ollama
+            <span class="k">module</span>: ./plugins/model-ollama.ts <span class="k">config</span>:
+            { model: qwen3.5:4b }
+          </div>
+        </div>
+        <div class="col" style="flex: 1; gap: 24px">
+          <div class="code" data-line="2" data-anim="right">
+            <span class="c"># model-ollama.plugin.yaml</span> <span class="k">id</span>:
+            eir.model.ollama <span class="k">contributes</span>: [aiModel]
+            <span class="k">network</span>: <span class="s">loopback</span>
+            <span class="k">dataClasses</span>: [identified-clinical]
+            <span class="k">isolation</span>: in-process
+          </div>
+          <div
+            class="card dangerc"
+            data-line="3"
+            data-anim="up"
+            style="display: flex; gap: 22px; align-items: center"
+          >
+            <div class="badge danger"><i data-icon="lock-keyhole"></i></div>
+            <p style="font-size: 30px" data-th="profile.policy"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

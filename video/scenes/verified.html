@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <div class="stage">
+      <div class="kicker" data-at="0.2" data-t="verified.kicker"></div>
+      <h2 data-line="0" data-t="verified.title" style="max-width: 1500px"></h2>
+      <div class="row" style="margin-top: 36px; gap: 34px">
+        <div
+          class="col"
+          style="flex: 1.1; gap: 18px"
+          data-line="0"
+          data-delay="0.4"
+          data-stagger="0.5"
+        >
+          <div
+            class="card teal"
+            style="display: flex; gap: 20px; align-items: center; padding: 22px 28px"
+          >
+            <div class="badge"><i data-icon="search"></i></div>
+            <div>
+              <h3 style="font-size: 32px" data-t="verified.s1"></h3>
+              <p class="muted" style="font-size: 25px" data-t="verified.s1b"></p>
+            </div>
+          </div>
+          <div
+            class="card ai"
+            style="display: flex; gap: 20px; align-items: center; padding: 22px 28px"
+          >
+            <div class="badge gold"><i data-icon="scale"></i></div>
+            <div>
+              <h3 style="font-size: 32px" data-t="verified.s2"></h3>
+              <p class="muted" style="font-size: 25px" data-t="verified.s2b"></p>
+            </div>
+          </div>
+          <div
+            class="card okc"
+            style="display: flex; gap: 20px; align-items: center; padding: 22px 28px"
+          >
+            <div class="badge ok"><i data-icon="badge-check"></i></div>
+            <div>
+              <h3 style="font-size: 32px" data-t="verified.s3"></h3>
+              <p class="muted" style="font-size: 25px" data-t="verified.s3b"></p>
+            </div>
+          </div>
+        </div>
+        <div class="col" style="flex: 1.05; gap: 18px">
+          <div class="code" data-line="1" data-anim="right" style="font-size: 30px">
+            <span class="c">// abridged example answer</span>
+            {
+            <span class="k">"points"</span>: [ { <span class="k">"ref"</span>:
+            <span class="s">"…@1"</span>, <span class="k">"value"</span>: 96 } ],
+            <span class="k">"coverage"</span>: { <span class="k">"ledger"</span>: 5,
+            <span class="k">"served"</span>: 4, <span class="k">"stale"</span>: 1 },
+            <span class="k">"complete"</span>: <span class="s" data-pulse="1">false</span> }
+          </div>
+          <p
+            class="muted"
+            data-line="1"
+            data-delay="1.2"
+            data-anim="fade"
+            style="font-size: 30px"
+            data-t="verified.note"
+          ></p>
+        </div>
+      </div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="runtime.js"></script>
+  </body>
+</html>

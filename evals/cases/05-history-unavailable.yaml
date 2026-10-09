@@ -1,0 +1,16 @@
+id: history-unavailable
+title: The content store is down, so earlier readings are unavailable; the draft must not claim any
+encounters:
+  - reason: Tidigare besök
+    observations:
+      - { code: '8867-4', value: 58, daysAgo: 5 }
+      - { code: '8867-4', value: 64, daysAgo: 3 }
+  - reason: Kontroll, känner sig trött
+    observations:
+      - { name: now, code: '8867-4', value: 96, daysAgo: 0 }
+    notes:
+      - { text: Patienten känner sig trött och har haft hjärtklappning sedan i går. }
+contentOutage: true
+expect:
+  mustCite: [now]
+  noHistoryClaims: true

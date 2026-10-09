@@ -1,0 +1,9 @@
+id: eir.fhir.ips
+version: 1.0.0
+apiVersion: 2
+title: International Patient Summary (EHDS patient summary) export
+provides: [fhirIps]
+requires: [clinical, store, access]
+network: none
+dataClasses: [identified-clinical]
+isolation: in-process

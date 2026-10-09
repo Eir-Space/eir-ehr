@@ -1,0 +1,9 @@
+id: eir.clinical-query
+version: 1.0.0
+apiVersion: 2
+title: Typed clinical queries over the content store
+provides: [clinicalQuery]
+requires: [store, access]
+network: none
+dataClasses: [identified-clinical]
+isolation: in-process

@@ -1,0 +1,802 @@
+/* Eir video theme. Values come from the Eir Space design system (tokens/base, tokens/semantic/dark):
+   warm dark surfaces ("dark mode is home"), Eir teal as the primary, gold for intelligence, the Eir Aura
+   gradient for brand moments, Geist for type, Lucide for icons. Motion is calm: fade plus a small
+   translate, ease-out, no bounce. */
+@font-face {
+  font-family: 'Geist';
+  font-weight: 400;
+  src: url(../fonts/Geist-Regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Geist';
+  font-weight: 500;
+  src: url(../fonts/Geist-Medium.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Geist';
+  font-weight: 600;
+  src: url(../fonts/Geist-SemiBold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Geist';
+  font-weight: 700;
+  src: url(../fonts/Geist-Bold.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-weight: 400;
+  src: url(../fonts/GeistMono-Regular.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-weight: 500;
+  src: url(../fonts/GeistMono-Medium.woff2) format('woff2');
+}
+
+:root {
+  --sand-50: #fafaf7;
+  --sand-100: #f5f4f0;
+  --sand-200: #e8e6e1;
+  --sand-300: #d4d1cb;
+  --sand-400: #a8a49e;
+  --sand-500: #7a766f;
+  --sand-600: #5a5650;
+  --sand-700: #3d3a36;
+  --sand-800: #252320;
+  --sand-900: #1a1917;
+  --sand-950: #111110;
+  --eir-200: #abe0ea;
+  --eir-300: #74cbd8;
+  --eir-400: #3db5c6;
+  --eir-500: #1e94a8;
+  --eir-600: #197a8e;
+  --eir-900: #1b4350;
+  --eir-950: #0d2d37;
+  --gold-300: #f5c178;
+  --gold-400: #edab55;
+  --gold-500: #d4a76a;
+  --gold-600: #b8894e;
+  --blue-300: #8bc4e3;
+  --blue-400: #6ea8c9;
+  --blue-500: #4a8db4;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --aura: linear-gradient(135deg, #d4a76a 0%, #c9b88a 30%, #a8c5d4 70%, #8bb8ce 100%);
+  --aura-subtle: linear-gradient(
+    135deg,
+    rgba(212, 167, 106, 0.08) 0%,
+    rgba(139, 184, 206, 0.08) 100%
+  );
+  --border: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(255, 255, 255, 0.16);
+  --bg: var(--sand-950);
+  --surface: var(--sand-900);
+  --surface-2: var(--sand-800);
+  --text: var(--sand-50);
+  --muted: var(--sand-400);
+  --sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
+  --gx: 18%;
+  --gy: 6%;
+  --hx: 86%;
+  --hy: 96%; /* background glow positions, moved slowly by the runtime */
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--bg);
+}
+body {
+  position: relative;
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+.bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(900px 620px at var(--gx) var(--gy), rgba(212, 167, 106, 0.11), transparent 70%),
+    radial-gradient(1000px 700px at var(--hx) var(--hy), rgba(139, 184, 206, 0.1), transparent 70%),
+    var(--bg);
+}
+.bg::after {
+  /* a faint grid gives the depth that flat black lacks */
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 96px 96px;
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 75%);
+}
+.stage {
+  position: absolute;
+  inset: 0;
+  padding: 130px 150px 190px;
+  transform-origin: 50% 45%;
+}
+[data-line],
+[data-at],
+[data-cue] {
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* top bar: brand on the left, chapter on the right */
+.topbar {
+  position: absolute;
+  left: 150px;
+  right: 150px;
+  top: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  opacity: 0.9;
+}
+.topbar img {
+  height: 38px;
+  display: block;
+}
+.topbar .chapter {
+  font: 500 22px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sand-500);
+}
+.progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 5px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+}
+.progress i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--aura);
+  border-radius: 0 3px 3px 0;
+}
+
+/* type */
+.kicker {
+  font: 500 24px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold-500);
+  margin: 0 0 22px;
+}
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+h1 {
+  font-size: 112px;
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+h2 {
+  font-size: 76px;
+  line-height: 1.06;
+}
+h3 {
+  font-size: 36px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+p {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.42;
+  color: var(--sand-300);
+}
+.lead {
+  font-size: 40px;
+  color: var(--sand-300);
+  max-width: 1300px;
+  line-height: 1.4;
+}
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 28px;
+}
+.mono {
+  font-family: var(--mono);
+}
+.grad {
+  background: var(--aura);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.teal {
+  color: var(--eir-400);
+}
+.gold {
+  color: var(--gold-400);
+}
+.ok {
+  color: var(--ok);
+}
+.warn {
+  color: var(--warn);
+}
+.danger {
+  color: var(--danger);
+}
+
+/* icons (Lucide, 1.5 stroke) */
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.12em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.badge {
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 40px;
+  background: rgba(61, 181, 198, 0.12);
+  color: var(--eir-400);
+  border: 1px solid rgba(61, 181, 198, 0.25);
+  flex: none;
+}
+.badge.gold {
+  background: rgba(237, 171, 85, 0.12);
+  color: var(--gold-400);
+  border-color: rgba(237, 171, 85, 0.28);
+}
+.badge.ok {
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--ok);
+  border-color: rgba(74, 222, 128, 0.25);
+}
+.badge.danger {
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--danger);
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+/* cards: surface, 1px border, no shadow in dark mode (the design system uses borders instead) */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 30px 34px;
+  position: relative;
+  transition: none;
+}
+.card.tint {
+  background: var(--aura-subtle), var(--surface);
+}
+.card.ai {
+  background: linear-gradient(rgba(237, 171, 85, 0.06), rgba(237, 171, 85, 0.06)), var(--surface);
+  border-left: 4px solid var(--gold-500);
+}
+.card.teal {
+  border-left: 4px solid var(--eir-400);
+}
+.card.okc {
+  border-left: 4px solid var(--ok);
+}
+.card.dangerc {
+  border-left: 4px solid var(--danger);
+}
+.card h3 {
+  color: var(--text);
+}
+.card.hot {
+  border-color: rgba(61, 181, 198, 0.55);
+  box-shadow: 0 0 0 6px rgba(61, 181, 198, 0.1);
+}
+.row {
+  display: flex;
+  gap: 32px;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.grid {
+  display: grid;
+  gap: 28px;
+}
+.center {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-active);
+  font-size: 28px;
+  color: var(--sand-200);
+  margin: 0 12px 12px 0;
+}
+.chip.ok {
+  color: var(--ok);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 34px;
+  border-radius: 14px;
+  background: var(--eir-400);
+  color: var(--sand-950);
+  font-weight: 600;
+  font-size: 34px;
+}
+.btn.secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-active);
+  font-weight: 500;
+}
+
+/* code and terminals */
+.code,
+.terminal {
+  background: #0c0c0b;
+  border: 1px solid var(--border-active);
+  border-radius: 18px;
+  font-family: var(--mono);
+  color: var(--sand-100);
+}
+.code {
+  padding: 26px 32px;
+  font-size: 29px;
+  line-height: 1.55;
+  white-space: pre;
+}
+.terminal {
+  padding: 22px 32px 26px;
+  font-size: 32px;
+  line-height: 1.6;
+}
+.terminal > div {
+  white-space: pre;
+  min-height: 1.6em;
+}
+.terminal .bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.terminal .bar i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--sand-700);
+}
+.prompt {
+  color: var(--ok);
+}
+.c {
+  color: var(--sand-500);
+}
+.k {
+  color: var(--eir-300);
+}
+.s {
+  color: var(--gold-400);
+}
+.caret {
+  color: var(--eir-300);
+}
+
+/* diagrams: HTML nodes positioned over an SVG layer for the connections */
+.diagram {
+  position: relative;
+}
+.diagram svg.edges {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.node {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border-active);
+  border-radius: 20px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.node .t {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.node .s {
+  font-size: 24px;
+  color: var(--muted);
+  line-height: 1.25;
+  margin-top: 2px;
+}
+.node.teal {
+  border-color: rgba(61, 181, 198, 0.5);
+}
+.node.gold {
+  border-color: rgba(237, 171, 85, 0.5);
+}
+.node.okc {
+  border-color: rgba(74, 222, 128, 0.45);
+}
+.edge {
+  fill: none;
+  stroke: rgba(61, 181, 198, 0.55);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.edge.gold {
+  stroke: rgba(237, 171, 85, 0.6);
+}
+.edge.dim {
+  stroke: rgba(255, 255, 255, 0.14);
+}
+.edge.danger {
+  stroke: rgba(248, 113, 113, 0.7);
+  stroke-dasharray: 10 12;
+}
+.dot {
+  fill: var(--eir-300);
+}
+.dot.gold {
+  fill: var(--gold-400);
+}
+
+/* captions: glass pill, karaoke highlight on the word being spoken */
+#caption {
+  position: absolute;
+  left: 170px;
+  right: 170px;
+  bottom: 54px;
+  display: flex;
+  justify-content: center;
+  opacity: 0;
+}
+#caption .pill {
+  max-width: 1580px;
+  padding: 18px 40px;
+  border-radius: 22px;
+  text-align: center;
+  font-size: 42px;
+  line-height: 1.28;
+  font-weight: 500;
+  background: rgba(17, 17, 16, 0.82);
+  border: 1px solid var(--border-active);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+#caption .w {
+  color: rgba(250, 250, 247, 0.42);
+}
+#caption .w.past {
+  color: var(--sand-50);
+}
+#caption .w.now {
+  color: var(--eir-300);
+}
+
+/* brand tile: the app icon, rune on the Eir Aura, as the design system defines it */
+.tile {
+  width: 220px;
+  height: 220px;
+  border-radius: 22%;
+  background: var(--aura);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 30px 80px rgba(212, 167, 106, 0.22);
+}
+.tile img {
+  width: 62%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18));
+}
+.tile.sm {
+  width: 120px;
+  height: 120px;
+}
+.orb {
+  position: absolute;
+  left: 50%;
+  top: 36%;
+  width: 1100px;
+  height: 1100px;
+  margin: -550px 0 0 -550px;
+  border-radius: 50%;
+  background: var(--aura);
+  opacity: 0.16;
+  filter: blur(150px);
+}
+.stat {
+  font: 600 72px var(--sans);
+  letter-spacing: -0.03em;
+}
+.tag {
+  font: 500 22px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sand-400);
+}
+.hr {
+  height: 1px;
+  background: var(--border);
+  margin: 18px 0;
+}
+
+/* ===== Light theme (the Eir.Space look): warm paper, near-black type, teal and gold accents ===========
+   The sand scale is flipped so every var(--sand-*) in the scenes reads correctly on light surfaces.
+   Code and terminals stay dark, like the dark feature bands on eir.space, and get the dark scale back. */
+html.light {
+  --sand-50: #1a1917;
+  --sand-100: #252320;
+  --sand-200: #3d3a36;
+  --sand-300: #5a5650;
+  --sand-400: #7a766f;
+  --sand-500: #7a766f;
+  --sand-600: #a8a49e;
+  --sand-700: #e8e6e1;
+  --sand-800: #f5f4f0;
+  --sand-900: #ffffff;
+  --sand-950: #fafaf7;
+  --eir-300: #1e94a8;
+  --eir-400: #197a8e;
+  --eir-500: #1e94a8;
+  --gold-300: #d4a76a;
+  --gold-400: #b8894e;
+  --gold-500: #b8894e;
+  --ok: #16a34a;
+  --warn: #d97706;
+  --danger: #dc2626;
+  --border: rgba(26, 25, 23, 0.09);
+  --border-active: rgba(26, 25, 23, 0.16);
+  --bg: #fafaf7;
+  --surface: #ffffff;
+  --surface-2: #f5f4f0;
+  --text: #1a1917;
+  --muted: #7a766f;
+  --aura-subtle: linear-gradient(
+    135deg,
+    rgba(212, 167, 106, 0.14) 0%,
+    rgba(139, 184, 206, 0.16) 100%
+  );
+  --teal-line: rgba(30, 148, 168, 0.5);
+}
+html.light body {
+  color: var(--text);
+}
+html.light .bg {
+  background:
+    radial-gradient(
+      1000px 700px at var(--gx) var(--gy),
+      rgba(245, 214, 170, 0.55),
+      transparent 70%
+    ),
+    radial-gradient(
+      1100px 760px at var(--hx) var(--hy),
+      rgba(190, 220, 235, 0.65),
+      transparent 70%
+    ),
+    #fafaf7;
+}
+html.light .bg::after {
+  opacity: 0.7;
+  background-image:
+    linear-gradient(rgba(26, 25, 23, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 25, 23, 0.035) 1px, transparent 1px);
+}
+html.light .orb {
+  opacity: 0.38;
+  filter: blur(130px);
+}
+html.light .grad {
+  background: linear-gradient(95deg, #197a8e 0%, #1e94a8 45%, #3db5c6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+html.light .kicker {
+  color: #b8894e;
+}
+html.light h1,
+html.light h2,
+html.light h3 {
+  color: #1a1917;
+}
+html.light p {
+  color: #5a5650;
+}
+html.light .muted {
+  color: #7a766f;
+}
+html.light .topbar .chapter {
+  color: #7a766f;
+}
+html.light .progress {
+  background: rgba(26, 25, 23, 0.06);
+}
+html.light .card {
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(26, 25, 23, 0.05),
+    0 14px 34px -14px rgba(26, 25, 23, 0.14);
+}
+html.light .card.tint {
+  background: var(--aura-subtle), #ffffff;
+}
+html.light .card.ai {
+  background: linear-gradient(rgba(237, 171, 85, 0.1), rgba(237, 171, 85, 0.1)), #ffffff;
+  border-left-color: #d4a76a;
+}
+html.light .card.teal {
+  border-left-color: #1e94a8;
+}
+html.light .card.okc {
+  border-left-color: #22c55e;
+}
+html.light .card.dangerc {
+  border-left-color: #ef4444;
+}
+html.light .badge {
+  background: rgba(30, 148, 168, 0.1);
+  border-color: rgba(30, 148, 168, 0.25);
+  color: #197a8e;
+}
+html.light .badge.gold {
+  background: rgba(212, 167, 106, 0.18);
+  border-color: rgba(184, 137, 78, 0.35);
+  color: #96703e;
+}
+html.light .badge.ok {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(22, 163, 74, 0.3);
+  color: #16a34a;
+}
+html.light .badge.danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(220, 38, 38, 0.28);
+  color: #dc2626;
+}
+html.light .chip {
+  background: #ffffff;
+  border-color: rgba(26, 25, 23, 0.14);
+  color: #3d3a36;
+  box-shadow: 0 1px 2px rgba(26, 25, 23, 0.05);
+}
+html.light .chip.ok {
+  color: #15803d;
+  border-color: rgba(22, 163, 74, 0.35);
+  background: rgba(240, 253, 244, 0.9);
+}
+html.light .btn {
+  background: linear-gradient(135deg, #197a8e, #1e94a8);
+  color: #ffffff;
+  box-shadow: 0 10px 24px -8px rgba(25, 122, 142, 0.5);
+}
+html.light .btn.secondary {
+  background: #ffffff;
+  color: #1a1917;
+}
+html.light .tile {
+  box-shadow: 0 30px 70px -20px rgba(184, 137, 78, 0.5);
+}
+html.light .node {
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(26, 25, 23, 0.05),
+    0 12px 28px -12px rgba(26, 25, 23, 0.14);
+}
+html.light .node.teal {
+  border-color: var(--teal-line);
+}
+html.light .node.gold {
+  border-color: rgba(184, 137, 78, 0.55);
+}
+html.light .node.okc {
+  border-color: rgba(22, 163, 74, 0.5);
+}
+html.light .edge {
+  stroke: rgba(30, 148, 168, 0.6);
+}
+html.light .edge.gold {
+  stroke: rgba(184, 137, 78, 0.7);
+}
+html.light .edge.danger {
+  stroke: rgba(220, 38, 38, 0.7);
+}
+html.light .edge.dim {
+  stroke: rgba(26, 25, 23, 0.16);
+}
+html.light .tag {
+  color: #7a766f;
+}
+/* dark code and terminal blocks keep the dark scale */
+html.light .code,
+html.light .terminal {
+  --sand-100: #f5f4f0;
+  --sand-200: #e8e6e1;
+  --sand-300: #d4d1cb;
+  --sand-400: #a8a49e;
+  --sand-500: #7a766f;
+  --sand-700: #3d3a36;
+  --eir-300: #74cbd8;
+  --gold-400: #edab55;
+  --ok: #4ade80;
+  background: #1a1917;
+  border-color: #2c2a27;
+  color: #f5f4f0;
+  box-shadow: 0 18px 40px -18px rgba(26, 25, 23, 0.45);
+}
+html.light .code .c,
+html.light .terminal .c {
+  color: #8c8780;
+}
+html.light .terminal .bar i {
+  background: #3d3a36;
+}
+html.light .tbl {
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(26, 25, 23, 0.05),
+    0 14px 34px -14px rgba(26, 25, 23, 0.14);
+}
+html.light .thead {
+  color: #7a766f;
+}
+html.light .trow {
+  color: #252320;
+}
+html.light #caption .pill {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(26, 25, 23, 0.12);
+  box-shadow: 0 10px 30px -12px rgba(26, 25, 23, 0.25);
+}
+html.light #caption .w {
+  color: rgba(26, 25, 23, 0.36);
+}
+html.light #caption .w.past {
+  color: #1a1917;
+}
+html.light #caption .w.now {
+  color: #197a8e;
+}

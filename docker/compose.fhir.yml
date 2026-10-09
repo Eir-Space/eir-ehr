@@ -1,0 +1,17 @@
+# Local FHIR R4 server (HAPI) for the FHIR content provider and its conformance tests.
+# Synthetic data only. No authentication, bound to loopback only; data is lost when the
+# container is removed. A real deployment puts an authenticating proxy in front.
+#   docker compose -f docker/compose.fhir.yml up -d
+#   EIR_TEST_FHIR_URL=http://127.0.0.1:8091/fhir npm run test:fhir
+name: eir-fhir
+services:
+  hapi:
+    image: hapiproject/hapi:latest
+    environment:
+      hapi.fhir.fhir_version: R4
+      hapi.fhir.client_id_strategy: ANY
+      hapi.fhir.allow_external_references: 'true'
+      hapi.fhir.enforce_referential_integrity_on_write: 'false'
+      hapi.fhir.enforce_referential_integrity_on_delete: 'false'
+    ports:
+      - '127.0.0.1:8091:8080'

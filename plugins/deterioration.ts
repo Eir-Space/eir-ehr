@@ -18,13 +18,14 @@ export default {
   version: '1.0.0',
   apiVersion: 2,
   provides: ['deterioration'],
-  requires: ['store', 'access', 'workforce', 'modules', 'riskEngine'],
+  requires: ['store', 'access', 'workforce', 'modules', 'riskEngine', 'clinical'],
   async setup(ctx, config) {
     const store = ctx.get('store'),
       access = ctx.get('access'),
       workforce = ctx.get('workforce'),
       modules = ctx.get('modules'),
-      engine = ctx.get('riskEngine');
+      engine = ctx.get('riskEngine'),
+      clinical = ctx.get('clinical');
     const settings = z
       .object({
         worker: z.boolean().default(false),
@@ -67,8 +68,10 @@ export default {
         'Monitoring encounter is not open',
       );
       assert(ageAt(patient.data.birthDate, now()) >= 18, 422, 'This module is limited to adults');
-      const records: Entity[] = [];
-      for (const kind of ['observation', 'labOrder', 'labReport']) {
+      const records: Entity[] = (await clinical.chart(actor, monitor.patientId)).filter(
+        (row) => row.kind === 'observation' && row.data.encounterId === encounter.id,
+      );
+      for (const kind of ['labOrder', 'labReport']) {
         let after;
         while (true) {
           const batch: Entity[] = await search(actor.tenant, kind, {
@@ -120,13 +123,14 @@ export default {
     };
     const evaluate = async (actor: Actor, id: string, automatic = false) => {
       const writer = automatic ? machine(actor.tenant, actor.unitId!) : actor;
-      const snapshot = await store.transaction(async () => {
+      const operational = await store.transaction(async () => {
         const monitor = await read(actor, id);
         const activation = await modules.state(actor.tenant, actor.unitId!, 'deterioration');
         assert(activation.enabled && monitor.data.active, 409, 'Monitoring is switched off');
         await checkOwner(actor, monitor);
-        return { monitor, activation, ...(await source(actor, monitor)) };
+        return { monitor, activation };
       });
+      const snapshot = { ...operational, ...(await source(actor, operational.monitor)) };
       let output: RiskOutput;
       try {
         output = riskOutput.parse(await engine.evaluate(snapshot.input));
@@ -149,6 +153,12 @@ export default {
           missing: ['Riskmotorn svarade inte med ett giltigt resultat'],
         };
       }
+      const current = await source(actor, snapshot.monitor);
+      if (
+        current.hash !== snapshot.hash ||
+        Date.now() - Date.parse(snapshot.input.evaluatedAt) > 30000
+      )
+        return;
       await store.transaction(async () => {
         const monitor = await read(actor, id);
         const activation = await modules.state(actor.tenant, actor.unitId!, 'deterioration');
@@ -160,12 +170,6 @@ export default {
         )
           return;
         await checkOwner(actor, monitor);
-        const current = await source(actor, monitor);
-        if (
-          current.hash !== snapshot.hash ||
-          Date.now() - Date.parse(snapshot.input.evaluatedAt) > 30000
-        )
-          return;
         const signature = digest({ source: snapshot.hash, engine: metadata, output });
         let assessmentId = monitor.data.assessmentId ?? null;
         if (signature !== monitor.data.signature) {
